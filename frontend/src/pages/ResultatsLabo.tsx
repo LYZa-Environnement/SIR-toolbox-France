@@ -4,6 +4,7 @@ import { AnalyseApercu, ControleQualite, ExempleConversion } from '../components
 import { telechargerClasseur } from '../lib/resultats/export'
 import { qualifierAuto, type Qualification } from '../lib/resultats/qualite'
 import { ajouterSommesCalculees } from '../lib/resultats/sommes'
+import { ordonnerCOHV } from '../lib/resultats/cohv'
 import { SignaturesApercu } from '../components/Signatures'
 import {
   legendeGuides,
@@ -68,7 +69,7 @@ async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
     nom,
     grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
   }))
-  const lecture = lireClasseur(feuilles, matrice === 'air' ? 'support' : 'tout')
+  const lecture = ordonnerCOHV(lireClasseur(feuilles, matrice === 'air' ? 'support' : 'tout'))
   return matrice === 'eau' ? ajouterSommesCalculees(lecture) : lecture
 }
 
