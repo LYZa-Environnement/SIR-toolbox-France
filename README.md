@@ -19,6 +19,29 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   d'investigation sur parcelles : taille et orientation de maille, zones
   multiples, exclusions, types de points, exports terrain (GPX, tableaux).
 
+- **Résultats labo** (`frontend/src/pages/ResultatsLabo.tsx`) — mise en
+  forme des résultats d'analyses : choix de la matrice (eaux souterraines,
+  sols, gaz du sol / air), chargement du fichier du laboratoire (ALS /
+  Wessling, Eurofins, SGS — disposition reconnue automatiquement,
+  `src/lib/resultats/parse.ts`), conversion µg/support → µg/m³ pour les gaz,
+  et export Excel « Tableau X - Résultats [matrice] » avec un onglet mis en
+  forme et un onglet comparé aux valeurs guides ERM (mise en forme
+  conditionnelle, sources sous le tableau).
+
+### Valeurs guides ERM
+
+Les valeurs guides sont extraites des trois classeurs ERM de référence vers
+`frontend/src/data/valeurs-guides.json`. Après une mise à jour d'un classeur :
+
+```bash
+cd frontend
+node scripts/valeurs-guides.mjs "<eaux souterraines.xlsx>" "<sol.xlsx>" "<air intérieur R1 R2 R3.xlsx>"
+```
+
+Pour les eaux souterraines, la valeur retenue est recalculée par l'outil à
+partir des rangs de la feuille « Hierarchisation » (rang 1 = source
+prioritaire pour le cas choisi).
+
 ## Développement
 
 ```bash

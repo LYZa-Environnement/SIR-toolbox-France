@@ -512,3 +512,72 @@ a.card:hover {
   position: sticky;
   left: 0;
 }
+
+.etape {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.6rem);
+  margin: 2.25rem 0 1rem;
+}
+
+.etape span {
+  display: inline-grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  background: var(--color-mint);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.choix__option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  font: inherit;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.choix__option span {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.choix__option:hover {
+  border-color: var(--color-accent);
+}
+
+.choix__option--actif {
+  border: 2px solid var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.choix__option:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.tableau__depasse {
+  font-weight: 800;
+  background: #bfbfbf !important;
+}
+
+.tableau__lq {
+  font-style: italic;
+}
+
+.tableau__selection td,
+.tableau__selection th {
+  background: var(--color-accent-soft);
+}
+
+.tableau td input.tableau__guide {
+  width: 5.5rem;
+}

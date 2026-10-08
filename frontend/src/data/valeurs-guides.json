@@ -1,0 +1,2322 @@
+{
+ "eau": {
+  "miseAJour": "2026-01-09",
+  "unite": "µg/L",
+  "fichier": "ERM Valeurs indicatives de comparaison eaux souterraines (MAJ 2025-11-07).xlsx",
+  "sources": [
+   {
+    "code": "(a)",
+    "libelle": "Valeurs limites / seuils de qualité des eaux souterraines définies par le SDAGE, le SAGE ou contrat de rivière local, ou toute autre source locale / régionale applicable (y compris éventuelles valeurs de \"bruit de fond local\")"
+   },
+   {
+    "code": "(b)",
+    "libelle": "Arrêté du 9 octobre 2023 modifiant l'arrêté du 17 décembre 2008 établissant les critères d'évaluation et les modalités de détermination de l'état des eaux souterraines et des tendances significatives et durables de dégradation de l'état chimique des eaux souterraines"
+   },
+   {
+    "code": "(c)",
+    "libelle": "Arrêté du 30 décembre 2022 modifiant l’arrêté ministériel du 11 janvier 2007 - Annexe II : \"Limites de qualité des eaux brutes de toute originie utilisée pour la production d'eau destinées à la consommation humaine\""
+   },
+   {
+    "code": "(d)",
+    "libelle": "Arrêté du 30 décembre 2022 modifiant l’arrêté ministériel du 11 janvier 2007 - Annexe I-I : \"Limites de qualité des eaux destinées à la consommation humaine\""
+   },
+   {
+    "code": "(e)",
+    "libelle": "Arrêté du 30 décembre 2022 modifiant l’arrêté ministériel du 11 janvier 2007 - Annexe I-II : \"Références de qualité des eaux destinées à la consommation humaine\""
+   },
+   {
+    "code": "(f)",
+    "libelle": "World Health Organisation - Guidelines for drinking-water quality - Fourth edition incorporation the first and second addenda (2022)"
+   },
+   {
+    "code": "(g)",
+    "libelle": "US-EPA National primary drinking standards (2009)"
+   }
+  ],
+  "cas": [
+   {
+    "id": 1,
+    "libelle": "Pas d'usage sensible des eaux souterraines à des fins d'alimentation en eau potable en position de vulnérabilité",
+    "rangs": {
+     "(a)": 1,
+     "(b)": 2,
+     "(c)": 3,
+     "(d)": 4,
+     "(e)": 5,
+     "(f)": 6,
+     "(g)": 7
+    }
+   },
+   {
+    "id": 2,
+    "libelle": "Présence de captage(s) AEP en position de vulnérabilité",
+    "rangs": {
+     "(a)": 5,
+     "(b)": 6,
+     "(c)": 1,
+     "(d)": 2,
+     "(e)": 3,
+     "(f)": 4,
+     "(g)": 7
+    }
+   },
+   {
+    "id": 3,
+    "libelle": "Présence de puits privés (hors captages AEP) en position de vulnérabilité",
+    "rangs": {
+     "(a)": 5,
+     "(b)": 6,
+     "(c)": 3,
+     "(d)": 1,
+     "(e)": 2,
+     "(f)": 4,
+     "(g)": 7
+    }
+   }
+  ],
+  "valeurs": [
+   {
+    "famille": "Acides acétiques",
+    "cas": "79-43-6",
+    "nom": "Acide dichloroacétique",
+    "sources": {
+     "(b)": 50,
+     "(f)": 50
+    }
+   },
+   {
+    "famille": "Acides acétiques",
+    "cas": "139-13-9",
+    "nom": "Acide nitrilotriacétique",
+    "sources": {
+     "(b)": 200
+    }
+   },
+   {
+    "famille": "Acides acétiques",
+    "cas": "",
+    "nom": "Acide trichloroacétique (Trichloroacetate)",
+    "sources": {
+     "(f)": 200
+    }
+   },
+   {
+    "famille": "Acides acétiques",
+    "cas": "",
+    "nom": "Acides haloacétiques (somme des acides chloroacétique, dichloroacétique, trichloroacétique, bromoacétique et dibromoacétique)",
+    "sources": {
+     "(d)": 60,
+     "(g)": 60
+    }
+   },
+   {
+    "famille": "Acides acétiques",
+    "cas": "60-00-4",
+    "nom": "EDTA (Ethylenediaminetetraacetic acid)",
+    "sources": {
+     "(b)": 600,
+     "(f)": 600
+    }
+   },
+   {
+    "famille": "Aldéhydes",
+    "cas": "100-52-7",
+    "nom": "Benzaldéhyde",
+    "sources": {}
+   },
+   {
+    "famille": "Aldéhydes",
+    "cas": "50-00-0",
+    "nom": "Formaldéhyde",
+    "sources": {
+     "(b)": 900
+    }
+   },
+   {
+    "famille": "CAV",
+    "cas": "95-63-6",
+    "nom": "1,2,4-Triméthylbenzène",
+    "sources": {}
+   },
+   {
+    "famille": "CAV",
+    "cas": "108-67-8",
+    "nom": "1,3,5-Triméthylbenzène",
+    "sources": {}
+   },
+   {
+    "famille": "CAV",
+    "cas": "98-82-8",
+    "nom": "Cumène (isopropylbenzène)",
+    "sources": {}
+   },
+   {
+    "famille": "CAV",
+    "cas": "100-42-5",
+    "nom": "Styrène",
+    "sources": {
+     "(f)": 20,
+     "(g)": 100
+    }
+   },
+   {
+    "famille": "CAV (BTEX)",
+    "cas": "71-43-2",
+    "nom": "Benzène",
+    "sources": {
+     "(b)": 1,
+     "(d)": 1,
+     "(f)": 10,
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "CAV (BTEX)",
+    "cas": "100-41-4",
+    "nom": "Ethylbenzène",
+    "sources": {
+     "(b)": 300,
+     "(f)": 300,
+     "(g)": 700
+    }
+   },
+   {
+    "famille": "CAV (BTEX)",
+    "cas": "108-88-3",
+    "nom": "Toluène",
+    "sources": {
+     "(b)": 700,
+     "(f)": 700,
+     "(g)": 1000
+    }
+   },
+   {
+    "famille": "CAV (BTEX)",
+    "cas": "1330-20-7",
+    "nom": "Xylènes (m+p- et o-)",
+    "sources": {
+     "(b)": 500,
+     "(f)": 500,
+     "(g)": 10000
+    }
+   },
+   {
+    "famille": "Cétones",
+    "cas": "67-64-1",
+    "nom": "Acétone",
+    "sources": {}
+   },
+   {
+    "famille": "Chloramines",
+    "cas": "",
+    "nom": "Chloramines",
+    "sources": {
+     "(g)": 4000
+    }
+   },
+   {
+    "famille": "Chloramines",
+    "cas": "10599-90-3",
+    "nom": "Monochloramine",
+    "sources": {
+     "(b)": 3000,
+     "(f)": 3000
+    }
+   },
+   {
+    "famille": "Chlorobenzènes",
+    "cas": "120-82-1",
+    "nom": "1,2,4-Trichlorobenzène",
+    "sources": {
+     "(g)": 70
+    }
+   },
+   {
+    "famille": "Chlorobenzènes",
+    "cas": "95-50-1",
+    "nom": "1,2-Dichlorobenzène (o-dichlorobenzène)",
+    "sources": {
+     "(b)": 1000,
+     "(f)": 1000,
+     "(g)": 600
+    }
+   },
+   {
+    "famille": "Chlorobenzènes",
+    "cas": "106-46-7",
+    "nom": "1,4-Dichlorobenzène (p-dichlorobenzène)",
+    "sources": {
+     "(b)": 300,
+     "(f)": 300,
+     "(g)": 75
+    }
+   },
+   {
+    "famille": "Chlorobenzènes",
+    "cas": "118-74-1",
+    "nom": "Hexachlorobenzène",
+    "sources": {
+     "(g)": 1
+    }
+   },
+   {
+    "famille": "Chlorobenzènes",
+    "cas": "108-90-7",
+    "nom": "Monochlorobenzène (Chlorobenzène)",
+    "sources": {
+     "(g)": 100
+    }
+   },
+   {
+    "famille": "Chlorobenzènes",
+    "cas": "608-93-5",
+    "nom": "Pentachlorobenzène",
+    "sources": {
+     "(b)": 0.1
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "630-20-6",
+    "nom": "1,1,1,2-Tetrachloroethane",
+    "sources": {}
+   },
+   {
+    "famille": "COHV",
+    "cas": "71-55-6",
+    "nom": "1,1,1-Trichloroéthane",
+    "sources": {
+     "(g)": 200
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "79-34-5",
+    "nom": "1,1,2,2-Tetrachloroethane",
+    "sources": {}
+   },
+   {
+    "famille": "COHV",
+    "cas": "79-00-5",
+    "nom": "1,1,2-trichloroéthane",
+    "sources": {
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "75-34-3",
+    "nom": "1,1-dichloroéthane",
+    "sources": {}
+   },
+   {
+    "famille": "COHV",
+    "cas": "75-35-4",
+    "nom": "1,1-Dichloroéthylène",
+    "sources": {
+     "(g)": 7
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "96-18-4",
+    "nom": "1,2,3-Trichloropropane",
+    "sources": {}
+   },
+   {
+    "famille": "COHV",
+    "cas": "106-93-4",
+    "nom": "1,2-Dibromoéthane",
+    "sources": {
+     "(b)": 0.4,
+     "(f)": 0.4,
+     "(g)": 0.05
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "107-06-2",
+    "nom": "1,2-Dichloroéthane",
+    "sources": {
+     "(b)": 3,
+     "(d)": 3,
+     "(f)": 30,
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "",
+    "nom": "1,2-Dichloroéthène",
+    "sources": {
+     "(f)": 50
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "540-59-0",
+    "nom": "1,2-Dichloroéthylène (somme cis et trans)",
+    "sources": {
+     "(b)": 50,
+     "(f)": 50
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "78-87-5",
+    "nom": "1,2-Dichloropropane",
+    "sources": {
+     "(b)": 40,
+     "(f)": 40,
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "109-64-8",
+    "nom": "1,3-Dibromoéthane",
+    "sources": {}
+   },
+   {
+    "famille": "COHV",
+    "cas": "542-75-6",
+    "nom": "1,3-Dichloropropène",
+    "sources": {
+     "(f)": 20
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "106-47-8",
+    "nom": "4-Chloroaniline",
+    "sources": {}
+   },
+   {
+    "famille": "COHV",
+    "cas": "75-00-3",
+    "nom": "Chloroéthane (ethylchloride)",
+    "sources": {}
+   },
+   {
+    "famille": "COHV",
+    "cas": "75-01-4",
+    "nom": "Chlorure de vinyle (Chloroéthylène)",
+    "sources": {
+     "(b)": 0.5,
+     "(d)": 0.5,
+     "(f)": 0.3,
+     "(g)": 2
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "156-59-2",
+    "nom": "cis-1,2-dichloroethylène",
+    "sources": {
+     "(g)": 70
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "3252-43-5",
+    "nom": "Dibromoacétonitrile",
+    "sources": {
+     "(b)": 70,
+     "(f)": 70
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "124-48-1",
+    "nom": "Dibromochlorométhane",
+    "sources": {
+     "(b)": 100,
+     "(f)": 100
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "3018-12-0",
+    "nom": "Dichloroacétonitrile",
+    "sources": {
+     "(b)": 20
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "75-09-2",
+    "nom": "Dichlorométhane (Chlorure de méthylène)",
+    "sources": {
+     "(f)": 20,
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "75-27-4",
+    "nom": "Dichloromonobromométhane (Bromodichlorométhane)",
+    "sources": {
+     "(b)": 60,
+     "(f)": 60
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "106-89-8",
+    "nom": "Epichlorhydrine",
+    "sources": {
+     "(d)": 0.1,
+     "(f)": 0.4
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "106-89-8",
+    "nom": "Epichlorhydrine",
+    "sources": {
+     "(d)": 0.1,
+     "(f)": 0.4
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "87-68-3",
+    "nom": "Hexachlorobutadiène",
+    "sources": {
+     "(b)": 0.6,
+     "(f)": 0.6
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "77-47-4",
+    "nom": "Hexachlorocyclopentadiène",
+    "sources": {
+     "(g)": 50
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "127-18-4",
+    "nom": "Tétrachloroéthylène",
+    "sources": {
+     "(b)": 10,
+     "(f)": 100,
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "",
+    "nom": "Tétrachloroéthylène + Trichloroéthylène (Somme)",
+    "sources": {
+     "(b)": 10,
+     "(d)": 10
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "56-23-5",
+    "nom": "Tétrachlorométhane (Tétrachlorure de carbone)",
+    "sources": {
+     "(b)": 4,
+     "(f)": 4,
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "156-60-5",
+    "nom": "trans-1,2-dichloroethylène",
+    "sources": {
+     "(g)": 100
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "75-25-2",
+    "nom": "Tribromométhane (Bromoforme)",
+    "sources": {
+     "(b)": 100,
+     "(f)": 100
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "79-01-6",
+    "nom": "Trichloroéthylène",
+    "sources": {
+     "(b)": 10,
+     "(f)": 8,
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "67-66-3",
+    "nom": "Trichlorométhane (Chloroforme)",
+    "sources": {
+     "(b)": 2.5,
+     "(f)": 300
+    }
+   },
+   {
+    "famille": "COHV",
+    "cas": "",
+    "nom": "Trihalométhanes (Total) (4)",
+    "sources": {
+     "(b)": 100,
+     "(d)": 100,
+     "(g)": 80
+    }
+   },
+   {
+    "famille": "COHV / Pesticide",
+    "cas": "96-12-8",
+    "nom": "Dibromo-1,2 chloro-3 propane",
+    "sources": {
+     "(b)": 1,
+     "(f)": 1
+    }
+   },
+   {
+    "famille": "Composés inorganiques",
+    "cas": "7782-50-5",
+    "nom": "Chlore",
+    "sources": {
+     "(f)": 5000,
+     "(g)": 4000
+    }
+   },
+   {
+    "famille": "Composés inorganiques",
+    "cas": "14797-73-0",
+    "nom": "Perchlorate",
+    "sources": {
+     "(b)": 4,
+     "(f)": 70
+    }
+   },
+   {
+    "famille": "Composés inorganiques",
+    "cas": "463-56-9",
+    "nom": "Thiocyanates",
+    "sources": {}
+   },
+   {
+    "famille": "Composés inorganiques",
+    "cas": "",
+    "nom": "Uranium",
+    "sources": {
+     "(d)": 30,
+     "(f)": 30,
+     "(g)": 30
+    }
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "123-91-1",
+    "nom": "1,4-dioxane",
+    "sources": {
+     "(b)": 50,
+     "(f)": 50
+    }
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "79-06-1",
+    "nom": "Acrylamide",
+    "sources": {
+     "(b)": 0.1,
+     "(d)": 0.1,
+     "(f)": 0.5
+    }
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "92-52-4",
+    "nom": "Biphényl",
+    "sources": {}
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "111-44-4",
+    "nom": "Bis(2-chloroéthyl)éther",
+    "sources": {}
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "",
+    "nom": "COT",
+    "sources": {
+     "(c)": 10000,
+     "(e)": 2000
+    }
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "103-23-1",
+    "nom": "Di(2-ethylhexyl) adipate",
+    "sources": {
+     "(g)": 400
+    }
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "",
+    "nom": "Hydrocarbures (indice)",
+    "sources": {
+     "(c)": 1000
+    }
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "78-59-1",
+    "nom": "Isophorone",
+    "sources": {}
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "",
+    "nom": "Monochloroacetate",
+    "sources": {
+     "(f)": 20
+    }
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "1634-04-4",
+    "nom": "MTBE",
+    "sources": {}
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "98-95-3",
+    "nom": "Nitrobenzène",
+    "sources": {}
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "62-75-9",
+    "nom": "N-Nitrosodimethylamine",
+    "sources": {
+     "(f)": 0.1
+    }
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "56-35-9",
+    "nom": "Oxyde de tributylétain",
+    "sources": {}
+   },
+   {
+    "famille": "Composés organiques",
+    "cas": "",
+    "nom": "Trichloroacetate",
+    "sources": {}
+   },
+   {
+    "famille": "HAP",
+    "cas": "91-58-7",
+    "nom": "2-Chloronaphthalène",
+    "sources": {}
+   },
+   {
+    "famille": "HAP",
+    "cas": "91-57-6",
+    "nom": "2-Méthylnaphtalène",
+    "sources": {}
+   },
+   {
+    "famille": "HAP",
+    "cas": "83-32-9",
+    "nom": "Acénaphtène",
+    "sources": {}
+   },
+   {
+    "famille": "HAP",
+    "cas": "50-32-8",
+    "nom": "Benzo[a]pyrène",
+    "sources": {
+     "(b)": 0.01,
+     "(d)": 0.01,
+     "(f)": 0.7,
+     "(g)": 0.2
+    }
+   },
+   {
+    "famille": "HAP",
+    "cas": "86-73-7",
+    "nom": "Fluorène",
+    "sources": {}
+   },
+   {
+    "famille": "HAP",
+    "cas": "",
+    "nom": "HAP : Somme de 4 HAP (2)",
+    "sources": {
+     "(b)": 0.1,
+     "(d)": 0.1
+    }
+   },
+   {
+    "famille": "HAP",
+    "cas": "",
+    "nom": "HAP : Somme de 6 HAP (1)",
+    "sources": {
+     "(b)": 1,
+     "(c)": 1
+    }
+   },
+   {
+    "famille": "HAP",
+    "cas": "91-20-3",
+    "nom": "Naphthalène",
+    "sources": {}
+   },
+   {
+    "famille": "HAP",
+    "cas": "129-00-0",
+    "nom": "Pyrene",
+    "sources": {}
+   },
+   {
+    "famille": "Ions",
+    "cas": "14798-03-9",
+    "nom": "Ammonium",
+    "sources": {
+     "(b)": 0.5,
+     "(c)": 4000,
+     "(e)": 100
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "15541-45-4",
+    "nom": "Bromates",
+    "sources": {
+     "(b)": 10,
+     "(d)": 10,
+     "(f)": 10,
+     "(g)": 10
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "14866-68-3",
+    "nom": "Chlorates",
+    "sources": {
+     "(b)": 700,
+     "(d)": 250,
+     "(f)": 700
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "14998-27-7",
+    "nom": "Chlorites",
+    "sources": {
+     "(d)": 250,
+     "(e)": 200,
+     "(f)": 700,
+     "(g)": 1000
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "16887-00-6",
+    "nom": "Chlorures",
+    "sources": {
+     "(b)": 250000,
+     "(c)": 200000,
+     "(e)": 250000
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "16984-48-8",
+    "nom": "Fluorures",
+    "sources": {
+     "(b)": 1500,
+     "(c)": 1500,
+     "(d)": 1500,
+     "(f)": 1500,
+     "(g)": 4000
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "14797-55-8",
+    "nom": "Nitrates",
+    "sources": {
+     "(b)": 50000,
+     "(c)": 100000,
+     "(d)": 50000,
+     "(f)": 50000,
+     "(g)": 10000
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "",
+    "nom": "Nitrates, nitrites : [nitrate]/50 + [nitrite]/3",
+    "sources": {
+     "(d)": 1000
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "14797-65-0",
+    "nom": "Nitrites",
+    "sources": {
+     "(b)": 300,
+     "(d)": 500,
+     "(f)": 3000,
+     "(g)": 1000
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "14265-44-2",
+    "nom": "Orthophosphates",
+    "sources": {
+     "(b)": 500
+    }
+   },
+   {
+    "famille": "Ions",
+    "cas": "14808-79-8",
+    "nom": "Sulfates",
+    "sources": {
+     "(b)": 250000,
+     "(c)": 250000,
+     "(e)": 250000
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7429-90-5",
+    "nom": "Aluminium",
+    "sources": {
+     "(b)": 200,
+     "(e)": 200
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-36-0",
+    "nom": "Antimoine",
+    "sources": {
+     "(b)": 5,
+     "(d)": 10,
+     "(f)": 20,
+     "(g)": 6
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-22-4",
+    "nom": "Argent",
+    "sources": {}
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-38-2",
+    "nom": "Arsenic",
+    "sources": {
+     "(b)": 10,
+     "(c)": 100,
+     "(d)": 10,
+     "(f)": 10,
+     "(g)": 10
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-39-3",
+    "nom": "Baryum",
+    "sources": {
+     "(b)": 700,
+     "(e)": 700,
+     "(f)": 1300,
+     "(g)": 2000
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-41-7",
+    "nom": "Beryllium",
+    "sources": {
+     "(g)": 4
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-42-8",
+    "nom": "Bore",
+    "sources": {
+     "(b)": 1000,
+     "(c)": 1500,
+     "(d)": 1500,
+     "(f)": 2400
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-43-9",
+    "nom": "Cadmium",
+    "sources": {
+     "(b)": 5,
+     "(c)": 5,
+     "(d)": 5,
+     "(f)": 3,
+     "(g)": 5
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-47-3",
+    "nom": "Chrome",
+    "sources": {
+     "(b)": 50,
+     "(c)": 50,
+     "(d)": 25,
+     "(f)": 50,
+     "(g)": 100
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "16065-83-1",
+    "nom": "Chrome III",
+    "sources": {}
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "18540-29-9",
+    "nom": "Chrome VI",
+    "sources": {
+     "(b)": 50,
+     "(d)": 6
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-50-8",
+    "nom": "Cuivre",
+    "sources": {
+     "(b)": 2000,
+     "(d)": 2000,
+     "(e)": 1000,
+     "(f)": 2000,
+     "(g)": 1300
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "57-12-5",
+    "nom": "Cyanures libres",
+    "sources": {
+     "(b)": 50,
+     "(g)": 200
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "\"cyanures totaux\"",
+    "nom": "Cyanures totaux",
+    "sources": {
+     "(b)": 50,
+     "(c)": 50,
+     "(d)": 50
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7439-89-6",
+    "nom": "Fer",
+    "sources": {
+     "(b)": 200,
+     "(e)": 200
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7439-96-5",
+    "nom": "Manganèse",
+    "sources": {
+     "(b)": 50,
+     "(e)": 50,
+     "(f)": 80
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7439-97-6",
+    "nom": "Mercure",
+    "sources": {
+     "(b)": 1,
+     "(c)": 1,
+     "(d)": 1,
+     "(f)": 6,
+     "(g)": 2
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7439-98-7",
+    "nom": "Molybdène",
+    "sources": {
+     "(b)": 70
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-02-0",
+    "nom": "Nickel",
+    "sources": {
+     "(b)": 20,
+     "(c)": 20,
+     "(d)": 20,
+     "(f)": 70
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7439-92-1",
+    "nom": "Plomb",
+    "sources": {
+     "(b)": 10,
+     "(c)": 50,
+     "(d)": 5,
+     "(f)": 10,
+     "(g)": 15
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7782-49-2",
+    "nom": "Sélénium",
+    "sources": {
+     "(b)": 10,
+     "(c)": 20,
+     "(d)": 20,
+     "(f)": 40,
+     "(g)": 50
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-23-5",
+    "nom": "Sodium",
+    "sources": {
+     "(b)": 200000,
+     "(c)": 200000,
+     "(e)": 200000
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-28-0",
+    "nom": "Thallium",
+    "sources": {
+     "(g)": 2
+    }
+   },
+   {
+    "famille": "Métaux & métalloïdes",
+    "cas": "7440-66-6",
+    "nom": "Zinc",
+    "sources": {
+     "(b)": 5000
+    }
+   },
+   {
+    "famille": "PCB, PCT, dioxines, furanes",
+    "cas": "132-64-9",
+    "nom": "Dibenzofurane",
+    "sources": {}
+   },
+   {
+    "famille": "PCB, PCT, dioxines, furanes",
+    "cas": "1746-01-6",
+    "nom": "Dioxine (2,3,7,8-TCDD)",
+    "sources": {
+     "(g)": 0.00003
+    }
+   },
+   {
+    "famille": "PCB, PCT, dioxines, furanes",
+    "cas": "",
+    "nom": "PCBs",
+    "sources": {
+     "(g)": 0.5
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "93-72-1",
+    "nom": "2,4,5,-TP (Fenoprop)",
+    "sources": {
+     "(f)": 9,
+     "(g)": 50
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "187022-11-3",
+    "nom": "Acétochlore ESA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "194992-44-4",
+    "nom": "Acétochlore OXA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "94-75-7",
+    "nom": "acide 2,4-Dichlorophenoxyacetique (2,4-D)",
+    "sources": {
+     "(f)": 30,
+     "(g)": 70
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "15972-60-8",
+    "nom": "Alachlor",
+    "sources": {
+     "(f)": 20,
+     "(g)": 2
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "142363-53-9",
+    "nom": "Alachlore ESA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "116-06-3",
+    "nom": "Aldicarbe",
+    "sources": {
+     "(f)": 10
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "309-00-2",
+    "nom": "Aldrine",
+    "sources": {
+     "(b)": 0.03,
+     "(d)": 0.03,
+     "(f)": 0.03
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1912-24-9",
+    "nom": "Atrazine",
+    "sources": {
+     "(f)": 100,
+     "(g)": 3
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "63-25-2",
+    "nom": "Carbaryl",
+    "sources": {}
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1563-66-2",
+    "nom": "Carbofuran",
+    "sources": {
+     "(f)": 7,
+     "(g)": 40
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "57-74-9",
+    "nom": "Chlordane",
+    "sources": {
+     "(f)": 0.2,
+     "(g)": 2
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "15545-48-9",
+    "nom": "Chlorotoluron",
+    "sources": {
+     "(f)": 30
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Chlorpyrifos",
+    "sources": {
+     "(f)": 30
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "21725-46-2",
+    "nom": "Cyanazine",
+    "sources": {
+     "(f)": 0.6
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "75-99-0",
+    "nom": "Dalapon",
+    "sources": {
+     "(g)": 200
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "96-12-8",
+    "nom": "DBCP (1,2-Dibromo-3-chloropropane)",
+    "sources": {
+     "(f)": 1,
+     "(g)": 0.2
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "DDT et métabolites",
+    "sources": {
+     "(f)": 1
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "120-36-5",
+    "nom": "Dichlorprop",
+    "sources": {
+     "(f)": 100
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "60-57-1",
+    "nom": "Dieldrine",
+    "sources": {
+     "(b)": 0.03,
+     "(d)": 0.03,
+     "(f)": 0.03
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1418095-08-5",
+    "nom": "Diméthachlore CGA 369873",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1231710-75-0",
+    "nom": "Diméthachlore ESA (CGA 354742)",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "205939-58-8",
+    "nom": "Diméthénamide ESA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "380412-59-9",
+    "nom": "Diméthénamide OXA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "60-51-5",
+    "nom": "Dimethoate",
+    "sources": {
+     "(f)": 6
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "88-85-7",
+    "nom": "Dinoseb",
+    "sources": {
+     "(g)": 7
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "2764-72-9",
+    "nom": "Diquat",
+    "sources": {
+     "(g)": 20
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "330-54-1",
+    "nom": "Diuron",
+    "sources": {}
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "145-73-3",
+    "nom": "Endothall",
+    "sources": {
+     "(g)": 100
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "72-20-8",
+    "nom": "Endrin",
+    "sources": {
+     "(f)": 0.6,
+     "(g)": 2
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1071-83-6",
+    "nom": "Glyphosate",
+    "sources": {
+     "(g)": 700
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "76-44-8",
+    "nom": "Heptachlore",
+    "sources": {
+     "(b)": 0.03,
+     "(d)": 0.03,
+     "(g)": 0.4
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1024-57-3",
+    "nom": "Heptachloroépoxyde",
+    "sources": {
+     "(b)": 0.03,
+     "(d)": 0.03,
+     "(g)": 0.2
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Hydroxyatrazine",
+    "sources": {
+     "(f)": 200
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "34123-59-6",
+    "nom": "Isoproturon",
+    "sources": {
+     "(f)": 9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "58-89-9",
+    "nom": "Lindane",
+    "sources": {
+     "(f)": 2,
+     "(g)": 0.2
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "12427-38-2",
+    "nom": "Manèbe",
+    "sources": {}
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "93-65-2",
+    "nom": "Mecoprop",
+    "sources": {
+     "(f)": 10
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "172960-62-2",
+    "nom": "Métazachlore ESA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1231244-60-2",
+    "nom": "Métazachlore OXA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "72-43-5",
+    "nom": "Methoxychlor",
+    "sources": {
+     "(f)": 20,
+     "(g)": 40
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Metolachlor",
+    "sources": {
+     "(f)": 10
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "171118-09-5",
+    "nom": "Métolachlore ESA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1418095-19-8",
+    "nom": "Métolachlore NOA (413173)",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "152019-73-3",
+    "nom": "Métolachlore OXA",
+    "sources": {
+     "(b)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Molinate",
+    "sources": {
+     "(f)": 6
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "23135-22-0",
+    "nom": "Oxamyl (Vydate)",
+    "sources": {
+     "(g)": 200
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Pendimethalin",
+    "sources": {
+     "(f)": 20
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Pesticides (par substance individuelle)",
+    "sources": {
+     "(c)": 2,
+     "(d)": 0.1
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Pesticides (Total) : Substances actives des pesticides, ainsi que les métabolites et produits de dégradation et de réaction pertinents (On entend par pesticides les produits phytopharmaceutiques et les produits biocides) / On entend par total la somme de tous les pesticides détectés et quantifiés dans le cadre de la procédure de surveillance, y compris leurs métabolites, les produits de dégradation et les produits de réaction pertinents. Sont à exclure de la somme des pesticides, les métabolites classés comme non pertinents par l'ANSES à la date de publication de l'arrêté du 09/10/2023)",
+    "sources": {
+     "(b)": 0.5
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Pesticides : Substances actives des pesticides, ainsi que les métabolites et produits de dégradation et de réaction pertinents (On entend par pesticides les produits phytopharmaceutiques et les produits biocides) Par substance",
+    "sources": {
+     "(b)": 0.1
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Pesticides : Substances actives des pesticides, ainsi que les métabolites et produits de dégradation et de réaction pertinents (On entend par pesticides les produits phytopharmaceutiques et les produits biocides) Par substance",
+    "sources": {
+     "(e)": 0.9
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Pesticides : Total pesticides",
+    "sources": {
+     "(c)": 5,
+     "(d)": 0.5
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "1918-02-1",
+    "nom": "Picloram",
+    "sources": {
+     "(g)": 500
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "122-34-9",
+    "nom": "Simazine",
+    "sources": {
+     "(f)": 2,
+     "(g)": 4
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "5915-41-3",
+    "nom": "Terbuthylazine",
+    "sources": {
+     "(f)": 7
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "8001-35-2",
+    "nom": "Toxaphène",
+    "sources": {
+     "(g)": 3
+    }
+   },
+   {
+    "famille": "Pesticides",
+    "cas": "",
+    "nom": "Trifluralin",
+    "sources": {
+     "(f)": 20
+    }
+   },
+   {
+    "famille": "PFAS",
+    "cas": "",
+    "nom": "PFAS : Somme des 20 PFAS préoccupants (3)",
+    "sources": {
+     "(c)": 2,
+     "(d)": 0.1
+    }
+   },
+   {
+    "famille": "PFAS",
+    "cas": "335-67-1",
+    "nom": "PFOA",
+    "sources": {}
+   },
+   {
+    "famille": "PFAS",
+    "cas": "1763-23-1",
+    "nom": "PFOS",
+    "sources": {}
+   },
+   {
+    "famille": "Phénols",
+    "cas": "58-90-2",
+    "nom": "2,3,4,6-Tétrachlorophénol",
+    "sources": {}
+   },
+   {
+    "famille": "Phénols",
+    "cas": "88-06-2",
+    "nom": "2,4,6-Trichlorophénol",
+    "sources": {
+     "(b)": 200,
+     "(f)": 200
+    }
+   },
+   {
+    "famille": "Phénols",
+    "cas": "105-67-9",
+    "nom": "2,4-Diméthylphénol",
+    "sources": {}
+   },
+   {
+    "famille": "Phénols",
+    "cas": "95-48-7",
+    "nom": "2-Méthylphénol (o-crésol)",
+    "sources": {}
+   },
+   {
+    "famille": "Phénols",
+    "cas": "106-44-5",
+    "nom": "4-Méthylphénol (p-crésol)",
+    "sources": {}
+   },
+   {
+    "famille": "Phénols",
+    "cas": "",
+    "nom": "Bisphénol A",
+    "sources": {
+     "(d)": 2.5
+    }
+   },
+   {
+    "famille": "Phénols",
+    "cas": "84852-15-3",
+    "nom": "Nonylphénol",
+    "sources": {
+     "(e)": 0.3
+    }
+   },
+   {
+    "famille": "Phénols",
+    "cas": "87-86-5",
+    "nom": "Pentachlorophénol",
+    "sources": {
+     "(b)": 9,
+     "(f)": 9,
+     "(g)": 1
+    }
+   },
+   {
+    "famille": "Phénols",
+    "cas": "108-95-2",
+    "nom": "Phénol (Indice)",
+    "sources": {}
+   },
+   {
+    "famille": "Phtalates",
+    "cas": "",
+    "nom": "Di(2-ethylhexyl)phthalate",
+    "sources": {
+     "(f)": 8,
+     "(g)": 6
+    }
+   },
+   {
+    "famille": "Phtalates",
+    "cas": "84-66-2",
+    "nom": "Diethyl phthalate",
+    "sources": {}
+   },
+   {
+    "famille": "Phtalates",
+    "cas": "84-74-2",
+    "nom": "Phtalate de dibutyl (Di-n-butyl phthalate)",
+    "sources": {}
+   }
+  ]
+ },
+ "sol": {
+  "miseAJour": "2023-10-20",
+  "unite": "mg/kg MS",
+  "fichier": "ERM Valeurs indicatives de comparaison sol (MAJ 20-10-2023).xlsx",
+  "sources": [
+   {
+    "code": "(a)",
+    "libelle": "Courrier de l’environnement de l’INRA n°39, février 2000 : Teneurs en « métaux lourds » dans les sols français - résultats généraux du programme ASPITET – Denis Baize"
+   },
+   {
+    "code": "(b)",
+    "libelle": "Note d'information interministérielle N° DGS/EA1/DGAL/DGPR/2023/148 du 5 octobre 2023 relative à la mise en oeuvre des avis du Haut Conseil de la santé publique (HCSP) relatifs à la définition de valeurs repères pour des polluants des sols pollués (cadmium, arsenic et mercure)"
+   },
+   {
+    "code": "(c)",
+    "libelle": "Arrêté du 12/12/14 relatif aux conditions d'admission des déchets inertes dans les installations relevant des rubriques 2515, 2516, 2517 et dans les installations de stockage de déchets inertes relevant de la rubrique 2760 de la nomenclature des installations classées"
+   }
+  ],
+  "metaux": [
+   {
+    "cas": "7440-38-2",
+    "nom": "Arsenic",
+    "inra": 25,
+    "seuilVigilance": 25
+   },
+   {
+    "cas": "7440-43-9",
+    "nom": "Cadmium",
+    "inra": 0.45,
+    "seuilVigilance": 1
+   },
+   {
+    "cas": "7440-47-3",
+    "nom": "Chrome total",
+    "inra": 90,
+    "seuilVigilance": null
+   },
+   {
+    "cas": "7440-48-4",
+    "nom": "Cobalt",
+    "inra": 23,
+    "seuilVigilance": null
+   },
+   {
+    "cas": "7440-50-8",
+    "nom": "Cuivre",
+    "inra": 20,
+    "seuilVigilance": null
+   },
+   {
+    "cas": "7487-94-7",
+    "nom": "Mercure et composés",
+    "inra": 0.1,
+    "seuilVigilance": 1
+   },
+   {
+    "cas": "7440-02-0",
+    "nom": "Nickel",
+    "inra": 60,
+    "seuilVigilance": null
+   },
+   {
+    "cas": "7439-92-1",
+    "nom": "Plomb",
+    "inra": 50,
+    "seuilVigilance": null
+   },
+   {
+    "cas": "7782-49-2",
+    "nom": "Selenium",
+    "inra": 0.7,
+    "seuilVigilance": null
+   },
+   {
+    "cas": "7440-28-0",
+    "nom": "Thallium",
+    "inra": 1.7,
+    "seuilVigilance": null
+   },
+   {
+    "cas": "7440-66-6",
+    "nom": "Zinc",
+    "inra": 100,
+    "seuilVigilance": null
+   }
+  ],
+  "organiques": [
+   {
+    "famille": "Composés organiques et hydrocarbures",
+    "cas": "",
+    "nom": "COT (carbone organique total) sur éluat",
+    "source": "(c)",
+    "valeur": 500
+   },
+   {
+    "famille": "Composés organiques et hydrocarbures",
+    "cas": "",
+    "nom": "COT sur sol brut",
+    "source": "(c)",
+    "valeur": 30000
+   },
+   {
+    "famille": "Composés organiques et hydrocarbures",
+    "cas": "1336-36-3",
+    "nom": "PCB (7 congénères)",
+    "source": "(c)",
+    "valeur": 1
+   },
+   {
+    "famille": "Composés organiques et hydrocarbures",
+    "cas": "",
+    "nom": "Hydrocarbures (C10 à C40)",
+    "source": "(c)",
+    "valeur": 500
+   },
+   {
+    "famille": "Composés aromatiques volatils (CAV)",
+    "cas": "",
+    "nom": "BTEX (benzène, toluène, éthylbenzène et xylènes)",
+    "source": "(c)",
+    "valeur": 6
+   },
+   {
+    "famille": "HAP",
+    "cas": "",
+    "nom": "Somme des HAP",
+    "source": "(c)",
+    "valeur": 50
+   }
+  ]
+ },
+ "air": {
+  "miseAJour": "2026-01-12",
+  "unite": "mg/m³",
+  "fichier": "Valeurs repères R1 R2 R3 Air interieur (maj 2026.01.30).xlsx",
+  "valeurs": [
+   {
+    "famille": "Eléments Traces Métalliques et Métalloides (ETMM)",
+    "cas": "7439-97-6",
+    "nom": "Mercure Hg° (élémentaire)",
+    "r1": 0.00003,
+    "r2": 0.0002,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (OEHHA, 2008)",
+    "sourceR2": "VTR (ATSDR ,1999) et (OMS, 2003), Approche plus protectrice que (10xVTR chronique retenue)",
+    "sourceR3": "Pas de valeur retenue"
+   },
+   {
+    "famille": "BTEX",
+    "cas": "71-43-2",
+    "nom": "Benzène",
+    "r1": 0.002,
+    "r2": 0.01,
+    "r3": 0.03,
+    "sourceR1": "Décret n°2011-1727 / Article R221-29 du Code de l'Environnement",
+    "sourceR2": "Décret n°2015-1926",
+    "sourceR3": "VGAi Court terme, (AFSSET, 2008)"
+   },
+   {
+    "famille": "BTEX",
+    "cas": "100-41-4",
+    "nom": "Ethylbenzène",
+    "r1": 1.5,
+    "r2": 15,
+    "r3": 22,
+    "sourceR1": "VGAI Long terme, Anses 2016",
+    "sourceR2": "10 x VGAI long terme, Anses 2016",
+    "sourceR3": "VGAI court terme, (Anses, 2016)"
+   },
+   {
+    "famille": "BTEX",
+    "cas": "108-88-3",
+    "nom": "Toluène",
+    "r1": 20,
+    "r2": 21,
+    "r3": 21,
+    "sourceR1": "VGAI Long terme, Anses 2018",
+    "sourceR2": "VTR aigue (Anses, 2017), Le mininum entre VGAI CT et (10 x VGAI LT) est incohérent. La VTR aigue a été retenue",
+    "sourceR3": "R3=R2"
+   },
+   {
+    "famille": "BTEX",
+    "cas": "1330-20-7",
+    "nom": "Xylènes totaux",
+    "r1": 0.1,
+    "r2": 1,
+    "r3": 8.8,
+    "sourceR1": "VTR chronique pour les effets à seuil, Anses 2020",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil, Anses 2020, le minimum entre 10 x VTR chronique et VTR aigûe a été retenu",
+    "sourceR3": "VTR aigue (1 à 14j), (Choix Anses - ATSDR, 2007)"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "75-01-4",
+    "nom": "Chlorure de vinyle",
+    "r1": 0.0026,
+    "r2": 0.026,
+    "r3": 1.3,
+    "sourceR1": "VTR chronique pour les effets sans seuil (Anses, 2012)",
+    "sourceR2": "10 x VTR chronique pour les effets sans seuil (Anses, 2012)",
+    "sourceR3": "VTR aigue (ATSDR, 2006)"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "156-59-2",
+    "nom": "cis-1,2-dichloroéthylène",
+    "r1": 0.06,
+    "r2": 0.6,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (RIVM, 2009)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (RIVM, 2009)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "71-55-6",
+    "nom": "1,1,1-trichloroéthane",
+    "r1": 1,
+    "r2": 5,
+    "r3": 5,
+    "sourceR1": "VTR chronique pour les effets à seuil (choix Ineris, 2014 - OEHHA, 2005)",
+    "sourceR2": "VTR aigue pour les effets à seuil (US-EPA, 2007)",
+    "sourceR3": "R3=R2"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "79-01-6",
+    "nom": "Trichloroéthylène",
+    "r1": 0.01,
+    "r2": 0.05,
+    "r3": 3.2,
+    "sourceR1": "Valeur repère pour l'air intérieur (HCSP, 2020)",
+    "sourceR2": "Valeur d'action rapide (HCSP, 2020)",
+    "sourceR3": "VGAI subchronique (Anses, 2019)"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "127-18-4",
+    "nom": "Tétrachloroéthylène",
+    "r1": 0.04,
+    "r2": 1.25,
+    "r3": 1.38,
+    "sourceR1": "Valeur repère pour les effets sans seuil (HCSP, 2025)",
+    "sourceR2": "Décret n°2015-1926",
+    "sourceR3": "VGAI court terme (Anses, 2010)"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "75-09-2",
+    "nom": "Dichlorométhane (chlorure de méthylène)",
+    "r1": 0.01,
+    "r2": 0.1,
+    "r3": 2.1,
+    "sourceR1": "VTR chronique pour les effets sans seuil (Choix Ineris, 2011 - OEHHA, 2009)",
+    "sourceR2": "10 x VTR chronique pour les effets sans seuil (OEHHA, 2009)",
+    "sourceR3": "VTR aigue (Choix Ineris, 2011 - ATSDR, 2000)"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "67-66-3",
+    "nom": "Trichlorométhane (chloroforme)",
+    "r1": 0.063,
+    "r2": 0.15,
+    "r3": 0.15,
+    "sourceR1": "VTR chronique pour les effets sans seuil (Anses, 2009)",
+    "sourceR2": "VTR aigue (ATSDR, 1997) (10 x VTR chronique) est incohérent par rapport à la VTR aigue. La VTR aigue est retenue.",
+    "sourceR3": "R3=R2"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "56-23-5",
+    "nom": "Tétrachlorométhane (tétrachlorure de carbone)",
+    "r1": 0.11,
+    "r2": 0.19,
+    "r3": 1.9,
+    "sourceR1": "VTR chronique pour les effets à seuil (Anses, 2017)",
+    "sourceR2": "VTR subchronique (ATSDR, 2005)",
+    "sourceR3": "VTR aigue (OEHHA, 1999)"
+   },
+   {
+    "famille": "Composés Organo-Halogénés Volatils (COHV)",
+    "cas": "75-25-2",
+    "nom": "Bromoforme",
+    "r1": 0.0091,
+    "r2": 0.091,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets sans seuil (US-EPA, 1991)",
+    "sourceR2": "10 x VTR chronique pour les effets sans seuil (US-EPA, 1991)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Hydrocarbures Aromatiques Polycycliques (HAP)",
+    "cas": "91-20-3",
+    "nom": "Naphtalène",
+    "r1": 0.01,
+    "r2": 0.05,
+    "r3": null,
+    "sourceR1": "Valeur repère pour les effets à seuil (HCSP, 2012)",
+    "sourceR2": "Valeur d'action rapide (HCSP, 2012)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Fractions d'hydrocarbures",
+    "cas": "",
+    "nom": "Aromatiques EC>8-10",
+    "r1": 0.2,
+    "r2": 2,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Fractions d'hydrocarbures",
+    "cas": "",
+    "nom": "Aromatiques EC>10-12",
+    "r1": 0.2,
+    "r2": 2,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Fractions d'hydrocarbures",
+    "cas": "",
+    "nom": "Aromatiques EC>12-16",
+    "r1": 0.2,
+    "r2": 2,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Fractions d'hydrocarbures",
+    "cas": "",
+    "nom": "Aliphatique EC C5-C6",
+    "r1": 18,
+    "r2": 180,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Fractions d'hydrocarbures",
+    "cas": "",
+    "nom": "Aliphatique EC>C6-C8",
+    "r1": 18,
+    "r2": 180,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Fractions d'hydrocarbures",
+    "cas": "",
+    "nom": "Aliphatique EC>C8-C10",
+    "r1": 1,
+    "r2": 10,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Fractions d'hydrocarbures",
+    "cas": "",
+    "nom": "Aliphatique EC>C10-C12",
+    "r1": 1,
+    "r2": 10,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Fractions d'hydrocarbures",
+    "cas": "",
+    "nom": "Aliphatique EC>C12-C16",
+    "r1": 1,
+    "r2": 10,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (TPHCWG, 1999)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Polychlorobiphényls (PCB)",
+    "cas": "",
+    "nom": "PCB (somme des 6 congénères NDL : PCB-28,52,101, 138, 153, 180)",
+    "r1": 0.0005,
+    "r2": 0.005,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (RIVM, 2001)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Polychlorobiphényls (PCB)",
+    "cas": "11097-69-1",
+    "nom": "PCB-NDL (arochlor 1254)",
+    "r1": 0.001,
+    "r2": 0.01,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (RIVM, 2001)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Composés chloro-aromatiques",
+    "cas": "108-90-7",
+    "nom": "Monochlorobenzène",
+    "r1": 0.01,
+    "r2": 0.1,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (Santé Canada, 2010)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (Santé Canada, 2010)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Composés chloro-aromatiques",
+    "cas": "106-46-7",
+    "nom": "1,4-dichlorobenzène",
+    "r1": 0.00091,
+    "r2": 0.0091,
+    "r3": 12,
+    "sourceR1": "VTR chronique pour les effets à seuil (OEHHA, 2009)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (OEHHA, 2009)",
+    "sourceR3": "VTR aigue (ATSDR, 2006)"
+   },
+   {
+    "famille": "Composés chloro-aromatiques",
+    "cas": "",
+    "nom": "Trichlorobenzènes",
+    "r1": 0.05,
+    "r2": 0.5,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (RIVM, 2001)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (RIVM, 2001)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Composés chloro-aromatiques",
+    "cas": "108-70-3",
+    "nom": "1,3,5-trichlorobenzène",
+    "r1": 0.0036,
+    "r2": 0.036,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (Santé Canada, 2010)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (Santé Canada, 2010)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Composés chloro-aromatiques",
+    "cas": "120-82-1",
+    "nom": "1,2,4-trichlorobenzène",
+    "r1": 0.007,
+    "r2": 0.07,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (Santé Canada, 2010)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (Santé Canada, 2010)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "108-95-2",
+    "nom": "Phénol",
+    "r1": 0.02,
+    "r2": 0.2,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (RIVM, 2001)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (RIVM, 2001)",
+    "sourceR3": "Pas de valeur retenue"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "50-00-0",
+    "nom": "Formaldéhyde",
+    "r1": 0.01,
+    "r2": 0.1,
+    "r3": null,
+    "sourceR1": "Décret n°2011-1727",
+    "sourceR2": "Décret n°2015-1926",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "1634-04-4",
+    "nom": "MTBE",
+    "r1": 0.037,
+    "r2": 0.37,
+    "r3": 7.3,
+    "sourceR1": "VTR chronique pour les effets à seuil (Santé Canada, 2010)",
+    "sourceR2": "10 x VTR chronique pour les effets à seuil (Santé Canada, 2010)",
+    "sourceR3": "VTR aigue (ATSDR, 1997)"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "74-90-8",
+    "nom": "HCN",
+    "r1": 0.0008,
+    "r2": 0.37,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (US-EPA, 2010)",
+    "sourceR2": "10 x VTR chronique pour les effets sans seuil (US-EPA, 2010)",
+    "sourceR3": "Pas de valeur retenue"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "",
+    "nom": "H2S",
+    "r1": 0.002,
+    "r2": 0.02,
+    "r3": 0.1,
+    "sourceR1": "VTR chronique pour les effets à seuil (US-EPA, 2003)",
+    "sourceR2": "10 x VTR chronique pour les effets sans seuil (US-EPA, 2003)",
+    "sourceR3": "VTR aigue (ATSDR, 2006)"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "58-89-9",
+    "nom": "Lindane (γ-HCH) / Hexachlorocyclohexane (tous les isomères)",
+    "r1": 0.0000091,
+    "r2": 0.000091,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (OEHHA, 2009)",
+    "sourceR2": "10x VTR chronique pour les effets à seuil (OEHHA, 2009)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "7664-41-7",
+    "nom": "NH3",
+    "r1": 0.5,
+    "r2": 5,
+    "r3": 5.9,
+    "sourceR1": "VTR chronique pour les effets sans seuil (Anses, 2018)",
+    "sourceR2": "10x VTR chronique pour les effets à seuil ATSDR, 2004)",
+    "sourceR3": "VTR aigue (ANSES, 2018)"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "87-86-5",
+    "nom": "Pentachlorophénol",
+    "r1": 0.002,
+    "r2": 0.02,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (OEHHA, 2011)",
+    "sourceR2": "10x VTR chronique pour les effets à seuil (OEHHA, 2011)",
+    "sourceR3": "Pas de valeur"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "106-99-0",
+    "nom": "1,3-butadiène",
+    "r1": 0.00033,
+    "r2": 0.0033,
+    "r3": 0.66,
+    "sourceR1": "VTR chronique pour les effets à seuil (US-EPA, 2002)",
+    "sourceR2": "10 x VTR chronique pour les effets sans seuil (US-EPA, 2002)",
+    "sourceR3": "VTR aigue (OEHA, 2011)"
+   },
+   {
+    "famille": "Autres substances",
+    "cas": "121-14-2",
+    "nom": "2,4-dinitrotoluène",
+    "r1": 0.00011,
+    "r2": 0.0011,
+    "r3": null,
+    "sourceR1": "VTR chronique pour les effets à seuil (OEHHA, 2009)",
+    "sourceR2": "10x VTR chronique pour les effets à seuil (OEHHA, 2009)",
+    "sourceR3": "Pas de valeur"
+   }
+  ]
+ }
+}

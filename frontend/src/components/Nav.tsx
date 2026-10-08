@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 
 const pages = [
   { to: '/', label: 'Site Setting', end: true },
-  { to: '/conversion', label: 'Conversion labo' },
+  { to: '/resultats-labo', label: 'Résultats labo' },
 ]
 
 // The two map tools are separate pages, not routes: they get buttons rather

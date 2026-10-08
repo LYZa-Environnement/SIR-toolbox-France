@@ -1,14 +1,15 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import Accueil from './pages/Accueil'
-import Conversion from './pages/Conversion'
+import ResultatsLabo from './pages/ResultatsLabo'
 
 export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Accueil />} />
-        <Route path="/conversion" element={<Conversion />} />
+        <Route path="/resultats-labo" element={<ResultatsLabo />} />
+        <Route path="/conversion" element={<Navigate to="/resultats-labo" replace />} />
 
         {/* The site was a consultancy showcase before becoming a data
             consultation platform; its former pages no longer exist, so old

@@ -19,21 +19,6 @@ function loadSite(): Site | null {
   }
 }
 
-const PRINCIPES = [
-  {
-    titre: 'Interrogé en direct',
-    texte: "Chaque rubrique appelle les API publiques au moment où vous la consultez. Rien n'est stocké, rien n'est mis en cache.",
-  },
-  {
-    titre: 'Situé par rapport au site',
-    texte: "Distance et direction pour chaque élément, et position amont ou aval quand le sens d'écoulement du cours d'eau est connu.",
-  },
-  {
-    titre: 'Les manques affichés',
-    texte: "Chaque rubrique liste ce qu'elle ne couvre pas et pourquoi. Une donnée absente est une question ouverte, pas un feu vert.",
-  },
-]
-
 export default function Accueil() {
   const [site, setSite] = useState<Site | null>(loadSite)
   // The site goes through two steps: an address, then the parcels that give it
@@ -112,14 +97,9 @@ export default function Accueil() {
               )}
             </div>
           ) : (
-            <div className="grid grid--3" style={{ marginTop: '2.5rem' }}>
-              {PRINCIPES.map((principe) => (
-                <div key={principe.titre} className="card">
-                  <strong style={{ display: 'block', marginBottom: '0.35rem' }}>{principe.titre}</strong>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--color-muted)' }}>{principe.texte}</span>
-                </div>
-              ))}
-            </div>
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.92rem', color: 'var(--color-muted)', maxWidth: '36rem' }}>
+              L'ensemble des données présentées est consulté en direct depuis des sources officielles publiques.
+            </p>
           )}
 
           {site && etape === 'lecture' && (
@@ -138,26 +118,6 @@ export default function Accueil() {
           )}
         </div>
       </section>
-
-      {!site && (
-        <section className="section section--muted">
-          <div className="container">
-            <p className="eyebrow">Les six rubriques</p>
-            <h2 style={{ marginBottom: '0.3rem' }}>Ce qui est restitué pour chaque adresse</h2>
-            <p className="lede" style={{ marginBottom: '1.75rem' }}>
-              Chaque rubrique part d'une carte au 1:25 000, situe les données par rapport au site, et cite ses sources.
-            </p>
-            <div className="grid grid--3">
-              {RUBRIQUES.map((rubrique) => (
-                <div key={rubrique.id} className="card">
-                  <h3 style={{ fontSize: '1.05rem', margin: '0 0 0.4rem' }}>{rubrique.titre}</h3>
-                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--color-muted)' }}>{rubrique.sousTitre}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {site && etape === 'parcelles' && <SelecteurParcelles site={site} onValider={handleValider} onAnnuler={handleAnnuler} />}
 
@@ -180,21 +140,6 @@ export default function Accueil() {
             )}
           </ThemeSection>
         ))}
-
-      <section className="section section--deep">
-        <div className="container">
-          <h2>Comment lire ces données</h2>
-          <p>
-            Les distances et les directions sont mesurées depuis le point géocodé de l'adresse, et les positions amont/aval s'appuient sur
-            le sens d'écoulement renseigné dans la BD TOPO® de l'IGN. L'échelle de chaque donnée est annoncée : une donnée communale ne
-            décrit pas une parcelle, un modèle à 11 km de maille ne décrit pas une rue.
-          </p>
-          <p>
-            Une donnée absente n'est pas une donnée rassurante : chaque rubrique liste explicitement ce qu'elle ne couvre pas et pourquoi.
-            Cette plateforme donne une lecture documentaire à distance — elle ne remplace ni une visite de site, ni une étude réglementaire.
-          </p>
-        </div>
-      </section>
     </>
   )
 }
