@@ -18,6 +18,17 @@
 import type { Borders, Cell as XCell, Fill, Workbook, Worksheet } from 'exceljs'
 import { arrondiSignificatif, convertir, decimales, volumeLitres, type Prelevement, type UniteSortie } from './calc.ts'
 import type { Couche, Lecture, Mesure, Parametre } from './parse.ts'
+import {
+  controleBlancs,
+  controleDoublons,
+  controlePercee,
+  estControle,
+  LIBELLES_TYPE,
+  SEUIL_PERCEE,
+  type PerceePoint,
+  type Qualification,
+} from './qualite.ts'
+import { statistiques, valeursCompose } from './stats.ts'
 
 export interface Legende {
   titre: string
@@ -41,6 +52,10 @@ export interface OptionsExport {
   /** Header of the comparison column, e.g. "Valeur repère R1". */
   libelleGuide: string
   legende: Legende
+  /** Sample types (blanks, duplicates), as confirmed by the user. */
+  qualifications: Record<string, Qualification>
+  /** Duplicate acceptance, relative percent difference. */
+  seuilDoublon: number
 }
 
 // Colours of the ERM Office theme, as resolved in the reference table.
@@ -202,7 +217,15 @@ function tableauSimple(ws: Worksheet, lecture: Lecture, opts: OptionsExport, ave
 
 // ---- Gas and air: conversion blocks ----------------------------------------
 
-function blocConversion(ws: Worksheet, ligne: number, lecture: Lecture, couche: Couche, opts: OptionsExport, avecGuides: boolean): number {
+function blocConversion(
+  ws: Worksheet,
+  ligne: number,
+  lecture: Lecture,
+  couche: Couche,
+  opts: OptionsExport,
+  avecGuides: boolean,
+  percees: PerceePoint[],
+): number {
   const { points } = lecture
   const parametres = lecture.parametres[couche]
   const decalage = avecGuides ? 2 : 0
@@ -302,6 +325,13 @@ function blocConversion(ws: Worksheet, ligne: number, lecture: Lecture, couche: 
         },
         { h: 'center', fond: GRIS_CONC, fmt: conc && !conc.inferieur ? formatNombre(conc.valeur) : undefined },
       )
+      const percee = couche === 'CM' ? percees.find((x) => x.point === p.nom)?.composes.find((c) => c.parametre.cle === pa.cle) : undefined
+      if (percee?.percee) {
+        const minimum = concentrationMinimale(percee.masseTotale, p.nom, opts)
+        ws.getCell(r, col(k, 1)).note =
+          `Percée : couche de contrôle ${percee.ratio === null ? 'quantifiée sans masse sur la couche de mesure' : `= ${percee.ratio.toFixed(0)} % de la couche de mesure`} ` +
+          `(> ${SEUIL_PERCEE} %, NF X 43-267). Résultat non conclusif${minimum ? ` : ${minimum}` : ''}.`
+      }
     })
     r++
   }
@@ -375,12 +405,251 @@ function feuille(wb: Workbook, nom: string, lecture: Lecture, opts: OptionsExpor
     const couches: Couche[] = lecture.coucheControle ? ['CM', 'CC'] : ['CM']
     for (const couche of couches) {
       if (!lecture.parametres[couche].length) continue
-      r = blocConversion(ws, r, lecture, couche, opts, avecGuides) + 2
+      r = blocConversion(ws, r, lecture, couche, opts, avecGuides, controlePercee(lecture)) + 2
     }
   } else {
     r = tableauSimple(ws, lecture, opts, avecGuides) + 2
   }
   legende(ws, r, opts, avecGuides)
+}
+
+/** "≥ X µg/m3" from the mass on both layers, for a tube that broke through. */
+function concentrationMinimale(masseTotale: number | null, point: string, opts: OptionsExport): string | null {
+  const vol = volumeLitres(opts.prelevements[point] ?? { debitDebut: null, debitFin: null, duree: null })
+  if (!vol || masseTotale === null) return null
+  const x = masseTotale / (vol / 1000) / (opts.unite === 'mg/m³' ? 1000 : 1)
+  return `≥ ${String(arrondiSignificatif(x)).replace('.', ',')} ${opts.unite === 'µg/m³' ? 'µg/m3' : 'mg/m3'}`
+}
+
+// ---- Per-compound analysis ----------------------------------------------------
+
+const COLONNES_ANALYSE: [string, number][] = [
+  ['Composé', 34],
+  ['Unité', 11],
+  ['Nb analysés', 9],
+  ['Nb quantifiés', 10],
+  ['Fréquence de quantification (%)', 15],
+  ['LQ min', 9],
+  ['LQ max', 9],
+  ['Minimum', 10],
+  ['Maximum', 10],
+  ['Échantillon du maximum', 16],
+  ['Moyenne', 10],
+  ['Médiane', 10],
+  ['Écart-type', 10],
+  ['Percentile 90', 10],
+  ['Moyenne (LQ/2)', 10],
+  ['Valeur de comparaison', 13],
+  ['Source', 8],
+  ['Nb dépassements', 13],
+  ['Fréquence de dépassement (%)', 15],
+  ['Maximum / valeur de comparaison', 15],
+  ['Échantillons en dépassement', 40],
+]
+
+function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
+  const ws = wb.addWorksheet('Analyse par composé', { views: [{ state: 'frozen', xSplit: 1, ySplit: 5, showGridLines: false }] })
+  const echantillons = lecture.points.filter((p) => !estControle(opts.qualifications[p.nom])).map((p) => p.nom)
+  const exclus = lecture.points.filter((p) => estControle(opts.qualifications[p.nom])).map((p) => p.nom)
+  ecrire(ws, 1, 1, `${opts.titre} — analyse par composé`, { gras: true, taille: 12, bord: false })
+  ecrire(
+    ws,
+    2,
+    1,
+    `${echantillons.length} échantillon${echantillons.length > 1 ? 's' : ''} pris en compte` +
+      (exclus.length ? ` ; échantillons de contrôle qualité exclus : ${exclus.join(', ')}` : '') +
+      (opts.conversion ? ` ; concentrations de la couche de mesure en ${opts.unite === 'µg/m³' ? 'µg/m3' : 'mg/m3'}` : ''),
+    { taille: 9, bord: false },
+  )
+  ecrire(
+    ws,
+    3,
+    1,
+    'Minimum, maximum, moyenne, médiane, écart-type et percentile 90 : sur les seuls résultats quantifiés. Moyenne (LQ/2) : sur tous les résultats, les valeurs <LQ remplacées par LQ/2.',
+    { italique: true, taille: 9, bord: false },
+  )
+  const r0 = 5
+  ws.getRow(r0).height = 45
+  COLONNES_ANALYSE.forEach(([titre, largeur], j) => {
+    ws.getColumn(j + 1).width = largeur
+    ecrire(ws, r0, j + 1, titre, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true })
+  })
+  let r = r0 + 1
+  let famille: string | null = null
+  const conversion = opts.conversion ? { prelevements: opts.prelevements, unite: opts.unite } : null
+  const nombre = (x: number | null) => (x === null ? '-' : Number(x.toPrecision(4)))
+  for (const pa of lecture.parametres.CM) {
+    if (pa.famille && pa.famille !== famille) {
+      famille = pa.famille
+      ligneFamille(ws, r++, famille, COLONNES_ANALYSE.length)
+    }
+    const g = opts.guides[pa.cle]
+    const s = statistiques(valeursCompose(lecture, pa, echantillons, conversion), g?.valeur ?? null)
+    const valeurs: (string | number)[] = [
+      pa.nom,
+      opts.conversion ? (opts.unite === 'µg/m³' ? 'µg/m3' : 'mg/m3') : pa.unite,
+      s.analyses,
+      s.quantifies,
+      nombre(s.frequence),
+      nombre(s.lqMin),
+      nombre(s.lqMax),
+      nombre(s.min),
+      nombre(s.max),
+      s.echantillonMax ?? '-',
+      nombre(s.moyenne),
+      nombre(s.mediane),
+      nombre(s.ecartType),
+      nombre(s.p90),
+      nombre(s.moyenneDemiLQ),
+      g ? g.valeur : '-',
+      g ? g.source : '-',
+      g ? s.depassements : '-',
+      nombre(s.frequenceDepassement),
+      nombre(s.ratioMaxGuide),
+      s.echantillonsDepassement.join(', ') || '-',
+    ]
+    const derniere = valeurs.length - 1
+    valeurs.forEach((v, j) => {
+      const depasse = j === 17 && typeof v === 'number' && v > 0
+      ecrire(ws, r, j + 1, v, {
+        h: j === 0 || j === derniere ? 'left' : 'center',
+        indent: j === 0 ? 1 : undefined,
+        italique: j === 0 && pa.somme,
+        wrap: j === derniere,
+        gras: depasse,
+        fond: depasse ? GRIS_DEPASSEMENT : undefined,
+      })
+    })
+    r++
+  }
+}
+
+// ---- Quality control -----------------------------------------------------------
+
+function feuilleQualite(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
+  const ws = wb.addWorksheet('Contrôle qualité', { views: [{ showGridLines: false }] })
+  ;[30, 32, 14, 14, 14, 18, 44].forEach((w, j) => (ws.getColumn(j + 1).width = w))
+  ecrire(ws, 1, 1, `${opts.titre} — contrôle qualité`, { gras: true, taille: 12, bord: false })
+  let r = 3
+  const titre = (t: string) => {
+    ecrire(ws, r++, 1, t, { gras: true, taille: 11, bord: false })
+  }
+  const entetes = (cols: string[]) => {
+    cols.forEach((c, j) => ecrire(ws, r, j + 1, c, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true }))
+    r++
+  }
+  const ligne = (vals: (string | number)[], alerte = false) => {
+    vals.forEach((v, j) =>
+      ecrire(ws, r, j + 1, v, { h: j < 2 ? 'left' : 'center', gras: alerte && j >= 2, fond: alerte ? GRIS_DEPASSEMENT : undefined, wrap: j === 6 }),
+    )
+    r++
+  }
+  const note = (t: string) => {
+    ecrire(ws, r++, 1, t, { italique: true, taille: 9, bord: false })
+  }
+
+  // Sample types.
+  titre('Échantillons de contrôle qualité')
+  const controles = lecture.points.filter((p) => estControle(opts.qualifications[p.nom]))
+  if (!controles.length) note('Aucun échantillon de contrôle qualité (blanc, doublon) identifié.')
+  else {
+    entetes(['Échantillon', 'Type', 'Doublon de'])
+    for (const p of controles) {
+      const q = opts.qualifications[p.nom]
+      ligne([p.nom, LIBELLES_TYPE[q.type], q.type === 'doublon' ? (q.de ?? 'non renseigné') : '-'])
+    }
+  }
+  r++
+
+  // Blanks.
+  titre('Blancs de terrain et de transport')
+  const blancs = controleBlancs(lecture, opts.qualifications)
+  if (!blancs.length) note('Aucun blanc identifié dans ce fichier.')
+  else {
+    entetes(['Blanc', 'Composé quantifié', 'Résultat', 'Unité'])
+    for (const b of blancs) {
+      const nom = `${b.blanc} (${LIBELLES_TYPE[b.type].toLowerCase()})`
+      if (!b.composes.length) ligne([nom, 'Aucun composé quantifié', '-', '-'])
+      for (const c of b.composes) ligne([nom, c.parametre.nom, brutFrancais(c.mesure), c.parametre.unite], true)
+    }
+  }
+  note(
+    'Un composé quantifié dans un blanc signale une possible contamination lors du prélèvement (blanc de terrain) ou du transport (blanc de transport) : les résultats des échantillons pour ce composé sont à interpréter en conséquence. Au moins un blanc de terrain par type de support et par jour, et un blanc de transport par type de support et par glacière (guide BRGM/INERIS 2016, § 6.4.4).',
+  )
+  r++
+
+  // Duplicates.
+  titre(`Doublons — écart relatif (seuil retenu : ${opts.seuilDoublon} %)`)
+  const doublons = controleDoublons(lecture, opts.qualifications, opts.seuilDoublon)
+  const sansParent = controles.filter((p) => opts.qualifications[p.nom].type === 'doublon' && !opts.qualifications[p.nom].de)
+  if (!doublons.length && !sansParent.length) note('Aucun doublon identifié dans ce fichier.')
+  for (const d of doublons) {
+    entetes(['Doublon', 'Composé', d.original, d.doublon, 'Écart relatif (%)', 'Conformité'])
+    const comparables = d.ecarts.filter((e) => e.ecart !== null)
+    if (!comparables.length) ligne([`${d.doublon} / ${d.original}`, 'Aucun composé quantifié dans les deux échantillons', '-', '-', '-', '-'])
+    for (const e of comparables) {
+      ligne(
+        [`${d.doublon} / ${d.original}`, e.parametre.nom, brutFrancais(e.original!), brutFrancais(e.doublon!), Number(e.ecart!.toFixed(1)), e.conforme ? 'Conforme' : 'Écart > seuil'],
+        !e.conforme,
+      )
+    }
+    const isoles = d.ecarts.filter((e) => e.ecart === null && ((e.original && !e.original.inferieur) || (e.doublon && !e.doublon.inferieur)))
+    if (isoles.length) {
+      note(`Quantifié dans un seul des deux échantillons : ${isoles.map((e) => `${e.parametre.nom} (${e.original?.brut ?? '-'} / ${e.doublon?.brut ?? '-'})`).join(' ; ')}.`)
+    }
+    r++
+  }
+  for (const p of sansParent) note(`${p.nom} : doublon dont l'échantillon d'origine n'a pas été renseigné.`)
+  note(
+    "Écart relatif = |a − b| / ((a + b) / 2) × 100, calculé lorsque le composé est quantifié dans les deux échantillons. Il n'existe pas de seuil réglementaire français ; les valeurs d'usage sont de 30 % pour les eaux et 50 % pour les sols. L'écart est moins significatif à proximité de la limite de quantification.",
+  )
+  r++
+
+  // Breakthrough.
+  if (opts.conversion) {
+    titre(`Percée des tubes — couche de contrôle / couche de mesure (seuil : ${SEUIL_PERCEE} %)`)
+    const percees = controlePercee(lecture)
+    if (!percees.length) note('Pas de couche de contrôle dans ce fichier : la percée ne peut pas être vérifiée.')
+    if (percees.length) entetes(['Point', 'Composé', 'Couche de mesure (µg)', 'Couche de contrôle (µg)', 'Contrôle / mesure (%)', 'Résultat retenu', 'Conclusion'])
+    for (const pt of percees) {
+      const alertes = pt.composes.filter((c) => c.percee)
+      const ratioSomme = pt.sommeCM > 0 ? (pt.sommeCC / pt.sommeCM) * 100 : null
+      for (const c of alertes) {
+        ligne(
+          [
+            pt.point,
+            c.parametre.nom,
+            c.cm ? brutFrancais(c.cm) : '-',
+            c.cc ? brutFrancais(c.cc) : '-',
+            c.ratio === null ? '-' : Number(c.ratio.toFixed(1)),
+            concentrationMinimale(c.masseTotale, pt.point, opts) ?? '-',
+            'Percée : prélèvement non conclusif pour ce composé',
+          ],
+          true,
+        )
+      }
+      ligne(
+        [
+          pt.point,
+          'Somme des composés quantifiés',
+          Number(pt.sommeCM.toPrecision(4)),
+          Number(pt.sommeCC.toPrecision(4)),
+          ratioSomme === null ? '-' : Number(ratioSomme.toFixed(1)),
+          '-',
+          pt.perceeGlobale ? 'Percée : prélèvement non conclusif pour tous les composés' : 'Conforme',
+        ],
+        pt.perceeGlobale,
+      )
+    }
+    r++
+    note(
+      "Critère : le prélèvement est valide lorsque la masse sur la couche de contrôle est inférieure à 5 % de celle de la couche de mesure, pour chaque composé et pour la somme des composés détectés. Au-delà, le prélèvement est non conclusif (pour le composé, ou pour l'ensemble si la somme dépasse) ; un résultat « ≥ X » calculé sur la somme des masses des deux couches peut être retenu (norme NF X 43-267 ; guide BRGM/INERIS 2016, § 7.5 b).",
+    )
+  }
+  r++
+  note(
+    'Référence : Guide pratique pour la caractérisation des gaz du sol et de l’air intérieur en lien avec une pollution des sols et/ou des eaux souterraines, BRGM RP-65870-FR / INERIS-DRC-16-156183-01401A, 2016.',
+  )
 }
 
 export async function construireClasseur(lecture: Lecture, opts: OptionsExport): Promise<Workbook> {
@@ -389,6 +658,8 @@ export async function construireClasseur(lecture: Lecture, opts: OptionsExport):
   wb.calcProperties.fullCalcOnLoad = true
   feuille(wb, 'Mis en forme', lecture, opts, false)
   feuille(wb, 'Valeurs guides ERM', lecture, opts, true)
+  feuilleAnalyse(wb, lecture, opts)
+  feuilleQualite(wb, lecture, opts)
   return wb
 }
 

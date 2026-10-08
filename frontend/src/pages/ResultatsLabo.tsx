@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type ReactNode } from 'react'
 import { convertir, debitMoyen, formatConcentration, lireNombre, volumeLitres, type Prelevement, type UniteSortie } from '../lib/resultats/calc'
+import { AnalyseApercu, ControleQualite, ExempleConversion } from '../components/ControleQualite'
 import { telechargerClasseur } from '../lib/resultats/export'
+import { qualifierAuto, type Qualification } from '../lib/resultats/qualite'
 import {
   legendeGuides,
   valeurGuideEn,
@@ -85,6 +87,8 @@ export default function ResultatsLabo() {
   const [repere, setRepere] = useState<Repere>('r1')
   const [surcharges, setSurcharges] = useState<Record<string, string>>({})
   const [parFamille, setParFamille] = useState<Record<string, string>>({})
+  const [qualifications, setQualifications] = useState<Record<string, Qualification>>({})
+  const [seuilDoublon, setSeuilDoublon] = useState(30)
   const [titre, setTitre] = useState('')
   const [sousTitre, setSousTitre] = useState('Echantillons prélevés par ERM le ')
   const [coucheApercu, setCoucheApercu] = useState<Couche>('CM')
@@ -120,6 +124,8 @@ export default function ResultatsLabo() {
       setAAppliquer(vide)
       setSurcharges({})
       setParFamille({})
+      setQualifications(qualifierAuto(l.points))
+      setSeuilDoublon(matrice === 'sol' ? 50 : 30)
       setCoucheApercu('CM')
     } catch (e) {
       setLecture(null)
@@ -243,6 +249,8 @@ export default function ResultatsLabo() {
           guides,
           libelleGuide: conversion ? `Valeur repère ${repere.toUpperCase()}` : 'Valeur de comparaison',
           legende: legendeGuides(matrice, options),
+          qualifications,
+          seuilDoublon,
         },
         `Tableau X - Résultats ${libelle}.xlsx`,
       )
@@ -384,6 +392,17 @@ export default function ResultatsLabo() {
               {avertissement && <p className="alerte" style={{ margin: '0.75rem 0 0' }}>{avertissement}</p>}
             </div>
           )}
+
+          {lecture && (
+            <ControleQualite
+              lecture={lecture}
+              qualifications={qualifications}
+              onQualifier={(nom, q) => setQualifications({ ...qualifications, [nom]: q })}
+              seuilDoublon={seuilDoublon}
+              onSeuilDoublon={setSeuilDoublon}
+              conversion={conversion}
+            />
+          )}
         </div>
       </section>
 
@@ -398,6 +417,8 @@ export default function ResultatsLabo() {
               échantillons, saisissez durée et débit sur la ligne « Valeurs à appliquer », puis appliquez-les à la sélection. Une colonne
               copiée depuis Excel peut aussi être collée directement dans la première case.
             </p>
+
+            <ExempleConversion lecture={lecture} prelevements={prelevements} unite={unite} />
 
             <div className="tableau-defile">
               <table className="tableau">
@@ -667,12 +688,19 @@ export default function ResultatsLabo() {
               </table>
             </div>
 
+            <AnalyseApercu
+              lecture={lecture}
+              qualifications={qualifications}
+              guides={guides}
+              conversion={conversion ? { prelevements, unite } : null}
+            />
+
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', marginTop: '1.5rem' }}>
               <button type="button" className="btn" onClick={exporter} disabled={export_ || !retenus.length}>
                 {export_ ? 'Préparation…' : 'Télécharger le tableau Excel'}
               </button>
               <span style={{ fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                « Tableau X - Résultats {libelle}.xlsx » — onglets « Mis en forme » et « Valeurs guides ERM ».
+                « Tableau X - Résultats {libelle}.xlsx » — onglets « Mis en forme », « Valeurs guides ERM », « Analyse par composé » et « Contrôle qualité ».
                 {sansVolume.length > 0 && <> Sans débit ni durée, aucune concentration pour : {sansVolume.map((p) => p.nom).join(', ')}.</>}
               </span>
             </div>
