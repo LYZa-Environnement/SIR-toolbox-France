@@ -37,6 +37,8 @@ export interface StatsCompose {
   frequenceDepassement: number | null
   ratioMaxGuide: number | null
   echantillonsDepassement: string[]
+  /** Results below an LQ that is itself above the comparison value. */
+  lqSuperieures: number
 }
 
 function quantile(tries: number[], q: number): number {
@@ -77,6 +79,7 @@ export function statistiques(valeurs: Valeur[], guide: number | null): StatsComp
     frequenceDepassement: guide !== null && valeurs.length ? (depassants.length / valeurs.length) * 100 : null,
     ratioMaxGuide: guide !== null && guide > 0 && max !== null ? max / guide : null,
     echantillonsDepassement: depassants.map((v) => v.echantillon),
+    lqSuperieures: guide === null ? 0 : valeurs.filter((v) => v.inferieur && v.valeur > guide).length,
   }
 }
 

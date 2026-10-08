@@ -48,6 +48,8 @@ const SYNONYMES: [RegExp, string][] = [
   // A lab's plain "COT" on soil is the raw-soil one, not the leachate one.
   [/^cot$/, 'cot sur sol brut'],
   [/^(cod )?cot (sur )?eluat$/, 'cot sur eluat'],
+  // "HAP : Somme de 4 HAP (2)" in the reference, "Somme de 4 HAP (calculée)" here.
+  [/^(hap )?somme (de |des )?(4|6) hap( \d)?( calculee)?$/, 'somme $3 hap'],
 ]
 
 export function normaliser(nom: string): string {
@@ -61,10 +63,14 @@ export function normaliser(nom: string): string {
   return n
 }
 
+/** A short parenthesis is a locant — "benzo(b)fluoranthène" — and part of
+ *  the name; dropping it would make benzo(b) and benzo(k) the same. */
+const LOCANT = /^[a-z0-9,\-\s]{1,8}$/i
+
 /** "Trichlorométhane (chloroforme)" answers to both names. */
 function cles(nom: string): string[] {
-  const sansParentheses = nom.replace(/\([^)]*\)/g, ' ')
-  const dedans = [...nom.matchAll(/\(([^)]*)\)/g)].map((m) => m[1])
+  const dedans = [...nom.matchAll(/\(([^)]*)\)/g)].map((m) => m[1]).filter((d) => !LOCANT.test(d.trim()))
+  const sansParentheses = nom.replace(/\(([^)]*)\)/g, (m, d: string) => (LOCANT.test(d.trim()) ? m : ' '))
   return [...new Set([normaliser(nom), normaliser(sansParentheses), ...dedans.map(normaliser)].filter((k) => k.length > 1))]
 }
 

@@ -29,6 +29,8 @@ import {
   type Qualification,
 } from './qualite.ts'
 import { statistiques, valeursCompose } from './stats.ts'
+import { dessinerCamembert, HAUTEUR, LARGEUR } from './camembert.ts'
+import { signatures } from './signatures.ts'
 
 export interface Legende {
   titre: string
@@ -84,10 +86,11 @@ interface Style {
   fmt?: string
   bord?: boolean
   wrap?: boolean
+  souligne?: boolean
 }
 
 function style(c: XCell, o: Style) {
-  c.font = { name: POLICE, size: o.taille ?? 10, bold: o.gras, italic: o.italique, color: { argb: o.couleur ?? ENCRE } }
+  c.font = { name: POLICE, size: o.taille ?? 10, bold: o.gras, italic: o.italique, underline: o.souligne, color: { argb: o.couleur ?? ENCRE } }
   if (o.fond) c.fill = plein(o.fond)
   c.alignment = { horizontal: o.h, vertical: 'middle', indent: o.indent, wrapText: o.wrap }
   if (o.fmt) c.numFmt = o.fmt
@@ -152,6 +155,25 @@ function regleDepassement(ws: Worksheet, r1: number, c1: number, r2: number, c2:
   })
 }
 
+/** Underlined (on top of the LQ italic grey) when the quantification limit
+ *  itself is above the comparison value: "<20" against 1 concludes nothing. */
+function regleLQSuperieure(ws: Worksheet, r1: number, c1: number, r2: number, c2: number, colGuide: number) {
+  if (r2 < r1 || c2 < c1) return
+  const coin = `${lettre(ws, c1)}${r1}`
+  const guide = `$${lettre(ws, colGuide)}${r1}`
+  ws.addConditionalFormatting({
+    ref: `${coin}:${lettre(ws, c2)}${r2}`,
+    rules: [
+      {
+        type: 'expression',
+        priority: 3,
+        formulae: [`AND(LEFT(TRIM(${coin}),1)="<",ISNUMBER(${guide}),IFERROR(_xlfn.NUMBERVALUE(MID(TRIM(${coin}),2,20),",")>${guide},FALSE))`],
+        style: { font: { underline: true, italic: true, color: { argb: GRIS_LQ } } },
+      },
+    ],
+  })
+}
+
 function ecrireGuide(ws: Worksheet, r: number, c: number, g: { valeur: number; source: string } | null | undefined) {
   ecrire(ws, r, c, g ? g.valeur : '-', { h: 'center', fmt: 'General' })
   ecrire(ws, r, c + 1, g ? g.source : '-', { h: 'center' })
@@ -211,7 +233,10 @@ function tableauSimple(ws: Worksheet, lecture: Lecture, opts: OptionsExport, ave
     r++
   }
   regleLQ(ws, premiere, colPremier, r - 1, largeur)
-  if (avecGuides) regleDepassement(ws, premiere, colPremier, r - 1, largeur, 3)
+  if (avecGuides) {
+    regleDepassement(ws, premiere, colPremier, r - 1, largeur, 3)
+    regleLQSuperieure(ws, premiere, colPremier, r - 1, largeur, 3)
+  }
   return r
 }
 
@@ -336,7 +361,12 @@ function blocConversion(
     r++
   }
   regleLQ(ws, premiere, 2 + decalage, r - 1, largeur)
-  if (avecGuides) points.forEach((_, k) => regleDepassement(ws, premiere, col(k, 1), r - 1, col(k, 1), 2))
+  if (avecGuides) {
+    points.forEach((_, k) => {
+      regleDepassement(ws, premiere, col(k, 1), r - 1, col(k, 1), 2)
+      regleLQSuperieure(ws, premiere, col(k, 1), r - 1, col(k, 1), 2)
+    })
+  }
   return r
 }
 
@@ -355,7 +385,10 @@ function legende(ws: Worksheet, r: number, opts: OptionsExport, avecGuides: bool
         : 'Concentration supérieure à la limite de quantification du laboratoire',
     ],
   ]
-  if (avecGuides) exemples.push([12, { gras: true, fond: GRIS_DEPASSEMENT }, 'Concentration supérieure à la valeur de comparaison'])
+  if (avecGuides) {
+    exemples.push([12, { gras: true, fond: GRIS_DEPASSEMENT }, 'Concentration supérieure à la valeur de comparaison'])
+    exemples.push(['<20', { italique: true, couleur: GRIS_LQ, souligne: true }, 'Limite de quantification supérieure à la valeur de comparaison : comparaison non concluante'])
+  }
   for (const [valeur, s, texte] of exemples) {
     ecrire(ws, r, c, valeur, { ...s, h: 'right', bord: false })
     ecrire(ws, r, c + 1, texte, { bord: false })
@@ -444,6 +477,7 @@ const COLONNES_ANALYSE: [string, number][] = [
   ['Nb dépassements', 13],
   ['Fréquence de dépassement (%)', 15],
   ['Maximum / valeur de comparaison', 15],
+  ['Nb LQ > valeur de comparaison', 13],
   ['Échantillons en dépassement', 40],
 ]
 
@@ -506,6 +540,7 @@ function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
       g ? s.depassements : '-',
       nombre(s.frequenceDepassement),
       nombre(s.ratioMaxGuide),
+      g ? s.lqSuperieures : '-',
       s.echantillonsDepassement.join(', ') || '-',
     ]
     const derniere = valeurs.length - 1
@@ -520,6 +555,77 @@ function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
         fond: depasse ? GRIS_DEPASSEMENT : undefined,
       })
     })
+    r++
+  }
+}
+
+// ---- Signatures of the organic families -------------------------------------
+
+/** Column index (1-based, fractional) at a given pixel offset from column A. */
+function colonneAuPixel(ws: Worksheet, px: number): number {
+  let x = 0
+  for (let c = 1; c < 200; c++) {
+    const largeur = (ws.getColumn(c).width ?? 9) * 7 + 5
+    if (x + largeur > px) return c - 1 + (px - x) / largeur
+    x += largeur
+  }
+  return 0
+}
+
+function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
+  const echantillons = lecture.points.filter((p) => !estControle(opts.qualifications[p.nom])).map((p) => p.nom)
+  const familles = signatures(lecture, echantillons)
+  const ws = wb.addWorksheet('Signatures', { views: [{ showGridLines: false }] })
+  ws.getColumn(1).width = 26
+  for (let c = 2; c <= 40; c++) ws.getColumn(c).width = 12
+  ecrire(ws, 1, 1, `${opts.titre} — signatures des composés organiques`, { gras: true, taille: 12, bord: false })
+  ecrire(
+    ws,
+    2,
+    1,
+    'Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés.',
+    { italique: true, taille: 9, bord: false },
+  )
+  if (!familles.length) {
+    ecrire(ws, 4, 1, 'Aucune famille de composés organiques avec au moins deux composés et un résultat quantifié.', { bord: false })
+    return
+  }
+  let r = 4
+  for (const f of familles) {
+    const ordre = f.composes.map((c) => c.nom)
+    const largeur = f.composes.length + 2
+    ws.mergeCells(r, 1, r, largeur)
+    ecrire(ws, r++, 1, f.famille.toUpperCase(), { gras: true, fond: GRIS_FAMILLE })
+    ws.getRow(r).height = 42
+    ecrire(ws, r, 1, 'Échantillon', { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center' })
+    f.composes.forEach((c, j) => ecrire(ws, r, j + 2, c.nom, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true }))
+    ecrire(ws, r, largeur, `Total (${f.unite})`, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true })
+    r++
+    for (const s of [...f.echantillons, f.ensemble]) {
+      const ensemble = s === f.ensemble
+      ecrire(ws, r, 1, s.echantillon, { gras: ensemble, italique: ensemble })
+      f.composes.forEach((c, j) => {
+        const part = s.parts.find((p) => p.nom === c.nom)
+        ecrire(ws, r, j + 2, part ? part.valeur / s.total : '-', { h: 'center', fmt: part ? '0.0%' : undefined, gras: ensemble })
+      })
+      ecrire(ws, r, largeur, Number(s.total.toPrecision(4)), { h: 'center', gras: ensemble })
+      r++
+    }
+    r++
+
+    // Pies: all samples together first, then one per sample, three per row.
+    const pies = [f.ensemble, ...f.echantillons]
+    const lignes = Math.ceil(HAUTEUR / 20) + 1
+    let dessinees = 0
+    pies.forEach((s, k) => {
+      const image = dessinerCamembert(s, ordre, f.unite, s === f.ensemble ? `${f.famille} — ensemble des échantillons` : s.echantillon)
+      if (!image) return
+      const id = wb.addImage({ base64: image, extension: 'png' })
+      const ligne = r + Math.floor(k / 3) * lignes
+      ws.addImage(id, { tl: { col: colonneAuPixel(ws, (k % 3) * (LARGEUR + 12)), row: ligne - 1 }, ext: { width: LARGEUR, height: HAUTEUR } })
+      dessinees++
+    })
+    r += dessinees ? Math.ceil(pies.length / 3) * lignes + 1 : 0
     r++
   }
 }
@@ -659,6 +765,7 @@ export async function construireClasseur(lecture: Lecture, opts: OptionsExport):
   feuille(wb, 'Mis en forme', lecture, opts, false)
   feuille(wb, 'Valeurs guides ERM', lecture, opts, true)
   feuilleAnalyse(wb, lecture, opts)
+  feuilleSignatures(wb, lecture, opts)
   feuilleQualite(wb, lecture, opts)
   return wb
 }

@@ -296,7 +296,7 @@ export function lireGrille(brute: Cell[][], mode: Mode, feuille?: string): Lectu
       cas: CAS.test(cas) ? cas : '',
       unite,
       versMicrogrammes: facteurMicrogrammes(unite),
-      somme: /^(somme|total|∑)|totaux?\b|\btotal\b|\(c5-c16\)|^xyl[eè]nes$/i.test(nom),
+      somme: /^(somme|total|∑)|totaux?\b|\btotal\b|\(c5-c16\)|^xyl[eè]nes$|^hydrocarbures? volatils/i.test(nom),
     }
     // A parameter no sample was analysed for (cancelled, "-" everywhere)
     // would only be an empty row in the table.

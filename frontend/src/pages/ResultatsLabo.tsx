@@ -3,6 +3,8 @@ import { convertir, debitMoyen, formatConcentration, lireNombre, volumeLitres, t
 import { AnalyseApercu, ControleQualite, ExempleConversion } from '../components/ControleQualite'
 import { telechargerClasseur } from '../lib/resultats/export'
 import { qualifierAuto, type Qualification } from '../lib/resultats/qualite'
+import { ajouterSommesCalculees } from '../lib/resultats/sommes'
+import { SignaturesApercu } from '../components/Signatures'
 import {
   legendeGuides,
   valeurGuideEn,
@@ -32,6 +34,14 @@ const CHAMPS: { champ: Champ; libelle: string; aide: string }[] = [
 ]
 
 const vide: Saisie = { duree: '', debitDebut: '', debitFin: '' }
+
+/** Usual values for soils, given as examples only (mg/kg MS). */
+function exempleFamille(famille: string): string | null {
+  if (/halog|cohv/i.test(famille)) return 'ex. 0,25 (usage sensible) / 1 (usage non sensible)'
+  if (/aromatiques volatils|\bcav\b|btex/i.test(famille)) return 'ex. benzène 0,25 (usage sensible) / 1 (usage non sensible)'
+  if (/polycycl|\bhap\b/i.test(famille)) return 'ex. naphtalène 5 (usage sensible) / 10 (usage non sensible)'
+  return null
+}
 const SANS_PRELEVEMENT: Prelevement = { duree: null, debitDebut: null, debitFin: null }
 
 function versPrelevement(s: Saisie | undefined): Prelevement {
@@ -58,7 +68,8 @@ async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
     nom,
     grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
   }))
-  return lireClasseur(feuilles, matrice === 'air' ? 'support' : 'tout')
+  const lecture = lireClasseur(feuilles, matrice === 'air' ? 'support' : 'tout')
+  return matrice === 'eau' ? ajouterSommesCalculees(lecture) : lecture
 }
 
 /** A file whose units belong to another matrix is most likely a wrong pick. */
@@ -161,7 +172,7 @@ export default function ResultatsLabo() {
   /** Families holding parameters without an ERM value — where the user
    *  fills in the project's own value (e.g. what ERM experience gave). */
   const famillesSansValeur = useMemo(() => {
-    if (!lecture) return []
+    if (!lecture || matrice !== 'sol') return []
     const parFam = new Map<string, { manquants: string[]; unite: string }>()
     for (const c of conversion ? (['CM', 'CC'] as const) : (['CM'] as const)) {
       for (const p of lecture.parametres[c]) {
@@ -174,7 +185,7 @@ export default function ResultatsLabo() {
       }
     }
     return [...parFam.entries()].map(([famille, e]) => ({ famille, ...e }))
-  }, [lecture, automatiques, conversion, unite])
+  }, [lecture, matrice, automatiques, conversion, unite])
 
   /** Retained value: per-parameter entry, else ERM value, else family entry. */
   const guides = useMemo(() => {
@@ -561,8 +572,8 @@ export default function ResultatsLabo() {
               <div className="card" style={{ margin: '1.25rem 0', maxWidth: '52rem' }}>
                 <strong>Valeurs à renseigner par famille</strong>
                 <p style={{ margin: '0.35rem 0 0.9rem', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-                  Ces composés n'ont pas de valeur guide ERM publiée
-                  {matrice === 'sol' ? ' (pour les COHV, CAV et HAP, la valeur retenue dépend de l’usage du site)' : ''}. Une valeur
+                  Ces composés n'ont pas de valeur guide ERM publiée ; pour les COHV, CAV et HAP, la valeur retenue dépend de
+                  l'usage du site (exemples indiqués à droite). Une valeur
                   saisie ici s'applique à tous les composés de la famille sans valeur guide ; une saisie composé par composé dans le
                   tableau reste prioritaire.
                 </p>
@@ -586,6 +597,7 @@ export default function ResultatsLabo() {
                           onChange={(e) => setParFamille({ ...parFamille, [f.famille]: e.target.value })}
                         />
                         <span>{f.unite}</span>
+                        {exempleFamille(f.famille) && <span className="famille-valeur__exemple">{exempleFamille(f.famille)}</span>}
                       </span>
                     </label>
                   ))}
@@ -669,16 +681,29 @@ export default function ResultatsLabo() {
                           const g = guides[pa.cle]
                           if (!conversion) {
                             const depasse = !!m && !m.inferieur && m.valeur !== null && !!g && m.valeur > g.valeur
+                            const lqSup = !!m && m.inferieur && m.valeur !== null && !!g && m.valeur > g.valeur
                             return (
-                              <td key={p.nom} className={m?.inferieur ? 'tableau__lq' : depasse ? 'tableau__depasse' : undefined}>
+                              <td
+                                key={p.nom}
+                                className={m?.inferieur ? `tableau__lq${lqSup ? ' tableau__lq-sup' : ''}` : depasse ? 'tableau__depasse' : undefined}
+                                title={lqSup ? 'Limite de quantification supérieure à la valeur de comparaison' : undefined}
+                              >
                                 {m ? virgule(m.brut) : '-'}
                               </td>
                             )
                           }
                           const c = convertir(m, pa, volumeLitres(prelevements[p.nom] ?? SANS_PRELEVEMENT), unite)
                           const depasse = !!c && !c.inferieur && !!g && c.valeur > g.valeur
+                          const lqSup = !!c && c.inferieur && !!g && c.valeur > g.valeur
                           return (
-                            <ValeursPoint key={p.nom} brut={m ? virgule(m.brut) : '-'} lq={!!m?.inferieur} conc={formatConcentration(c)} depasse={depasse} />
+                            <ValeursPoint
+                              key={p.nom}
+                              brut={m ? virgule(m.brut) : '-'}
+                              lq={!!m?.inferieur}
+                              conc={formatConcentration(c)}
+                              depasse={depasse}
+                              lqSup={lqSup}
+                            />
                           )
                         })}
                       </tr>
@@ -688,6 +713,11 @@ export default function ResultatsLabo() {
               </table>
             </div>
 
+            <p className="legende-apercu">
+              <span className="tableau__lq">&lt;0,10</span> inférieur à la LQ · <span className="tableau__depasse">12</span> supérieur à la
+              valeur de comparaison · <span className="tableau__lq tableau__lq-sup">&lt;20</span> LQ supérieure à la valeur de comparaison
+            </p>
+
             <AnalyseApercu
               lecture={lecture}
               qualifications={qualifications}
@@ -695,12 +725,14 @@ export default function ResultatsLabo() {
               conversion={conversion ? { prelevements, unite } : null}
             />
 
+            <SignaturesApercu lecture={lecture} qualifications={qualifications} />
+
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', marginTop: '1.5rem' }}>
               <button type="button" className="btn" onClick={exporter} disabled={export_ || !retenus.length}>
                 {export_ ? 'Préparation…' : 'Télécharger le tableau Excel'}
               </button>
               <span style={{ fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                « Tableau X - Résultats {libelle}.xlsx » — onglets « Mis en forme », « Valeurs guides ERM », « Analyse par composé » et « Contrôle qualité ».
+                « Tableau X - Résultats {libelle}.xlsx » — onglets « Mis en forme », « Valeurs guides ERM », « Analyse par composé », « Signatures » et « Contrôle qualité ».
                 {sansVolume.length > 0 && <> Sans débit ni durée, aucune concentration pour : {sansVolume.map((p) => p.nom).join(', ')}.</>}
               </span>
             </div>
@@ -751,11 +783,16 @@ function UnitesPoint({ unite, uniteBrute }: { unite: UniteSortie; uniteBrute: st
   )
 }
 
-function ValeursPoint({ brut, lq, conc, depasse }: { brut: string; lq: boolean; conc: string; depasse: boolean }) {
+function ValeursPoint({ brut, lq, conc, depasse, lqSup }: { brut: string; lq: boolean; conc: string; depasse: boolean; lqSup: boolean }) {
   return (
     <>
       <td className={lq ? 'tableau__lq' : undefined}>{brut}</td>
-      <td className={`tableau__conc${lq ? ' tableau__lq' : depasse ? ' tableau__depasse' : ''}`}>{conc}</td>
+      <td
+        className={`tableau__conc${lq ? ` tableau__lq${lqSup ? ' tableau__lq-sup' : ''}` : depasse ? ' tableau__depasse' : ''}`}
+        title={lqSup ? 'Limite de quantification supérieure à la valeur de comparaison' : undefined}
+      >
+        {conc}
+      </td>
     </>
   )
 }
