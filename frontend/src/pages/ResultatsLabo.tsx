@@ -288,7 +288,7 @@ export default function ResultatsLabo() {
         <div className="container">
           <p className="eyebrow">Résultats de laboratoire</p>
           <h1 style={{ maxWidth: '24ch' }}>
-            Mise en forme des résultats <em>d'analyses</em>
+            Mise en forme des résultats d'analyses
           </h1>
           <p className="lede">
             Chargez le fichier transmis par le laboratoire : les résultats sont restitués dans un tableau Excel au format des rapports
@@ -744,9 +744,9 @@ export default function ResultatsLabo() {
                 <strong>Export expert</strong>
                 <p>Le standard, plus des analyses fondées sur les méthodes recommandées :</p>
                 <ul>
-                  <li>statistiques sur données &lt;LQ — Kaplan-Meier, UCL95, valeurs atypiques (USEPA ProUCL) ;</li>
-                  <li>dégradation des COHV en moles — nombre de chlore moyen, part des produits de dégradation (USEPA, 1998) ;</li>
-                  <li>HAP — ratios d'origine (Yunker et al., 2002) et équivalent benzo(a)pyrène (FET INERIS, 2003) ;</li>
+                  <li>dégradation des COHV et des chlorobenzènes : stade par ouvrage, nombre de chlore moyen, composition en moles, figure (USEPA, 1998) ;</li>
+                  <li>HAP : profil par cycles, origine pétrogénique ou pyrolytique (Yunker et al., 2002), part cancérogène, équivalent benzo(a)pyrène (INERIS, 2003) ;</li>
+                  <li>hydrocarbures : répartition par classes de carbone et produits associés ; BTEX : indicateurs d'altération ;</li>
                   {matrice === 'sol' && <li>admissibilité ISDI par échantillon (arrêté du 12 décembre 2014, annexe II) ;</li>}
                   <li>références des méthodes.</li>
                 </ul>
