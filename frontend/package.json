@@ -8,16 +8,17 @@
     "build": "npm run donnees && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "veille": "node scripts/veille.mjs",
-    "donnees": "node scripts/veille.mjs && node scripts/baignade.mjs"
+    "donnees": "node scripts/baignade.mjs"
   },
   "dependencies": {
     "@turf/turf": "^7.4.0",
+    "exceljs": "^4.4.0",
     "leaflet": "^1.9.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-leaflet": "^5.0.0",
-    "react-router-dom": "^7.18.3"
+    "react-router-dom": "^7.18.3",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.22",

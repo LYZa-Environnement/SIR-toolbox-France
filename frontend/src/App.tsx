@@ -1,12 +1,14 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import Accueil from './pages/Accueil'
+import Conversion from './pages/Conversion'
 
 export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Accueil />} />
+        <Route path="/conversion" element={<Conversion />} />
 
         {/* The site was a consultancy showcase before becoming a data
             consultation platform; its former pages no longer exist, so old

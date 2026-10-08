@@ -4,7 +4,6 @@ import FriseAerienne from '../components/FriseAerienne'
 import RoseDesVents from '../components/RoseDesVents'
 import SelecteurParcelles from '../components/SelecteurParcelles'
 import ThemeSection from '../components/ThemeSection'
-import Veille from '../components/Veille'
 import { formatSurface, libelleParcelle } from '../lib/cadastre'
 import { RUBRIQUES } from '../themes'
 import type { Site } from '../types/site'
@@ -181,8 +180,6 @@ export default function Accueil() {
             )}
           </ThemeSection>
         ))}
-
-      <Veille />
 
       <section className="section section--deep">
         <div className="container">

@@ -43,6 +43,10 @@ export default function Footer() {
               Site Setting
             </Link>
             <br />
+            <Link to="/conversion" style={lien}>
+              Conversion labo (gaz du sol / air)
+            </Link>
+            <br />
             <a href={`${import.meta.env.BASE_URL}donnees-environnementales.html`} style={lien}>
               Données environnementales publiques
             </a>

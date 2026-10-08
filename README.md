@@ -27,14 +27,13 @@ npm install
 npm run dev
 ```
 
-`npm run build` collecte la veille environnementale et les données de
-baignade (`scripts/`), puis produit le site statique dans `frontend/dist/`.
+`npm run build` collecte les données de baignade (`scripts/`), puis produit le site statique dans `frontend/dist/`.
 
 ## Mise en ligne
 
 Le workflow `.github/workflows/deploy-pages.yml` publie le site sur GitHub
-Pages à chaque push sur `main`, et le reconstruit chaque matin pour tenir la
-veille à jour. Le préfixe d'URL suit automatiquement le nom du dépôt.
+Pages à chaque push sur `main`, et le reconstruit chaque matin pour tenir les
+données de baignade à jour. Le préfixe d'URL suit automatiquement le nom du dépôt.
 
 Le dossier `backend/` (FastAPI) n'est pas utilisé par le site en ligne ; il
 est conservé pour du traitement par lots (`backend/app/analytics/`).

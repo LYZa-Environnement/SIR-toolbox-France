@@ -12,14 +12,14 @@
   --color-ink: #0d2421;
   --color-muted: #4f625f;
   --color-border: #d3dcda;
-  --color-mint: #19e6be;
-  --color-mint-hover: #12cba7;
+  --color-mint: #00ffbe;
+  --color-mint-hover: #00e0a7;
   --color-accent: #00756a;
   --color-accent-ink: #ffffff;
   --color-accent-soft: #e2f8f2;
   --color-accent-deep: #0d2421;
   --color-deep-muted: #b5c8c4;
-  --color-accent-red: #19e6be;
+  --color-accent-red: #00ffbe;
   --color-accent-red-soft: #e2f8f2;
   --color-slate: #4a5a6b;
   --color-section: #f2f5f5;
@@ -338,4 +338,177 @@ a.card:hover {
 .badge--indeterminee {
   color: var(--level-indeterminee);
   background: var(--level-indeterminee-bg);
+}
+
+
+/* ---- Conversion labo ---- */
+
+.depot {
+  margin-top: 2rem;
+  max-width: 40rem;
+  padding: 1.75rem;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-section);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.depot--survol {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.alerte {
+  max-width: 40rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--level-elevee);
+  background: var(--level-elevee-bg);
+  color: var(--color-ink);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.champ input,
+.champ select,
+.tableau input:not([type='checkbox']) {
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.6rem;
+  min-width: 0;
+}
+
+.champ input:focus-visible,
+.champ select:focus-visible,
+.tableau input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 0;
+  border-color: var(--color-accent);
+}
+
+.tableau input[aria-invalid='true'] {
+  border-color: var(--level-elevee);
+  background: var(--level-elevee-bg);
+}
+
+.tableau-defile {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.tableau {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tableau th,
+.tableau td {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tableau thead th {
+  background: #cddcd1;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.tableau tbody th,
+.tableau thead th:first-child,
+.tableau .tableau__tous td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  font-weight: 600;
+  background: var(--color-surface);
+}
+
+.tableau thead th:first-child {
+  background: #cddcd1;
+}
+
+.tableau td input:not([type='checkbox']) {
+  width: 6.5rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.tableau tbody td,
+.tableau tbody th {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.tableau__tous td {
+  background: var(--color-accent-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.tableau .tableau__tous td:first-child {
+  background: var(--color-accent-soft);
+}
+
+.tableau__calcule {
+  color: var(--color-muted);
+  text-align: right !important;
+}
+
+.tableau__exclu td,
+.tableau__exclu th {
+  opacity: 0.45;
+}
+
+.tableau--resultats td {
+  text-align: center;
+}
+
+.tableau__unite {
+  font-weight: 400 !important;
+  font-size: 0.75rem !important;
+  background: var(--color-surface) !important;
+}
+
+.tableau__conc {
+  background: #e6e7e5;
+}
+
+.tableau__unite.tableau__conc {
+  background: #e6e7e5 !important;
+}
+
+.tableau__lq {
+  color: #8c8c8c;
+}
+
+.tableau__famille td {
+  background: #f2f2f2;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: sticky;
+  left: 0;
 }

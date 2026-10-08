@@ -1,6 +1,9 @@
 import { NavLink } from 'react-router-dom'
 
-const pages = [{ to: '/', label: 'Site Setting', end: true }]
+const pages = [
+  { to: '/', label: 'Site Setting', end: true },
+  { to: '/conversion', label: 'Conversion labo' },
+]
 
 // The two map tools are separate pages, not routes: they get buttons rather
 // than nav links, because that is how they are reached — one click from the
