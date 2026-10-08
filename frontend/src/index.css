@@ -752,3 +752,32 @@ a.card:hover {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
+
+.exports {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.export {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.export p,
+.export ul {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--color-muted);
+}
+
+.export ul {
+  padding-left: 1.1rem;
+}
+
+.export .btn {
+  margin-top: auto;
+}

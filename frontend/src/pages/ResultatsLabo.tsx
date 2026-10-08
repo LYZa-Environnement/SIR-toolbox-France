@@ -104,7 +104,7 @@ export default function ResultatsLabo() {
   const [titre, setTitre] = useState('')
   const [sousTitre, setSousTitre] = useState('Echantillons prélevés par ERM le ')
   const [coucheApercu, setCoucheApercu] = useState<Couche>('CM')
-  const [export_, setExport] = useState(false)
+  const [export_, setExport] = useState<'standard' | 'expert' | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
   const conversion = matrice === 'air'
@@ -244,9 +244,9 @@ export default function ResultatsLabo() {
     })
   }
 
-  async function exporter() {
+  async function exporter(expert: boolean) {
     if (!lecture || !matrice) return
-    setExport(true)
+    setExport(expert ? 'expert' : 'standard')
     try {
       await telechargerClasseur(
         { ...lecture, points: retenus },
@@ -263,11 +263,12 @@ export default function ResultatsLabo() {
           legende: legendeGuides(matrice, options),
           qualifications,
           seuilDoublon,
+          expert,
         },
-        `Tableau X - Résultats ${libelle}.xlsx`,
+        `Tableau X - Résultats ${libelle}${expert ? ' - expert' : ''}.xlsx`,
       )
     } finally {
-      setExport(false)
+      setExport(null)
     }
   }
 
@@ -728,15 +729,37 @@ export default function ResultatsLabo() {
 
             <SignaturesApercu lecture={lecture} qualifications={qualifications} />
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', marginTop: '1.5rem' }}>
-              <button type="button" className="btn" onClick={exporter} disabled={export_ || !retenus.length}>
-                {export_ ? 'Préparation…' : 'Télécharger le tableau Excel'}
-              </button>
-              <span style={{ fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                « Tableau X - Résultats {libelle}.xlsx » — onglets « Mis en forme », « Valeurs guides ERM », « Analyse par composé », « Signatures » et « Contrôle qualité ».
-                {sansVolume.length > 0 && <> Sans débit ni durée, aucune concentration pour : {sansVolume.map((p) => p.nom).join(', ')}.</>}
-              </span>
+            <div className="exports">
+              <div className="card export">
+                <strong>Export standard</strong>
+                <p>
+                  « Tableau X - Résultats {libelle}.xlsx » : mis en forme, valeurs guides ERM, analyse par composé, signatures et contrôle
+                  qualité.
+                </p>
+                <button type="button" className="btn" onClick={() => exporter(false)} disabled={!!export_ || !retenus.length}>
+                  {export_ === 'standard' ? 'Préparation…' : 'Télécharger le tableau Excel'}
+                </button>
+              </div>
+              <div className="card export">
+                <strong>Export expert</strong>
+                <p>Le standard, plus des analyses fondées sur les méthodes recommandées :</p>
+                <ul>
+                  <li>statistiques sur données &lt;LQ — Kaplan-Meier, UCL95, valeurs atypiques (USEPA ProUCL) ;</li>
+                  <li>dégradation des COHV en moles — nombre de chlore moyen, part des produits de dégradation (USEPA, 1998) ;</li>
+                  <li>HAP — ratios d'origine (Yunker et al., 2002) et équivalent benzo(a)pyrène (FET INERIS, 2003) ;</li>
+                  {matrice === 'sol' && <li>admissibilité ISDI par échantillon (arrêté du 12 décembre 2014, annexe II) ;</li>}
+                  <li>références des méthodes.</li>
+                </ul>
+                <button type="button" className="btn btn--ghost" onClick={() => exporter(true)} disabled={!!export_ || !retenus.length}>
+                  {export_ === 'expert' ? 'Préparation…' : 'Télécharger l\'export expert'}
+                </button>
+              </div>
             </div>
+            {sansVolume.length > 0 && (
+              <p style={{ fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                Sans débit ni durée, aucune concentration pour : {sansVolume.map((p) => p.nom).join(', ')}.
+              </p>
+            )}
           </div>
         </section>
       )}

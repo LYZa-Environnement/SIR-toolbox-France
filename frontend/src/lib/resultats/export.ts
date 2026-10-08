@@ -58,14 +58,16 @@ export interface OptionsExport {
   qualifications: Record<string, Qualification>
   /** Duplicate acceptance, relative percent difference. */
   seuilDoublon: number
+  /** Adds the expert sheets (statistics, degradation, PAH, ISDI). */
+  expert?: boolean
 }
 
 // Colours of the ERM Office theme, as resolved in the reference table.
-const VERT_ENTETE = 'FFCDDCD1' // accent 4 (#82A78D), tint 60 %
+export const VERT_ENTETE = 'FFCDDCD1' // accent 4 (#82A78D), tint 60 %
 const GRIS_CONC = 'FFE6E7E5' // accent 6 (#82887E), tint 80 %
-const GRIS_FAMILLE = 'FFF2F2F2'
-const GRIS_LQ = 'FF808080'
-const GRIS_DEPASSEMENT = 'FFBFBFBF'
+export const GRIS_FAMILLE = 'FFF2F2F2'
+export const GRIS_LQ = 'FF808080'
+export const GRIS_DEPASSEMENT = 'FFBFBFBF'
 const ENCRE = 'FF1C1C1C'
 const POLICE = 'Verdana'
 
@@ -75,7 +77,7 @@ const bordure: Partial<Borders> = { top: fin, bottom: fin, left: fin, right: fin
 
 const LIBELLE_COUCHE: Record<Couche, string> = { CM: 'Couche de mesure', CC: 'Couche de contrôle' }
 
-interface Style {
+export interface Style {
   gras?: boolean
   italique?: boolean
   taille?: number
@@ -97,7 +99,7 @@ function style(c: XCell, o: Style) {
   if (o.bord !== false) c.border = bordure
 }
 
-function ecrire(ws: Worksheet, r: number, c: number, valeur: XCell['value'], o: Style = {}) {
+export function ecrire(ws: Worksheet, r: number, c: number, valeur: XCell['value'], o: Style = {}) {
   const cell = ws.getCell(r, c)
   cell.value = valeur
   style(cell, o)
@@ -105,7 +107,7 @@ function ecrire(ws: Worksheet, r: number, c: number, valeur: XCell['value'], o: 
 }
 
 /** "<0.16" → "<0,16": the tables are read in French Excel. */
-function brutFrancais(m: Mesure): string | number {
+export function brutFrancais(m: Mesure): string | number {
   if (!m.inferieur && m.valeur !== null) return m.valeur
   return m.brut.replace(/\s/g, '').replace('.', ',')
 }
@@ -184,7 +186,7 @@ function ecrireNomParametre(ws: Worksheet, r: number, pa: Parametre, avecUnite =
   ecrire(ws, r, 1, nom, { italique: pa.somme, h: pa.somme ? 'right' : 'left', indent: 1 })
 }
 
-function ligneFamille(ws: Worksheet, r: number, famille: string, largeur: number) {
+export function ligneFamille(ws: Worksheet, r: number, famille: string, largeur: number) {
   ws.mergeCells(r, 1, r, largeur)
   ecrire(ws, r, 1, famille.toUpperCase(), { gras: true, fond: GRIS_FAMILLE })
 }
@@ -765,6 +767,10 @@ export async function construireClasseur(lecture: Lecture, opts: OptionsExport):
   feuilleAnalyse(wb, lecture, opts)
   feuilleSignatures(wb, lecture, opts)
   feuilleQualite(wb, lecture, opts)
+  if (opts.expert) {
+    const { ajouterFeuillesExpert } = await import('./expert/feuilles.ts')
+    ajouterFeuillesExpert(wb, lecture, opts)
+  }
   return wb
 }
 
