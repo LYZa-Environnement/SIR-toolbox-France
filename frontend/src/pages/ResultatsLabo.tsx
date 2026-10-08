@@ -733,7 +733,7 @@ export default function ResultatsLabo() {
               <div className="card export">
                 <strong>Export standard</strong>
                 <p>
-                  « Tableau X - Résultats {libelle}.xlsx » : mis en forme, valeurs guides ERM, analyse par composé, signatures et contrôle
+                  « Tableau X - Résultats {libelle}.xlsx » : mis en forme, valeurs guides ERM, analyse par composé et contrôle
                   qualité.
                 </p>
                 <button type="button" className="btn" onClick={() => exporter(false)} disabled={!!export_ || !retenus.length}>
@@ -747,7 +747,9 @@ export default function ResultatsLabo() {
                   <li>dégradation des COHV et des chlorobenzènes : stade par ouvrage, nombre de chlore moyen, composition en moles, figure (USEPA, 1998) ;</li>
                   <li>HAP : profil par cycles, origine pétrogénique ou pyrolytique (Yunker et al., 2002), part cancérogène, équivalent benzo(a)pyrène (INERIS, 2003) ;</li>
                   <li>hydrocarbures : répartition par classes de carbone et produits associés ; BTEX : indicateurs d'altération ;</li>
-                  {matrice === 'sol' && <li>admissibilité ISDI par échantillon (arrêté du 12 décembre 2014, annexe II) ;</li>}
+                    <li>signatures des composés organiques (camemberts par échantillon, ordonnés par similarité) ;</li>
+                  {matrice === 'sol' && <li>profils en profondeur : composé clé et familles par sondage, extension verticale (profondeur lue dans le nom, ex. « MW6 (4-4,5) ») ;</li>}
+                {matrice === 'sol' && <li>admissibilité ISDI par échantillon (arrêté du 12 décembre 2014, annexe II) ;</li>}
                   <li>références des méthodes.</li>
                 </ul>
                 <button type="button" className="btn btn--ghost" onClick={() => exporter(true)} disabled={!!export_ || !retenus.length}>

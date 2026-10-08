@@ -765,9 +765,10 @@ export async function construireClasseur(lecture: Lecture, opts: OptionsExport):
   feuille(wb, 'Mis en forme', lecture, opts, false)
   feuille(wb, 'Valeurs guides ERM', lecture, opts, true)
   feuilleAnalyse(wb, lecture, opts)
-  feuilleSignatures(wb, lecture, opts)
   feuilleQualite(wb, lecture, opts)
   if (opts.expert) {
+    // Signatures are part of the expert reading only.
+    feuilleSignatures(wb, lecture, opts)
     const { ajouterFeuillesExpert } = await import('./expert/feuilles.ts')
     ajouterFeuillesExpert(wb, lecture, opts)
   }
