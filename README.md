@@ -1,4 +1,4 @@
-# SIR toolbox France
+# SIR Toolbox France
 
 Outil interne ERM de consultation des données environnementales publiques, à
 l'échelle d'une adresse ou d'un ensemble de parcelles. Tout tourne dans le

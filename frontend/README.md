@@ -1,4 +1,4 @@
-# SIR toolbox France — frontend
+# SIR Toolbox France — frontend
 
 Site React (Vite + TypeScript). Voir le README à la racine du dépôt.
 
