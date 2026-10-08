@@ -1,0 +1,286 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { enFile } from '../lib/queue'
+import BarreProgression from './BarreProgression'
+import type { Suivi } from '../themes/common'
+import ThemeMap from './ThemeMap'
+import { nomFichier, telechargerCsv } from '../lib/tableau'
+import type { Indicator, LigneTableau, Level, Site, ThemeReport } from '../types/site'
+
+const LEVEL_STYLE: Record<Level, { color: string; background: string }> = {
+  favorable: { color: 'var(--level-faible)', background: 'var(--level-faible-bg)' },
+  attention: { color: 'var(--level-moderee)', background: 'var(--level-moderee-bg)' },
+  defavorable: { color: 'var(--level-elevee)', background: 'var(--level-elevee-bg)' },
+  inconnu: { color: 'var(--level-indeterminee)', background: 'var(--level-indeterminee-bg)' },
+}
+
+function IndicatorRow({ indicator }: { indicator: Indicator }) {
+  const style = LEVEL_STYLE[indicator.level ?? 'inconnu']
+  return (
+    <li style={{ padding: '0.7rem 0', borderTop: '1px solid rgba(13, 36, 33, 0.14)' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{indicator.label}</span>
+        <span
+          style={{
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            padding: '0.1rem 0.6rem',
+            borderRadius: '999px',
+            color: style.color,
+            background: style.background,
+            border: `1.5px solid ${style.color}`,
+          }}
+        >
+          {indicator.value}
+        </span>
+      </div>
+      {indicator.situation && (
+        <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--color-accent-deep)', fontWeight: 600 }}>{indicator.situation}</p>
+      )}
+      {indicator.detail && <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--color-muted)' }}>{indicator.detail}</p>}
+      {indicator.href && (
+        <a href={indicator.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.82rem' }}>
+          Consulter la fiche →
+        </a>
+      )}
+    </li>
+  )
+}
+
+/** Splits the indicator list into runs: plain rows, and consecutive rows
+ * sharing a `pliable` label, which become one collapsible block. */
+function enBlocs(indicateurs: Indicator[]): ({ type: 'simple'; indicateur: Indicator } | { type: 'pliable'; titre: string; indicateurs: Indicator[] })[] {
+  const blocs: ({ type: 'simple'; indicateur: Indicator } | { type: 'pliable'; titre: string; indicateurs: Indicator[] })[] = []
+  for (const indicateur of indicateurs) {
+    const dernier = blocs[blocs.length - 1]
+    if (indicateur.pliable) {
+      if (dernier && dernier.type === 'pliable' && dernier.titre === indicateur.pliable) dernier.indicateurs.push(indicateur)
+      else blocs.push({ type: 'pliable', titre: indicateur.pliable, indicateurs: [indicateur] })
+    } else {
+      blocs.push({ type: 'simple', indicateur })
+    }
+  }
+  return blocs
+}
+
+function BlocPliable({ titre, indicateurs, site }: { titre: string; indicateurs: Indicator[]; site: Site }) {
+  const [ouvert, setOuvert] = useState(false)
+  const lignes = indicateurs.map((indicateur) => indicateur.tableau).filter((ligne): ligne is LigneTableau => ligne !== undefined)
+  return (
+    <li style={{ padding: '0.7rem 0', borderTop: '1px solid rgba(13, 36, 33, 0.14)' }}>
+      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+      <button
+        type="button"
+        onClick={() => setOuvert((precedent) => !precedent)}
+        aria-expanded={ouvert}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.3rem 0.8rem',
+          borderRadius: '999px',
+          cursor: 'pointer',
+          fontSize: '0.85rem',
+          fontWeight: 700,
+          border: '1.5px solid var(--color-border)',
+          background: ouvert ? 'var(--color-accent)' : 'var(--color-surface)',
+          color: ouvert ? 'var(--color-accent-ink)' : 'var(--color-ink)',
+        }}
+      >
+        <span aria-hidden style={{ display: 'inline-block', transform: ouvert ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+          ▸
+        </span>
+        {titre} ({indicateurs.length})
+      </button>
+      {lignes.length > 0 && (
+        <button
+          type="button"
+          onClick={() => telechargerCsv(lignes, nomFichier(titre, site.citycode || 'site'))}
+          title="Télécharger la liste au format tableur (CSV)"
+          style={{
+            padding: '0.3rem 0.8rem',
+            borderRadius: '999px',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            border: '1.5px solid var(--color-border)',
+            background: 'var(--color-surface)',
+            color: 'var(--color-ink)',
+          }}
+        >
+          ⭳ Extraire en tableau
+        </button>
+      )}
+      </span>
+      {ouvert && (
+        <ul style={{ listStyle: 'none', padding: 0, margin: '0.4rem 0 0' }}>
+          {indicateurs.map((indicateur, i) => (
+            <IndicatorRow key={`${i}-${indicateur.label}`} indicator={indicateur} />
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
+
+interface Props {
+  id: string
+  titre: string
+  sousTitre: string
+  site: Site
+  build: (site: Site, suivi?: Suivi) => Promise<ThemeReport>
+  /** Rendered under the commentary — charts, timelines, anything the
+   * generic indicator list can't express. */
+  children?: (report: ThemeReport) => ReactNode
+}
+
+export default function ThemeSection({ id, titre, sousTitre, site, build, children }: Props) {
+  const [report, setReport] = useState<ThemeReport | null>(null)
+  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [progres, setProgres] = useState({ attendus: 0, faits: 0 })
+  const [enAttente, setEnAttente] = useState(false)
+  const containerRef = useRef<HTMLElement | null>(null)
+  const [visible, setVisible] = useState(false)
+
+  // Six rubriques firing dozens of API calls at once would hammer every
+  // upstream service for data most visitors never scroll to — each one waits
+  // until it is actually approached.
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node || visible) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setVisible(true)
+      },
+      { rootMargin: '300px' },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [visible])
+
+  // `state` and `report` must stay out of this effect's dependencies: they
+  // are written by the effect itself, so listing them would re-run it, and
+  // the cleanup would cancel the very request it just started — leaving the
+  // section loading forever.
+  useEffect(() => {
+    if (!visible) return
+    let cancelled = false
+    setReport(null)
+    setState('loading')
+    setProgres({ attendus: 0, faits: 0 })
+    setEnAttente(true)
+
+    // Counters held outside React state: they are incremented from inside the
+    // rubrique's own calls, where reading a stale render's value would lose
+    // increments that land in the same tick.
+    let attendus = 0
+    let faits = 0
+    const suivi: Suivi = {
+      attendu() {
+        attendus += 1
+        if (!cancelled) setProgres({ attendus, faits })
+      },
+      fait() {
+        faits += 1
+        if (!cancelled) setProgres({ attendus, faits })
+      },
+    }
+    // Queued rather than fired immediately: six rubriques starting at once
+    // saturate the browser's per-host connection limit (see lib/queue.ts).
+    enFile(() => {
+      // The queue runs this only once a slot frees up, which is exactly when
+      // the rubrique stops waiting and starts querying.
+      if (!cancelled) setEnAttente(false)
+      return build(site, suivi)
+    })
+      .then((result) => {
+        if (cancelled) return
+        setReport(result)
+        setState('idle')
+      })
+      .catch(() => {
+        if (!cancelled) setState('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [visible, site, build])
+
+  return (
+    <section ref={containerRef} id={id} className="section" style={{ borderTop: 'var(--border-w) solid var(--color-border)', scrollMarginTop: '1rem' }}>
+      <div className="container">
+        <h2 style={{ marginBottom: '0.3rem' }}>{titre}</h2>
+        <p className="lede" style={{ marginBottom: '1.75rem' }}>{sousTitre}</p>
+
+        {state === 'loading' && <BarreProgression faits={progres.faits} attendus={progres.attendus} enAttente={enAttente} />}
+        {state === 'error' && (
+          <div className="card" style={{ borderColor: 'var(--level-elevee)' }}>
+            <p style={{ margin: 0 }}>Les données de cette rubrique n'ont pas pu être récupérées. Réessayez plus tard.</p>
+          </div>
+        )}
+
+        {report && (
+          <>
+            <div className="grid grid--2" style={{ alignItems: 'start' }}>
+              <ThemeMap site={site} features={report.features} rayonM={report.rayonM} />
+              <div>
+                {report.commentaire.map((paragraph, i) => (
+                  <p key={i} style={{ fontSize: '0.95rem' }}>
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            {report.indicateurs.length > 0 && (
+              <div className="card" style={{ marginTop: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.05rem', marginBottom: '0.2rem' }}>Données relevées</h3>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {/* Indexed keys: the detailed lists can legitimately repeat a
+                      label — two installations of the same company, two sites
+                      with the same name — so the label is not a unique key. */}
+                  {enBlocs(report.indicateurs).map((bloc, i) =>
+                    bloc.type === 'pliable' ? (
+                      <BlocPliable key={`b${i}-${bloc.titre}`} titre={bloc.titre} indicateurs={bloc.indicateurs} site={site} />
+                    ) : (
+                      <IndicatorRow key={`${i}-${bloc.indicateur.label}`} indicator={bloc.indicateur} />
+                    ),
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {children?.(report)}
+
+            <div className="grid grid--2" style={{ marginTop: '1.5rem', alignItems: 'start' }}>
+              <div className="card">
+                <h3 style={{ fontSize: '1.05rem' }}>Sources des données</h3>
+                <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.85rem' }}>
+                  {report.sources.map((source) => (
+                    <li key={source.label} style={{ marginBottom: '0.5rem' }}>
+                      <a href={source.href} target="_blank" rel="noopener noreferrer">
+                        {source.label}
+                      </a>
+                      {source.note && <span style={{ color: 'var(--color-muted)' }}> — {source.note}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {report.lacunes.length > 0 && (
+                <div className="card" style={{ background: 'var(--level-indeterminee-bg)' }}>
+                  <h3 style={{ fontSize: '1.05rem' }}>Ce que cette rubrique ne couvre pas</h3>
+                  <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+                    {report.lacunes.map((gap) => (
+                      <li key={gap} style={{ marginBottom: '0.4rem' }}>
+                        {gap}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  )
+}
