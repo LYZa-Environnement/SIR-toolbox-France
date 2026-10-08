@@ -269,11 +269,11 @@ export function AnalyseApercu({
           <thead>
             <tr>
               <th>Composé</th>
-              <th>Quantifiés / analysés</th>
+              <th>Dépassements de la LQ / analysés</th>
               <th>Maximum</th>
               <th>Échantillon du max.</th>
               <th>Médiane</th>
-              <th>Moyenne (LQ/2)</th>
+              <th>Moyenne</th>
               <th>Valeur guide</th>
               <th>Dépassements</th>
               <th>Max / valeur guide</th>
@@ -289,7 +289,7 @@ export function AnalyseApercu({
                 <td>{n(s.max)}</td>
                 <td>{s.echantillonMax ?? '-'}</td>
                 <td>{n(s.mediane)}</td>
-                <td>{n(s.moyenneDemiLQ)}</td>
+                <td>{n(s.moyenne)}</td>
                 <td>{s.guide === null ? '-' : fr(s.guide)}</td>
                 <td className={s.depassements ? 'tableau__depasse' : undefined}>{s.guide === null ? '-' : s.depassements}</td>
                 <td>{n(s.ratioMaxGuide)}</td>

@@ -4,9 +4,8 @@
  * pull the distribution down).
  *
  * Distribution figures (min, max, mean, median, standard deviation, 90th
- * percentile) are computed on quantified results only; the "LQ/2" mean
- * substitutes half the quantification limit for results below it, the usual
- * convention when a mean over all samples is wanted.
+ * percentile) are computed on quantified results only, i.e. those above
+ * the quantification limit.
  */
 
 import { convertir, volumeLitres, type Prelevement, type UniteSortie } from './calc.ts'
@@ -31,7 +30,6 @@ export interface StatsCompose {
   mediane: number | null
   ecartType: number | null
   p90: number | null
-  moyenneDemiLQ: number | null
   guide: number | null
   depassements: number
   frequenceDepassement: number | null
@@ -59,7 +57,6 @@ export function statistiques(valeurs: Valeur[], guide: number | null): StatsComp
   const ecartType = n > 1 && moyenne !== null ? Math.sqrt(x.reduce((s, v) => s + (v - moyenne) ** 2, 0) / (n - 1)) : null
   const max = n ? tries[n - 1] : null
   const depassants = guide === null ? [] : q.filter((v) => v.valeur > guide)
-  const tous = valeurs.map((v) => (v.inferieur ? v.valeur / 2 : v.valeur))
   return {
     analyses: valeurs.length,
     quantifies: n,
@@ -73,7 +70,6 @@ export function statistiques(valeurs: Valeur[], guide: number | null): StatsComp
     mediane: n ? quantile(tries, 0.5) : null,
     ecartType,
     p90: n ? quantile(tries, 0.9) : null,
-    moyenneDemiLQ: tous.length ? tous.reduce((a, b) => a + b, 0) / tous.length : null,
     guide,
     depassements: depassants.length,
     frequenceDepassement: guide !== null && valeurs.length ? (depassants.length / valeurs.length) * 100 : null,

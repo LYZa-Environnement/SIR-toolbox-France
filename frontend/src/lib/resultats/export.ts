@@ -460,8 +460,8 @@ const COLONNES_ANALYSE: [string, number][] = [
   ['Composé', 34],
   ['Unité', 11],
   ['Nb analysés', 9],
-  ['Nb quantifiés', 10],
-  ['Fréquence de quantification (%)', 15],
+  ['Nb de dépassements de la LQ', 12],
+  ['Fréquence de dépassement de la LQ (%)', 15],
   ['LQ min', 9],
   ['LQ max', 9],
   ['Minimum', 10],
@@ -471,11 +471,10 @@ const COLONNES_ANALYSE: [string, number][] = [
   ['Médiane', 10],
   ['Écart-type', 10],
   ['Percentile 90', 10],
-  ['Moyenne (LQ/2)', 10],
   ['Valeur de comparaison', 13],
   ['Source', 8],
-  ['Nb dépassements', 13],
-  ['Fréquence de dépassement (%)', 15],
+  ['Nb dépassements de la valeur de comparaison', 15],
+  ['Fréquence de dépassement de la valeur de comparaison (%)', 15],
   ['Maximum / valeur de comparaison', 15],
   ['Nb LQ > valeur de comparaison', 13],
   ['Échantillons en dépassement', 40],
@@ -499,7 +498,7 @@ function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
     ws,
     3,
     1,
-    'Minimum, maximum, moyenne, médiane, écart-type et percentile 90 : sur les seuls résultats quantifiés. Moyenne (LQ/2) : sur tous les résultats, les valeurs <LQ remplacées par LQ/2.',
+    'Dépassement de la LQ : résultat quantifié. Minimum, maximum, moyenne, médiane, écart-type et percentile 90 : sur les seuls résultats supérieurs à la LQ.',
     { italique: true, taille: 9, bord: false },
   )
   const r0 = 5
@@ -534,7 +533,6 @@ function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
       nombre(s.mediane),
       nombre(s.ecartType),
       nombre(s.p90),
-      nombre(s.moyenneDemiLQ),
       g ? g.valeur : '-',
       g ? g.source : '-',
       g ? s.depassements : '-',
@@ -545,7 +543,7 @@ function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
     ]
     const derniere = valeurs.length - 1
     valeurs.forEach((v, j) => {
-      const depasse = j === 17 && typeof v === 'number' && v > 0
+      const depasse = COLONNES_ANALYSE[j][0] === 'Nb dépassements de la valeur de comparaison' && typeof v === 'number' && v > 0
       ecrire(ws, r, j + 1, v, {
         h: j === 0 || j === derniere ? 'left' : 'center',
         indent: j === 0 ? 1 : undefined,
