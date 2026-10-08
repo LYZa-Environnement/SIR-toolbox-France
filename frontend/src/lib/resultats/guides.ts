@@ -13,12 +13,10 @@ import donnees from '../../data/valeurs-guides.json' with { type: 'json' }
 import type { Parametre } from './parse.ts'
 
 export type Matrice = 'eau' | 'sol' | 'air'
-export type CasEau = 1 | 2 | 3
 export type ContexteMetaux = 'sur site' | 'hors site'
 export type Repere = 'r1' | 'r2' | 'r3'
 
 export interface OptionsGuides {
-  casEau: CasEau
   metaux: ContexteMetaux
   repere: Repere
 }
@@ -30,7 +28,6 @@ export interface ValeurGuide {
   source: string
 }
 
-export const REFERENTIELS = donnees
 
 // ---- Name matching -------------------------------------------------------
 
@@ -101,14 +98,9 @@ export function facteurUnite(de: string, vers: string): number | null {
 
 // ---- Values per matrix -----------------------------------------------------
 
-function eau(p: Parametre, o: OptionsGuides): ValeurGuide | null {
+function eau(p: Parametre): ValeurGuide | null {
   const e = trouver(donnees.eau.valeurs, p)
-  if (!e) return null
-  const rangs = donnees.eau.cas.find((c) => c.id === o.casEau)!.rangs as Record<string, number>
-  const ordre = Object.keys(rangs).sort((x, y) => rangs[x] - rangs[y])
-  const sources = e.sources as Record<string, number>
-  const code = ordre.find((s) => sources[s] !== undefined)
-  return code ? { valeur: sources[code], unite: donnees.eau.unite, source: code } : null
+  return e ? { valeur: e.valeur, unite: donnees.eau.unite, source: e.source } : null
 }
 
 const ELUAT = /[ée]luat|lixiv/i
@@ -142,7 +134,7 @@ function air(p: Parametre, o: OptionsGuides): ValeurGuide | null {
 }
 
 export function valeurGuide(matrice: Matrice, p: Parametre, o: OptionsGuides): ValeurGuide | null {
-  return matrice === 'eau' ? eau(p, o) : matrice === 'sol' ? sol(p, o) : air(p, o)
+  return matrice === 'eau' ? eau(p) : matrice === 'sol' ? sol(p, o) : air(p, o)
 }
 
 /** The guide value expressed in `unite` (the lab's, or the output one). */
@@ -157,9 +149,8 @@ export function valeurGuideEn(matrice: Matrice, p: Parametre, o: OptionsGuides, 
 
 export function legendeGuides(matrice: Matrice, o: OptionsGuides): { titre: string; sources: { code: string; libelle: string }[]; reference: string } {
   if (matrice === 'eau') {
-    const cas = donnees.eau.cas.find((c) => c.id === o.casEau)!
     return {
-      titre: `Valeurs de comparaison retenues — cas ${cas.id} : ${cas.libelle}`,
+      titre: 'Valeurs de comparaison retenues pour les eaux souterraines',
       sources: donnees.eau.sources,
       reference: `ERM, valeurs indicatives de comparaison pour les eaux souterraines (mise à jour du ${dateFr(donnees.eau.miseAJour)})`,
     }

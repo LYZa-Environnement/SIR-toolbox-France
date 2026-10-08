@@ -38,9 +38,9 @@ cd frontend
 node scripts/valeurs-guides.mjs "<eaux souterraines.xlsx>" "<sol.xlsx>" "<air intérieur R1 R2 R3.xlsx>"
 ```
 
-Pour les eaux souterraines, la valeur retenue est recalculée par l'outil à
-partir des rangs de la feuille « Hierarchisation » (rang 1 = source
-prioritaire pour le cas choisi).
+Pour les eaux souterraines, la valeur reprise est la colonne K (« Valeur de
+comparaison retenue ») de l'onglet « Eaux souterraines », avec sa source en
+colonne L.
 
 ## Développement
 

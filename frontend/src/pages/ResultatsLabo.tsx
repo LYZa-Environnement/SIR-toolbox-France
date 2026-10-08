@@ -3,9 +3,7 @@ import { convertir, debitMoyen, formatConcentration, lireNombre, volumeLitres, t
 import { telechargerClasseur } from '../lib/resultats/export'
 import {
   legendeGuides,
-  REFERENTIELS,
   valeurGuideEn,
-  type CasEau,
   type ContexteMetaux,
   type Matrice,
   type OptionsGuides,
@@ -83,7 +81,6 @@ export default function ResultatsLabo() {
   const [exclus, setExclus] = useState<Record<string, boolean>>({})
   const [aAppliquer, setAAppliquer] = useState<Saisie>(vide)
   const [unite, setUnite] = useState<UniteSortie>('µg/m³')
-  const [casEau, setCasEau] = useState<CasEau>(1)
   const [metaux, setMetaux] = useState<ContexteMetaux>('sur site')
   const [repere, setRepere] = useState<Repere>('r1')
   const [surcharges, setSurcharges] = useState<Record<string, string>>({})
@@ -97,7 +94,7 @@ export default function ResultatsLabo() {
   const conversion = matrice === 'air'
   const libelle = matrice ? libelleMatrice(matrice, milieu) : ''
   const titreParDefaut = `Tableau X - Résultats dans ${dansLa(libelle)}`
-  const options: OptionsGuides = { casEau, metaux, repere }
+  const options: OptionsGuides = { metaux, repere }
 
   function choisirMatrice(m: Matrice) {
     if (m === matrice) return
@@ -150,10 +147,10 @@ export default function ResultatsLabo() {
     const g: Record<string, { valeur: number; source: string } | null> = {}
     if (!lecture || !matrice) return g
     for (const c of ['CM', 'CC'] as const) {
-      for (const p of lecture.parametres[c]) g[p.cle] = valeurGuideEn(matrice, p, { casEau, metaux, repere }, conversion ? unite : p.unite)
+      for (const p of lecture.parametres[c]) g[p.cle] = valeurGuideEn(matrice, p, { metaux, repere }, conversion ? unite : p.unite)
     }
     return g
-  }, [lecture, matrice, casEau, metaux, repere, conversion, unite])
+  }, [lecture, matrice, metaux, repere, conversion, unite])
 
   /** Families holding parameters without an ERM value — where the user
    *  fills in the project's own value (e.g. what ERM experience gave). */
@@ -512,18 +509,6 @@ export default function ResultatsLabo() {
             </h2>
 
             <div className="grid grid--4" style={{ margin: '1.25rem 0 0.75rem', alignItems: 'end' }}>
-              {matrice === 'eau' && (
-                <label className="champ" style={{ gridColumn: 'span 2' }}>
-                  Cas de figure (eaux souterraines)
-                  <select value={casEau} onChange={(e) => setCasEau(Number(e.target.value) as CasEau)}>
-                    {REFERENTIELS.eau.cas.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        Cas {c.id} — {c.libelle}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
               {matrice === 'sol' && (
                 <>
                   <label className="champ">

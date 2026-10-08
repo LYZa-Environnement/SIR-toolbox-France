@@ -4,11 +4,9 @@
 // À relancer quand un classeur est mis à jour :
 //   node scripts/valeurs-guides.mjs <eaux souterraines.xlsx> <sol.xlsx> <air intérieur R1 R2 R3.xlsx>
 //
-// Seules les valeurs brutes sont reprises. Pour les eaux souterraines, la
-// valeur retenue est recalculée dans l'outil à partir des rangs de la feuille
-// « Hierarchisation » : ces rangs sont lus comme des rangs (rang 1 = source
-// prioritaire), ce que la formule LET du classeur ne fait pas pour les cas 2
-// et 3 (elle les lit comme une liste d'ordre).
+// Pour les eaux souterraines, la valeur reprise est celle de la colonne K
+// (« Valeur de comparaison retenue ») et sa source en colonne L, telles que
+// le classeur les calcule pour le cas de figure qui y est sélectionné.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -37,30 +35,19 @@ function eaux(f) {
   const wb = ouvrir(f)
   const ws = wb.Sheets['Eaux souterraines']
   const h = wb.Sheets['Hierarchisation']
-  const lettres = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
-  const colonnes = ['D', 'E', 'F', 'G', 'H', 'I', 'J']
-  const sources = lettres.map((l, i) => ({
+  const sources = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((l, i) => ({
     code: `(${l})`,
     libelle: texte(cellule(h, `A${5 + i}`)).replace(/^\([a-g]\)\s*/, ''),
-  }))
-  const cas = ['B', 'C', 'D'].map((col, i) => ({
-    id: i + 1,
-    libelle: texte(cellule(h, `${col}4`)).replace(/^CAS \d+ :\s*/i, ''),
-    rangs: Object.fromEntries(lettres.map((l, k) => [`(${l})`, nombre(cellule(h, `${col}${5 + k}`))])),
   }))
   const valeurs = []
   const fin = XLSX.utils.decode_range(ws['!ref']).e.r + 1
   for (let r = 5; r <= fin; r++) {
     const nom = texte(cellule(ws, `C${r}`))
-    if (!nom) continue
-    const parSource = {}
-    colonnes.forEach((col, k) => {
-      const v = nombre(cellule(ws, `${col}${r}`))
-      if (v !== null) parSource[`(${lettres[k]})`] = v
-    })
-    valeurs.push({ famille: texte(cellule(ws, `A${r}`)), cas: texte(cellule(ws, `B${r}`)), nom, sources: parSource })
+    const valeur = nombre(cellule(ws, `K${r}`))
+    if (!nom || valeur === null) continue
+    valeurs.push({ famille: texte(cellule(ws, `A${r}`)), cas: texte(cellule(ws, `B${r}`)), nom, valeur, source: texte(cellule(ws, `L${r}`)) })
   }
-  return { miseAJour: date(cellule(ws, 'J2')), unite: 'µg/L', fichier: path.basename(f), sources, cas, valeurs }
+  return { miseAJour: date(cellule(ws, 'J2')), unite: 'µg/L', fichier: path.basename(f), sources, valeurs }
 }
 
 // ---- Sols ---------------------------------------------------------------
