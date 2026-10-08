@@ -66,11 +66,57 @@ export function signatures(lecture: Lecture, echantillons: string[]): SignatureF
       famille,
       unite,
       composes,
-      echantillons: parEchantillon,
+      echantillons: ordonnerParSimilarite(parEchantillon),
       ensemble: { echantillon: 'Ensemble des échantillons', total: partsEnsemble.reduce((a, p) => a + p.valeur, 0), parts: partsEnsemble },
     })
   }
   return out
+}
+
+/** Bray-Curtis dissimilarity of two compositions in proportions:
+ *  0 for identical profiles, 1 for profiles sharing no compound. */
+export function brayCurtis(a: Signature, b: Signature): number {
+  const pa = new Map(a.parts.map((p) => [p.nom, p.valeur / a.total]))
+  const pb = new Map(b.parts.map((p) => [p.nom, p.valeur / b.total]))
+  let commun = 0
+  for (const [nom, v] of pa) commun += Math.min(v, pb.get(nom) ?? 0)
+  return 1 - commun
+}
+
+/**
+ * Orders samples so that similar signatures sit side by side: average-
+ * linkage agglomerative clustering on the Bray-Curtis dissimilarity, read
+ * off as the leaf order of the dendrogram. At each merge the two branches
+ * are flipped so that the samples meeting at the junction are the closest
+ * possible pair.
+ */
+export function ordonnerParSimilarite(sigs: Signature[]): Signature[] {
+  if (sigs.length < 3) return sigs
+  const d = sigs.map((a) => sigs.map((b) => brayCurtis(a, b)))
+  let groupes = sigs.map((_, i) => [i])
+  const liaison = (g: number[], h: number[]) => g.reduce((s, i) => s + h.reduce((t, j) => t + d[i][j], 0), 0) / (g.length * h.length)
+  while (groupes.length > 1) {
+    let meilleur = { i: 0, j: 1, v: Infinity }
+    for (let i = 0; i < groupes.length; i++) {
+      for (let j = i + 1; j < groupes.length; j++) {
+        const v = liaison(groupes[i], groupes[j])
+        if (v < meilleur.v) meilleur = { i, j, v }
+      }
+    }
+    const a = groupes[meilleur.i]
+    const b = groupes[meilleur.j]
+    const variantes = [
+      [...a, ...b],
+      [...a, ...[...b].reverse()],
+      [...[...a].reverse(), ...b],
+      [...[...a].reverse(), ...[...b].reverse()],
+    ]
+    const jonction = (v: number[]) => d[v[a.length - 1]][v[a.length]]
+    const fusion = variantes.reduce((m, v) => (jonction(v) < jonction(m) ? v : m))
+    groupes = groupes.filter((_, k) => k !== meilleur.i && k !== meilleur.j)
+    groupes.push(fusion)
+  }
+  return groupes[0].map((i) => sigs[i])
 }
 
 /** A stable colour per compound, the same in every pie of a family. */

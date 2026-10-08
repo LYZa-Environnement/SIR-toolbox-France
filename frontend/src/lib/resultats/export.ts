@@ -583,7 +583,7 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
     ws,
     2,
     1,
-    'Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés.',
+    'Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés. Les échantillons sont ordonnés par similarité de composition : classification hiérarchique (lien moyen) sur la distance de Bray-Curtis entre profils, 0 pour deux profils identiques, 1 pour deux profils sans composé commun.',
     { italique: true, taille: 9, bord: false },
   )
   if (!familles.length) {
