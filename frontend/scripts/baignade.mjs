@@ -69,7 +69,7 @@ async function recupere(url, options = {}) {
   try {
     const reponse = await fetch(url, {
       signal: controller.signal,
-      headers: { 'user-agent': 'ERM-Environnement' },
+      headers: { 'user-agent': 'SIR-toolbox-France' },
       ...options,
     })
     if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`)

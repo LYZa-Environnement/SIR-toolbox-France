@@ -22,7 +22,7 @@ export default function Nav() {
       <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: '4.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <NavLink to="/" style={{ textDecoration: 'none', color: 'var(--color-ink)', display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
           <span style={{ fontWeight: 800, fontSize: '1.45rem', letterSpacing: '0.02em' }}>ERM</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>Consultation de données environnementales</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>SIR toolbox France</span>
         </NavLink>
         <nav style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           {pages.map((page) => (

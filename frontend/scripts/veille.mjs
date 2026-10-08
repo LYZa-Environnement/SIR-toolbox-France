@@ -210,7 +210,7 @@ async function tente(source, essai) {
       // Several publishers answer 403 to a bare request: they expect the
       // header set a feed reader actually sends.
       headers: {
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36 ERM-Environnement-veille/1.0',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36 SIR-toolbox-France-veille/1.0',
         accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, */*;q=0.8',
         'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8',
       },

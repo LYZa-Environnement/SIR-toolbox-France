@@ -5,6 +5,6 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   // GitHub Pages serves a project site from /<repo>/, not the domain root;
   // the workflow passes the repository name so a rename needs no edit here.
-  base: process.env.GITHUB_PAGES ? `/${process.env.PAGES_BASE ?? 'ERM-Environnement'}/` : '/',
+  base: process.env.GITHUB_PAGES ? `/${process.env.PAGES_BASE ?? 'SIR-toolbox-France'}/` : '/',
   plugins: [react()],
 })

@@ -1,6 +1,6 @@
-# ERM — Consultation des données environnementales
+# SIR toolbox France
 
-Outil interne de consultation des données environnementales publiques, à
+Outil interne ERM de consultation des données environnementales publiques, à
 l'échelle d'une adresse ou d'un ensemble de parcelles. Tout tourne dans le
 navigateur : les pages interrogent directement les API publiques (Géorisques,
 Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
