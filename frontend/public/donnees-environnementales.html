@@ -445,9 +445,9 @@
     <div class="section">
       <div class="section-title">Fond de carte</div>
       <div class="layer-group">
-        <label class="layer-row"><input type="radio" name="base" value="scan25" checked><span class="lbl">Carte IGN 1:25 000</span></label>
+        <label class="layer-row"><input type="radio" name="base" value="scan25"><span class="lbl">Carte IGN 1:25 000</span></label>
         <label class="layer-row"><input type="radio" name="base" value="plan"><span class="lbl">Plan IGN</span></label>
-        <label class="layer-row"><input type="radio" name="base" value="photo"><span class="lbl">Photographies aériennes</span></label>
+        <label class="layer-row"><input type="radio" name="base" value="photo" checked><span class="lbl">Photographies aériennes</span></label>
         <label class="layer-row"><input type="radio" name="base" value="osm"><span class="lbl">OpenStreetMap</span></label>
         <label class="layer-row"><input type="radio" name="base" value="histo"><span class="lbl">Photos aériennes historiques</span></label>
         <label class="layer-row" id="histo-year-row" style="display:none;padding-left:24px;">
@@ -597,7 +597,8 @@
 (function(){
   "use strict";
 
-  var map = L.map('map', { zoomControl:false, minZoom:5, maxZoom:19 }).setView([48.8566, 2.3522], 13);
+  // Vue d'ouverture : la côte des havres du Cotentin, de Portbail au havre de la Vanlée.
+  var map = L.map('map', { zoomControl:false, minZoom:5, maxZoom:19 }).fitBounds([[48.86, -1.73], [49.36, -1.47]]);
   L.control.zoom({ position:'bottomright' }).addTo(map);
   L.control.scale({ position:'bottomleft', imperial:false, maxWidth:120 }).addTo(map);
 
@@ -902,10 +903,10 @@
       : "Les clichés disponibles semblent identiques à cet endroit à ce niveau de zoom (pas de nouvelle prise de vue) : rien à comparer pour l'instant.";
     return comparable;
   }
-  var currentBase = baseSCAN25;
+  var currentBase = basePhoto;
   var histoYearRow = document.getElementById('histo-year-row');
   var histoNote = document.getElementById('histo-note');
-  baseSCAN25.addTo(map);
+  basePhoto.addTo(map);
   function setBase(layer){
     map.removeLayer(currentBase);
     currentBase = layer;
