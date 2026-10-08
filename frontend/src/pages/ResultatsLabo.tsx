@@ -26,7 +26,6 @@ const MATRICES: { id: Matrice; titre: string; detail: string }[] = [
   { id: 'air', titre: 'Gaz du sol / air', detail: 'Masses par support converties en concentrations, comparées aux valeurs repères R1, R2, R3' },
 ]
 
-const LABORATOIRES = ['ALS / Wessling', 'Eurofins', 'SGS', 'Autre']
 
 const CHAMPS: { champ: Champ; libelle: string; aide: string }[] = [
   { champ: 'duree', libelle: 'Durée (min)', aide: 'Temps de prélèvement' },
@@ -84,7 +83,6 @@ function avertissementMatrice(matrice: Matrice, l: Lecture): string | null {
 export default function ResultatsLabo() {
   const [matrice, setMatrice] = useState<Matrice | null>(null)
   const [milieu, setMilieu] = useState<MilieuAir>('gaz du sol')
-  const [laboratoire, setLaboratoire] = useState('')
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [fichier, setFichier] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
@@ -255,7 +253,6 @@ export default function ResultatsLabo() {
           conversion,
           titre: titre || titreParDefaut,
           sousTitre,
-          laboratoire: laboratoire === 'Autre' ? '' : laboratoire,
           unite,
           prelevements,
           guides,
@@ -339,19 +336,6 @@ export default function ResultatsLabo() {
               <h2 className="etape">
                 <span>2</span> Fichier du laboratoire
               </h2>
-              <div className="grid grid--4" style={{ marginBottom: '1rem' }}>
-                <label className="champ">
-                  Laboratoire
-                  <select value={laboratoire} onChange={(e) => setLaboratoire(e.target.value)}>
-                    <option value="">Non précisé</option>
-                    {LABORATOIRES.map((l) => (
-                      <option key={l} value={l}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
               <div
                 className={`depot${survol ? ' depot--survol' : ''}`}
                 onDragOver={(e) => {

@@ -44,7 +44,6 @@ export interface OptionsExport {
   conversion: boolean
   titre: string
   sousTitre: string
-  laboratoire: string
   /** Gas / air only. */
   unite: UniteSortie
   prelevements: Record<string, Prelevement>
@@ -408,7 +407,6 @@ function legende(ws: Worksheet, r: number, opts: OptionsExport, avecGuides: bool
       { italique: true, taille: 9, bord: false },
     )
   }
-  if (opts.laboratoire) ecrire(ws, r++, c, `Analyses réalisées par le laboratoire ${opts.laboratoire}.`, { taille: 9, bord: false })
   if (avecGuides) {
     r++
     ecrire(ws, r++, c, opts.legende.titre, { gras: true, taille: 9, bord: false })
