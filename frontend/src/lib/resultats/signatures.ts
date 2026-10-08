@@ -40,7 +40,10 @@ export function signatures(lecture: Lecture, echantillons: string[]): SignatureF
   const familles = new Map<string, Parametre[]>()
   for (const p of lecture.parametres.CM) {
     if (!p.famille || NON_ORGANIQUE.test(p.famille) || p.somme || !/g\s*\//i.test(p.unite)) continue
-    familles.set(p.famille, [...(familles.get(p.famille) ?? []), p])
+    // The COHV degradation chains are one family here: a single pie shows
+    // the whole chlorinated-solvent signature, chains side by side.
+    const famille = /^COHV —/.test(p.famille) ? 'COHV' : p.famille
+    familles.set(famille, [...(familles.get(famille) ?? []), p])
   }
   const out: SignatureFamille[] = []
   for (const [famille, composes] of familles) {
@@ -120,7 +123,10 @@ export function ordonnerParSimilarite(sigs: Signature[]): Signature[] {
 }
 
 /** A stable colour per compound, the same in every pie of a family. */
-export const PALETTE = ['#0d2421', '#00a37e', '#82a78d', '#f2a541', '#c34a35', '#5c6bc0', '#2a8f9e', '#7c3f8f', '#d6572e', '#1f6fa8', '#446d5d', '#b5893a']
+export const PALETTE = [
+  '#0d2421', '#00a37e', '#82a78d', '#f2a541', '#c34a35', '#5c6bc0', '#2a8f9e', '#7c3f8f', '#d6572e', '#1f6fa8', '#446d5d', '#b5893a',
+  '#e377c2', '#8c564b', '#17becf', '#bcbd22', '#9467bd', '#6b8e23', '#d4a5a5', '#4b4b8f',
+]
 export const COULEUR_AUTRES = '#c8ccc9'
 export const SEUIL_AUTRES = 0.03
 
