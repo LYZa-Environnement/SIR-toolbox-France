@@ -50,6 +50,7 @@ const SYNONYMES: [RegExp, string][] = [
   [/^(pcb 7 congeneres|somme des 7 pcb|pcb totaux 7|somme des pcb 7|pcb somme des 7 congeneres)$/, 'pcb 7'],
   // A lab's plain "COT" on soil is the raw-soil one, not the leachate one.
   [/^cot$/, 'cot sur sol brut'],
+  [/^(cod )?cot (sur )?eluat$/, 'cot sur eluat'],
 ]
 
 export function normaliser(nom: string): string {
@@ -110,7 +111,15 @@ function eau(p: Parametre, o: OptionsGuides): ValeurGuide | null {
   return code ? { valeur: sources[code], unite: donnees.eau.unite, source: code } : null
 }
 
+const ELUAT = /[ée]luat|lixiv/i
+
 function sol(p: Parametre, o: OptionsGuides): ValeurGuide | null {
+  // A leachate result is not comparable to a raw-soil value: only the
+  // leachate criteria (COT sur éluat) apply to it.
+  if (ELUAT.test(p.famille) || ELUAT.test(p.nom)) {
+    const e = trouver(donnees.sol.organiques.filter((x) => ELUAT.test(x.nom)), p)
+    return e && e.valeur !== null ? { valeur: e.valeur, unite: donnees.sol.unite, source: e.source } : null
+  }
   const m = trouver(donnees.sol.metaux, p)
   if (m) {
     // Sur site, le bruit de fond prime ; hors site, le seuil de vigilance.

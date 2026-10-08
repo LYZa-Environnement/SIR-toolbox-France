@@ -581,3 +581,46 @@ a.card:hover {
 .tableau td input.tableau__guide {
   width: 5.5rem;
 }
+
+.famille-valeur {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.famille-valeur > span:first-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.famille-valeur small {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.famille-valeur__saisie {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.famille-valeur input {
+  width: 7rem;
+  font: inherit;
+  color: var(--color-ink);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.5rem;
+}
+
+.famille-valeur input[aria-invalid='true'] {
+  border-color: var(--level-elevee);
+  background: var(--level-elevee-bg);
+}

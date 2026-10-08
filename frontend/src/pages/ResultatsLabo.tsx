@@ -87,6 +87,7 @@ export default function ResultatsLabo() {
   const [metaux, setMetaux] = useState<ContexteMetaux>('sur site')
   const [repere, setRepere] = useState<Repere>('r1')
   const [surcharges, setSurcharges] = useState<Record<string, string>>({})
+  const [parFamille, setParFamille] = useState<Record<string, string>>({})
   const [titre, setTitre] = useState('')
   const [sousTitre, setSousTitre] = useState('Echantillons prélevés par ERM le ')
   const [coucheApercu, setCoucheApercu] = useState<Couche>('CM')
@@ -105,6 +106,7 @@ export default function ResultatsLabo() {
     setFichier('')
     setErreur(null)
     setSurcharges({})
+    setParFamille({})
   }
 
   async function charger(f: File | undefined) {
@@ -120,6 +122,7 @@ export default function ResultatsLabo() {
       setExclus({})
       setAAppliquer(vide)
       setSurcharges({})
+      setParFamille({})
       setCoucheApercu('CM')
     } catch (e) {
       setLecture(null)
@@ -142,23 +145,52 @@ export default function ResultatsLabo() {
   )
   const sansVolume = conversion ? retenus.filter((p) => volumeLitres(prelevements[p.nom]) === null) : []
 
-  /** Comparison value per parameter, in the row's unit or the output unit. */
-  const guides = useMemo(() => {
+  /** ERM value per parameter, in the row's unit or the output unit. */
+  const automatiques = useMemo(() => {
     const g: Record<string, { valeur: number; source: string } | null> = {}
     if (!lecture || !matrice) return g
+    for (const c of ['CM', 'CC'] as const) {
+      for (const p of lecture.parametres[c]) g[p.cle] = valeurGuideEn(matrice, p, { casEau, metaux, repere }, conversion ? unite : p.unite)
+    }
+    return g
+  }, [lecture, matrice, casEau, metaux, repere, conversion, unite])
+
+  /** Families holding parameters without an ERM value — where the user
+   *  fills in the project's own value (e.g. what ERM experience gave). */
+  const famillesSansValeur = useMemo(() => {
+    if (!lecture) return []
+    const parFam = new Map<string, { manquants: string[]; unite: string }>()
+    for (const c of conversion ? (['CM', 'CC'] as const) : (['CM'] as const)) {
+      for (const p of lecture.parametres[c]) {
+        // Only concentrations take a guide value — not a pH, a % or a °C.
+        if (automatiques[p.cle] || !/g\s*\//i.test(p.unite)) continue
+        const f = p.famille || 'Autres paramètres'
+        const e = parFam.get(f) ?? { manquants: [], unite: conversion ? unite : p.unite }
+        if (!e.manquants.includes(p.nom)) e.manquants.push(p.nom)
+        parFam.set(f, e)
+      }
+    }
+    return [...parFam.entries()].map(([famille, e]) => ({ famille, ...e }))
+  }, [lecture, automatiques, conversion, unite])
+
+  /** Retained value: per-parameter entry, else ERM value, else family entry. */
+  const guides = useMemo(() => {
+    const g: Record<string, { valeur: number; source: string } | null> = {}
+    if (!lecture) return g
     for (const c of ['CM', 'CC'] as const) {
       for (const p of lecture.parametres[c]) {
         const saisie = surcharges[p.cle]
         if (saisie !== undefined && saisie.trim() !== '') {
           const v = lireNombre(saisie)
           g[p.cle] = v === null ? null : { valeur: v, source: 'Saisie' }
-        } else {
-          g[p.cle] = valeurGuideEn(matrice, p, { casEau, metaux, repere }, conversion ? unite : p.unite)
+          continue
         }
+        const famille = lireNombre(parFamille[p.famille || 'Autres paramètres'] ?? '')
+        g[p.cle] = automatiques[p.cle] ?? (famille === null ? null : { valeur: famille, source: 'Saisie' })
       }
     }
     return g
-  }, [lecture, matrice, surcharges, casEau, metaux, repere, conversion, unite])
+  }, [lecture, surcharges, parFamille, automatiques])
 
   function modifier(nom: string, champ: Champ, valeur: string) {
     setSaisies((s) => ({ ...s, [nom]: { ...vide, ...s[nom], [champ]: valeur } }))
@@ -518,6 +550,42 @@ export default function ResultatsLabo() {
               Les valeurs guides sont retrouvées par n° CAS ou par nom. Chacune peut être corrigée dans le tableau ci-dessous : une
               valeur saisie remplace la valeur ERM (« - » pour n'en retenir aucune).
             </p>
+
+            {famillesSansValeur.length > 0 && (
+              <div className="card" style={{ margin: '1.25rem 0', maxWidth: '52rem' }}>
+                <strong>Valeurs à renseigner par famille</strong>
+                <p style={{ margin: '0.35rem 0 0.9rem', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+                  Ces composés n'ont pas de valeur guide ERM publiée
+                  {matrice === 'sol' ? ' (pour les COHV, CAV et HAP, la valeur retenue dépend de l’usage du site)' : ''}. Une valeur
+                  saisie ici s'applique à tous les composés de la famille sans valeur guide ; une saisie composé par composé dans le
+                  tableau reste prioritaire.
+                </p>
+                <div style={{ display: 'grid', gap: '0.6rem' }}>
+                  {famillesSansValeur.map((f) => (
+                    <label key={f.famille} className="famille-valeur">
+                      <span>
+                        <strong>{f.famille}</strong>
+                        <small>
+                          {f.manquants.length} composé{f.manquants.length > 1 ? 's' : ''} : {f.manquants.slice(0, 6).join(', ')}
+                          {f.manquants.length > 6 ? '…' : ''}
+                        </small>
+                      </span>
+                      <span className="famille-valeur__saisie">
+                        <input
+                          inputMode="decimal"
+                          value={parFamille[f.famille] ?? ''}
+                          placeholder="-"
+                          aria-label={`Valeur guide pour la famille ${f.famille}`}
+                          aria-invalid={!!parFamille[f.famille] && lireNombre(parFamille[f.famille]) === null}
+                          onChange={(e) => setParFamille({ ...parFamille, [f.famille]: e.target.value })}
+                        />
+                        <span>{f.unite}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid--4" style={{ margin: '1.25rem 0 1.5rem', alignItems: 'end' }}>
               <label className="champ" style={{ gridColumn: 'span 2' }}>
