@@ -1,7 +1,6 @@
 import type { Suivi } from './common'
 import type { Site, ThemeReport } from '../types/site'
 import { buildAir } from './air'
-import { buildClimat } from './climat'
 import { buildEau } from './eau'
 import { buildNature } from './nature'
 import { buildRisques } from './risques'
@@ -44,13 +43,6 @@ export const RUBRIQUES: Rubrique[] = [
     sousTitre:
       'Périmètres Natura 2000, zones naturelles d’intérêt écologique (ZNIEFF), parcs naturels et réserves autour du site, et les espèces effectivement observées à proximité.',
     build: buildNature,
-  },
-  {
-    id: 'climat',
-    titre: 'Changements climatiques',
-    sousTitre:
-      "Température et précipitations projetées à l'horizon 2050, journées de forte chaleur, inondation, feux de forêt et inscription au décret sur le recul du trait de côte.",
-    build: buildClimat,
   },
   {
     id: 'risques',

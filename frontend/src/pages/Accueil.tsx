@@ -60,7 +60,7 @@ export default function Accueil() {
           <h1 style={{ maxWidth: '20ch' }}>Ce que les données publiques disent d'une adresse</h1>
           <p className="lede">
             Saisissez une adresse : la plateforme interroge les bases publiques françaises et européennes — Géorisques, Hub'Eau, IGN, INPN,
-            GIS Sol, Copernicus — et restitue six lectures cartographiées de son environnement, avec les sources, les distances et les
+            GIS Sol, Copernicus — et restitue cinq lectures cartographiées de son environnement, avec les sources, les distances et les
             limites de chaque donnée.
           </p>
 

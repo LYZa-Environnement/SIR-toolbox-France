@@ -184,7 +184,7 @@ export default function ThemeSection({ id, titre, sousTitre, site, build, childr
         if (!cancelled) setProgres({ attendus, faits })
       },
     }
-    // Queued rather than fired immediately: six rubriques starting at once
+    // Queued rather than fired immediately: five rubriques starting at once
     // saturate the browser's per-host connection limit (see lib/queue.ts).
     enFile(() => {
       // The queue runs this only once a slot frees up, which is exactly when

@@ -2,9 +2,7 @@
  * Per-session memo for upstream lookups shared between rubriques.
  *
  * Several sources answer more than one rubrique for the same site — the ICPE
- * list feeds both "qualité de l'air" and "risques", the watercourse network
- * feeds both "eau" and "changements climatiques", the commune's GASPAR risks
- * feed both "changements climatiques" and "risques". Without this, each is
+ * list feeds both "qualité de l'air" and "risques". Without this, each is
  * fetched twice from the same endpoint within seconds, which is slower for
  * the reader and needlessly heavy on services that rate-limit.
  *
