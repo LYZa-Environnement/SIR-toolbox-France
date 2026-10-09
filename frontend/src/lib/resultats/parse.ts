@@ -24,7 +24,9 @@
 export type Cell = string | number | boolean | Date | null | undefined
 export type Couche = 'CM' | 'CC'
 /** `support`: sorbent tubes, masses to convert; `tout`: every row with a unit. */
-export type Mode = 'support' | 'tout'
+/** `support`: sorbent tubes, masses to convert; `concentration`: gas or air
+ *  already in µg/m³ (canisters, bags); `tout`: every row with a unit. */
+export type Mode = 'support' | 'concentration' | 'tout'
 
 export interface Mesure {
   /** The value exactly as the lab wrote it. */
@@ -62,9 +64,12 @@ export interface Lecture {
   lignesIgnorees: string[]
   /** Distinct units met on the data rows, to tell the matrix apart. */
   unites: string[]
+  /** How the sheet was read — `concentration` needs no conversion. */
+  mode: Mode
   feuille?: string
 }
 
+const UNITE_CONCENTRATION_AIR = /^\s*([nµμum]|mc)?g\s*\/\s*m\s*[3³]/i
 const UNITE_SUPPORT = /^\s*([nµμum]|mc)?g\s*\/\s*(support|supp?\.?|[ée]ch\.?|[ée]chantillon|tube|cartouche|badge|filtre|t[êe]te|m[ée]dia|cassette)\b/i
 const UNITE = /^\s*(([nµμum]|mc)?g\s*\/\s*\S+|%|‰|°\s*c|ms\/m|µs\/cm|us\/cm|mv|upH|unit[ée]s?\s*ph|ntu|ufc)/i
 const EN_TETE_UNITE = /^(unit[ée]s?|units?)$/i
@@ -72,6 +77,7 @@ const EN_TETE_CAS = /^(n°?\s*)?cas(\s*n°?)?$/i
 const CAS = /^\d{2,7}-\d{2}-\d$/
 const EN_TETE_ECHANTILLON = /d[ée]signation|nom d.?[ée]chantillon|sample\s*name|client\s*(id|name)/i
 const COLONNE_NON_ECHANTILLON = /^(n°?\s*)?cas\b|unit[ée]?s?\b|considered|comparison|valeur|source|\blq\b|limite|m[ée]thode|norme|incertitude/i
+const EN_TETE_TECHNIQUE = /^(lq|l\.\s*q\.?|limite de quantification|incertitude.*|m[ée]thode.*|n°?\s*cas|unit[ée]s?)$/i
 const CONTROLE = /zone\s+de\s+contr[ôo]le|couche\s+de\s+contr[ôo]le|\bzc\b/i
 const SUFFIXE_COUCHE = /[\s_-]+(CM|CC|ZM|ZC)$/i
 const SANS_VALEUR = /^(-|-\/-|n\.?\s*[ad]\.?|na|nd|n\.?\s*m\.?|\/|—|–)$/i
@@ -164,7 +170,8 @@ function separerUnitesIntegrees(grille: Cell[][]): Cell[][] {
 export function lireGrille(brute: Cell[][], mode: Mode, feuille?: string): Lecture {
   const grille = separerUnitesIntegrees(brute)
   const largeur = Math.max(0, ...grille.map((r) => r.length))
-  const estUnite = (c: Cell) => (mode === 'support' ? UNITE_SUPPORT.test(texte(c)) : UNITE.test(texte(c)))
+  const estUnite = (c: Cell) =>
+    mode === 'support' ? UNITE_SUPPORT.test(texte(c)) : mode === 'concentration' ? UNITE_CONCENTRATION_AIR.test(texte(c)) : UNITE.test(texte(c))
   // A bare "-" is the unit of pH and the like, but too common to locate
   // the unit column with: it only counts once the column is known.
   const estUniteRetenue = (c: Cell) => estUnite(c) || (mode === 'tout' && texte(c) === '-')
@@ -233,9 +240,15 @@ export function lireGrille(brute: Cell[][], mode: Mode, feuille?: string): Lectu
   }
   if (ligneNoms < 0) throw new LectureImpossible("La ligne portant les noms d'échantillons n'a pas été reconnue.")
 
+  // A column headed "LQ", "Méthode", "Incertitude"… on any header row, or
+  // whose name is a label ("Référence Client :"), is not a sample.
+  const enTeteNonEchantillon = (j: number) => {
+    for (let i = 0; i < premiere; i++) if (EN_TETE_TECHNIQUE.test(texte(grille[i][j]))) return true
+    return false
+  }
   const colonnes = candidates.filter((j) => {
     const entete = texte(grille[ligneNoms][j])
-    return entete && !COLONNE_NON_ECHANTILLON.test(entete)
+    return entete && !COLONNE_NON_ECHANTILLON.test(entete) && !/:\s*$/.test(entete) && !enTeteNonEchantillon(j)
   })
   if (!colonnes.length) throw new LectureImpossible("Aucune colonne d'échantillon n'a été reconnue.")
 
@@ -319,6 +332,7 @@ export function lireGrille(brute: Cell[][], mode: Mode, feuille?: string): Lectu
     coucheControle: parametres.CC.length > 0,
     lignesIgnorees,
     unites: [...unites],
+    mode,
     feuille,
   }
 }

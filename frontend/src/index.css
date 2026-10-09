@@ -781,3 +781,65 @@ a.card:hover {
 .export .btn {
   margin-top: auto;
 }
+
+/* Home page: one clickable card per tool. */
+.outil {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-ink);
+  text-decoration: none;
+  border-top: 4px solid var(--color-mint);
+  transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.outil:hover,
+.outil:focus-visible {
+  box-shadow: 0 8px 24px rgba(13, 36, 33, 0.12);
+  transform: translateY(-2px);
+  border-top-color: var(--color-accent);
+}
+.outil:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.outil__numero {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: var(--color-border);
+}
+.outil .eyebrow {
+  padding-right: 3rem;
+}
+.outil__titre {
+  margin: 0 0 0.6rem;
+  font-size: 1.6rem;
+}
+.outil__texte {
+  margin: 0 0 0.8rem;
+  color: var(--color-muted);
+}
+.outil__points {
+  margin: 0 0 1.2rem;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+}
+.outil__ouvrir {
+  margin-top: auto;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .outil {
+    transition: none;
+  }
+  .outil:hover {
+    transform: none;
+  }
+}

@@ -23,7 +23,7 @@ type MilieuAir = 'gaz du sol' | 'air ambiant' | 'air intérieur'
 const MATRICES: { id: Matrice; titre: string; detail: string }[] = [
   { id: 'eau', titre: 'Eaux souterraines', detail: 'Résultats en µg/l, mg/l… comparés aux valeurs ERM eaux souterraines' },
   { id: 'sol', titre: 'Sols', detail: 'Résultats en mg/kg MS comparés aux valeurs ERM sols (bruit de fond, note interministérielle, ISDI)' },
-  { id: 'air', titre: 'Gaz du sol / air', detail: 'Masses par support converties en concentrations, comparées aux valeurs repères R1, R2, R3' },
+  { id: 'air', titre: 'Gaz du sol / air', detail: 'Tubes (µg/support, convertis en concentrations) ou canisters (µg/m³), comparés aux valeurs repères R1, R2, R3' },
 ]
 
 
@@ -68,8 +68,18 @@ async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
     nom,
     grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
   }))
-  const lecture = ordonnerCOHV(lireClasseur(feuilles, matrice === 'air' ? 'support' : 'tout'))
-  return matrice === 'eau' ? ajouterSommesCalculees(lecture) : lecture
+  if (matrice !== 'air') {
+    const lecture = ordonnerCOHV(lireClasseur(feuilles, 'tout'))
+    return matrice === 'eau' ? ajouterSommesCalculees(lecture) : lecture
+  }
+  // Sorbent tubes (µg/support, to convert) first; failing that, results
+  // already in µg/m³ (canisters, bags), which need no conversion.
+  try {
+    return ordonnerCOHV(lireClasseur(feuilles, 'support'))
+  } catch (e) {
+    if (!(e instanceof LectureImpossible)) throw e
+    return ordonnerCOHV(lireClasseur(feuilles, 'concentration'))
+  }
 }
 
 /** A file whose units belong to another matrix is most likely a wrong pick. */
@@ -105,7 +115,8 @@ export default function ResultatsLabo() {
   const [export_, setExport] = useState<'standard' | 'expert' | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
-  const conversion = matrice === 'air'
+  // Conversion only for sorbent tubes: canister results come in µg/m³.
+  const conversion = matrice === 'air' && lecture?.mode !== 'concentration'
   const libelle = matrice ? libelleMatrice(matrice, milieu) : ''
   const titreParDefaut = `Tableau X - Résultats dans ${dansLa(libelle)}`
   const options: OptionsGuides = { metaux, repere }
@@ -256,7 +267,7 @@ export default function ResultatsLabo() {
           unite,
           prelevements,
           guides,
-          libelleGuide: conversion ? `Valeur repère ${repere.toUpperCase()}` : 'Valeur de comparaison',
+          libelleGuide: matrice === 'air' ? `Valeur repère ${repere.toUpperCase()}` : 'Valeur de comparaison',
           legende: legendeGuides(matrice, options),
           qualifications,
           seuilDoublon,
@@ -321,13 +332,15 @@ export default function ResultatsLabo() {
                   <option value="air intérieur">Air intérieur</option>
                 </select>
               </label>
-              <label className="champ">
-                Unité de sortie
-                <select value={unite} onChange={(e) => setUnite(e.target.value as UniteSortie)}>
-                  <option value="µg/m³">µg/m³</option>
-                  <option value="mg/m³">mg/m³</option>
-                </select>
-              </label>
+              {lecture?.mode !== 'concentration' && (
+                <label className="champ">
+                  Unité de sortie
+                  <select value={unite} onChange={(e) => setUnite(e.target.value as UniteSortie)}>
+                    <option value="µg/m³">µg/m³</option>
+                    <option value="mg/m³">mg/m³</option>
+                  </select>
+                </label>
+              )}
             </div>
           )}
 
@@ -381,6 +394,12 @@ export default function ResultatsLabo() {
                 {points.length} échantillon{points.length > 1 ? 's' : ''} · {lecture.parametres.CM.length} paramètres
                 {lecture.coucheControle ? ' · couche de mesure et couche de contrôle' : ''} · unités : {lecture.unites.join(', ')}
               </p>
+              {lecture.mode === 'concentration' && (
+                <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>
+                  Résultats fournis directement en µg/m³ (prélèvement par canister ou sac) : aucune conversion nécessaire, les colonnes en
+                  ppbV ne sont pas reprises.
+                </p>
+              )}
               {conversion && lecture.lignesIgnorees.length > 0 && (
                 <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
                   Lignes non converties (unité autre qu'une masse par support) : {lecture.lignesIgnorees.join(', ')}

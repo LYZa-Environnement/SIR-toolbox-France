@@ -40,20 +40,8 @@ export default function Footer() {
           <strong>Navigation</strong>
           <p style={{ marginTop: '0.5rem' }}>
             <Link to="/" style={lien}>
-              Site Setting
+              Accueil — les quatre outils
             </Link>
-            <br />
-            <Link to="/resultats-labo" style={lien}>
-              Résultats labo (mise en forme, valeurs guides)
-            </Link>
-            <br />
-            <a href={`${import.meta.env.BASE_URL}donnees-environnementales.html`} style={lien}>
-              Données environnementales publiques
-            </a>
-            <br />
-            <a href={`${import.meta.env.BASE_URL}creation-maillage.html`} style={lien}>
-              Création maillage
-            </a>
           </p>
         </div>
       </div>

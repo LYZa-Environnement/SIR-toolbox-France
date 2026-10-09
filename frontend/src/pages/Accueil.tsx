@@ -1,145 +1,94 @@
-import { useCallback, useEffect, useState } from 'react'
-import AddressSearch from '../components/AddressSearch'
-import FriseAerienne from '../components/FriseAerienne'
-import RoseDesVents from '../components/RoseDesVents'
-import SelecteurParcelles from '../components/SelecteurParcelles'
-import ThemeSection from '../components/ThemeSection'
-import { formatSurface, libelleParcelle } from '../lib/cadastre'
-import { RUBRIQUES } from '../themes'
-import type { Site } from '../types/site'
+import { Link } from 'react-router-dom'
 
-const STORAGE_KEY = 'erm.site'
+interface Outil {
+  titre: string
+  accroche: string
+  description: string
+  points: string[]
+  /** In-app route, or a standalone page under the site base. */
+  route?: string
+  page?: string
+}
 
-function loadSite(): Site | null {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as Site) : null
-  } catch {
-    return null
-  }
+const OUTILS: Outil[] = [
+  {
+    titre: 'Site Setting',
+    accroche: "L'environnement d'une adresse",
+    description:
+      'Saisissez une adresse ou des parcelles : eau, air, sol, nature et risques sont lus en direct dans les bases publiques et restitués sur carte.',
+    points: ['Géorisques, Hub’Eau, IGN, INPN', 'Distances et sources pour chaque donnée'],
+    route: '/site-setting',
+  },
+  {
+    titre: 'Résultats labo',
+    accroche: 'Mise en forme des résultats',
+    description:
+      'Chargez un rapport de laboratoire (eau, sol, gaz du sol / air ambiant) : tableau mis en forme, comparaison aux valeurs guides et export Excel.',
+    points: ['Conversion µg/support → µg/m³', 'Export standard ou expert'],
+    route: '/resultats-labo',
+  },
+  {
+    titre: 'Données environnementales publiques',
+    accroche: 'Carte interactive',
+    description:
+      'Explorez sur une carte les ouvrages, captages, sites et sols pollués, zones naturelles et photographies aériennes historiques.',
+    points: ['BRGM, BNPE, AtlaSanté', 'Remonter le temps (IGN)'],
+    page: 'donnees-environnementales.html',
+  },
+  {
+    titre: 'Création maillage',
+    accroche: "Plan d'échantillonnage",
+    description:
+      "Dessinez un maillage d'investigation sur parcelles : grille orientée, zones multiples, types de points, saisie de terrain et restitution.",
+    points: ['Fond cadastral et photo aérienne', 'Export des points'],
+    page: 'creation-maillage.html',
+  },
+]
+
+function Carte({ outil, numero }: { outil: Outil; numero: number }) {
+  const contenu = (
+    <>
+      <span className="outil__numero">{String(numero).padStart(2, '0')}</span>
+      <span className="eyebrow" style={{ marginBottom: '0.4rem' }}>
+        {outil.accroche}
+      </span>
+      <h2 className="outil__titre">{outil.titre}</h2>
+      <p className="outil__texte">{outil.description}</p>
+      <ul className="outil__points">
+        {outil.points.map((p) => (
+          <li key={p}>{p}</li>
+        ))}
+      </ul>
+      <span className="outil__ouvrir">Ouvrir l'outil →</span>
+    </>
+  )
+  return outil.route ? (
+    <Link to={outil.route} className="card outil">
+      {contenu}
+    </Link>
+  ) : (
+    <a href={`${import.meta.env.BASE_URL}${outil.page}`} className="card outil">
+      {contenu}
+    </a>
+  )
 }
 
 export default function Accueil() {
-  const [site, setSite] = useState<Site | null>(loadSite)
-  // The site goes through two steps: an address, then the parcels that give it
-  // a surface. Keeping them apart means the reader can come back and redraw
-  // the footprint without losing the address, and that a restored session
-  // lands on the readings rather than back in the selector.
-  const [etape, setEtape] = useState<'adresse' | 'parcelles' | 'lecture'>(() => (loadSite() ? 'lecture' : 'adresse'))
-
-  useEffect(() => {
-    try {
-      if (site) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(site))
-      else sessionStorage.removeItem(STORAGE_KEY)
-    } catch {
-      // A blocked sessionStorage only costs the convenience of keeping the
-      // address across a reload — never the page itself.
-    }
-  }, [site])
-
-  const handleSelect = useCallback((selected: Site) => {
-    setSite({ ...selected, adresseLat: selected.lat, adresseLon: selected.lon })
-    setEtape('parcelles')
-  }, [])
-
-  const handleValider = useCallback((valide: Site) => {
-    setSite(valide)
-    setEtape('lecture')
-  }, [])
-
-  const handleAnnuler = useCallback(() => {
-    setSite(null)
-    setEtape('adresse')
-  }, [])
-
   return (
-    <>
-      <section className="section">
-        <div className="container">
-          <p className="eyebrow">Plateforme de consultation de données</p>
-          <h1 style={{ maxWidth: '20ch' }}>Ce que les données publiques disent d'une adresse</h1>
-          <p className="lede">
-            Saisissez une adresse : la plateforme interroge les bases publiques françaises et européennes — Géorisques, Hub'Eau, IGN, INPN,
-            GIS Sol, Copernicus — et restitue cinq lectures cartographiées de son environnement, avec les sources, les distances et les
-            limites de chaque donnée.
-          </p>
-
-          <div style={{ maxWidth: '36rem', margin: '2rem 0 1rem' }}>
-            <AddressSearch onSelect={handleSelect} />
-          </div>
-
-          {site ? (
-            <div className="card" style={{ maxWidth: '36rem' }}>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-muted)' }}>Site étudié</p>
-              <strong style={{ fontSize: '1.05rem' }}>{site.label}</strong>
-              <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-                {site.parcelles && site.parcelles.length > 0 ? (
-                  <>
-                    {site.parcelles.length > 1 ? `${site.parcelles.length} parcelles` : 'Parcelle'}{' '}
-                    {site.parcelles.map(libelleParcelle).join(', ')} — {formatSurface(site.surfaceM2 ?? 0)} — commune {site.city} (
-                    {site.citycode})
-                  </>
-                ) : (
-                  <>
-                    Point d'adresse : {site.lat.toFixed(5)}, {site.lon.toFixed(5)} — commune {site.city} ({site.citycode})
-                  </>
-                )}
-              </p>
-              {etape === 'lecture' && (
-                <button
-                  type="button"
-                  className="btn btn--ghost"
-                  style={{ marginTop: '0.9rem' }}
-                  onClick={() => setEtape('parcelles')}
-                >
-                  Modifier l'emprise
-                </button>
-              )}
-            </div>
-          ) : (
-            <p style={{ margin: '0.5rem 0 0', fontSize: '0.92rem', color: 'var(--color-muted)', maxWidth: '36rem' }}>
-              L'ensemble des données présentées est consulté en direct depuis des sources officielles publiques.
-            </p>
-          )}
-
-          {site && etape === 'lecture' && (
-            <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginTop: '1.5rem' }}>
-              {RUBRIQUES.map((rubrique) => (
-                <a
-                  key={rubrique.id}
-                  href={`#${rubrique.id}`}
-                  className="badge"
-                  style={{ textDecoration: 'none', color: 'var(--color-accent)', background: 'var(--color-accent-soft)' }}
-                >
-                  {rubrique.titre}
-                </a>
-              ))}
-            </nav>
-          )}
+    <section className="section">
+      <div className="container">
+        <p className="eyebrow">ERM — boîte à outils</p>
+        <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
+        <p className="lede">
+          Quatre outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
+          d'analyses.
+        </p>
+        <div className="grid grid--2" style={{ marginTop: '2.5rem', gap: '1.25rem' }}>
+          {OUTILS.map((outil, i) => (
+            <Carte key={outil.titre} outil={outil} numero={i + 1} />
+          ))}
         </div>
-      </section>
-
-      {site && etape === 'parcelles' && <SelecteurParcelles site={site} onValider={handleValider} onAnnuler={handleAnnuler} />}
-
-      {site &&
-        etape === 'lecture' &&
-        RUBRIQUES.map((rubrique) => (
-          <ThemeSection
-            key={rubrique.id}
-            id={rubrique.id}
-            titre={rubrique.titre}
-            sousTitre={rubrique.sousTitre}
-            site={site}
-            build={rubrique.build}
-          >
-            {() => (
-              <>
-                {rubrique.id === 'air' && <RoseDesVents site={site} />}
-                {rubrique.id === 'sol' && <FriseAerienne site={site} />}
-              </>
-            )}
-          </ThemeSection>
-        ))}
-    </>
+      </div>
+    </section>
   )
 }
