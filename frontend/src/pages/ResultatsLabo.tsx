@@ -2,10 +2,12 @@ import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type Re
 import { convertir, debitMoyen, formatConcentration, lireNombre, volumeLitres, type Prelevement, type UniteSortie } from '../lib/resultats/calc'
 import { AnalyseApercu, ControleQualite, ExempleConversion } from '../components/ControleQualite'
 import { telechargerClasseur } from '../lib/resultats/export'
-import { qualifierAuto, type Qualification } from '../lib/resultats/qualite'
+import { estControle, qualifierAuto, type Qualification } from '../lib/resultats/qualite'
 import { ajouterSommesCalculees } from '../lib/resultats/sommes'
 import { ordonnerCOHV } from '../lib/resultats/cohv'
 import { SignaturesApercu } from '../components/Signatures'
+import { PositionsHydrauliques } from '../components/PositionsHydrauliques'
+import { positionsAuto, type Position } from '../lib/resultats/expert/amontAval'
 import {
   legendeGuides,
   valeurGuideEn,
@@ -109,6 +111,9 @@ export default function ResultatsLabo() {
   const [parFamille, setParFamille] = useState<Record<string, string>>({})
   const [qualifications, setQualifications] = useState<Record<string, Qualification>>({})
   const [seuilDoublon, setSeuilDoublon] = useState(30)
+  const [positions, setPositions] = useState<Record<string, Position>>({})
+  const [positionsDetectees, setPositionsDetectees] = useState<Record<string, Position>>({})
+  const [facteurAmontAval, setFacteurAmontAval] = useState(2)
   const [titre, setTitre] = useState('')
   const [sousTitre, setSousTitre] = useState('Echantillons prélevés par ERM le ')
   const [coucheApercu, setCoucheApercu] = useState<Couche>('CM')
@@ -146,6 +151,9 @@ export default function ResultatsLabo() {
       setSurcharges({})
       setParFamille({})
       setQualifications(qualifierAuto(l.points))
+      const detectees = positionsAuto(l.points)
+      setPositions(detectees)
+      setPositionsDetectees(detectees)
       setSeuilDoublon(matrice === 'sol' ? 50 : 30)
       setCoucheApercu('CM')
     } catch (e) {
@@ -272,6 +280,8 @@ export default function ResultatsLabo() {
           qualifications,
           seuilDoublon,
           expert,
+          positions: matrice === 'eau' ? positions : undefined,
+          facteurAmontAval,
         },
         `Tableau X - Résultats ${libelle}${expert ? ' - expert' : ''}.xlsx`,
       )
@@ -417,6 +427,17 @@ export default function ResultatsLabo() {
               seuilDoublon={seuilDoublon}
               onSeuilDoublon={setSeuilDoublon}
               conversion={conversion}
+            />
+          )}
+
+          {lecture && matrice === 'eau' && (
+            <PositionsHydrauliques
+              points={lecture.points.filter((p) => !estControle(qualifications[p.nom]))}
+              positions={positions}
+              auto={positionsDetectees}
+              onPositions={setPositions}
+              facteur={facteurAmontAval}
+              onFacteur={setFacteurAmontAval}
             />
           )}
         </div>
@@ -749,6 +770,7 @@ export default function ResultatsLabo() {
                 <ul>
                   <li>dégradation des COHV et des chlorobenzènes : stade par ouvrage, nombre de chlore moyen, composition en moles, figure (USEPA, 1998) ;</li>
                   <li>HAP : profil par cycles, origine pétrogénique ou pyrolytique (Yunker et al., 2002), part cancérogène, équivalent benzo(a)pyrène (INERIS, 2003) ;</li>
+                  {matrice === 'eau' && <li>amont / aval hydraulique : contribution du site par paramètre, rapport aval / amont, dépassements apparaissant en aval, figure (positions à renseigner plus haut) ;</li>}
                   <li>hydrocarbures : répartition par classes de carbone et produits associés ; BTEX : indicateurs d'altération ;</li>
                     <li>signatures des composés organiques (camemberts par échantillon, ordonnés par similarité) ;</li>
                   {matrice === 'sol' && <li>profils en profondeur : composé clé et familles par sondage, extension verticale (profondeur lue dans le nom, ex. « MW6 (4-4,5) ») ;</li>}

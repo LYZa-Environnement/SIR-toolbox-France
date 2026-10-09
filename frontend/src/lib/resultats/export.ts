@@ -31,6 +31,7 @@ import {
 import { statistiques, valeursCompose } from './stats.ts'
 import { dessinerCamembert, HAUTEUR, LARGEUR } from './camembert.ts'
 import { signatures } from './signatures.ts'
+import type { Position } from './expert/amontAval.ts'
 
 export interface Legende {
   titre: string
@@ -59,6 +60,10 @@ export interface OptionsExport {
   seuilDoublon: number
   /** Adds the expert sheets (statistics, degradation, PAH, ISDI). */
   expert?: boolean
+  /** Groundwater: hydraulic position of each sample, for the upgradient /
+   *  downgradient sheet, and the ratio taken as a real difference. */
+  positions?: Record<string, Position>
+  facteurAmontAval?: number
 }
 
 // Colours of the ERM Office theme, as resolved in the reference table.

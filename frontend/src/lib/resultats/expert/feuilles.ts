@@ -6,7 +6,7 @@
  */
 
 import type { Workbook, Worksheet } from 'exceljs'
-import { dessinerBarres, dessinerProfil, type Serie } from '../barres.ts'
+import { dessinerBarres, dessinerComparaison, dessinerProfil, type Serie } from '../barres.ts'
 import { convertir, volumeLitres } from '../calc.ts'
 import { ecrire, GRIS_DEPASSEMENT, GRIS_FAMILLE, GRIS_LQ, VERT_ENTETE, type OptionsExport, type Style } from '../export.ts'
 import type { Lecture, Mesure, Parametre } from '../parse.ts'
@@ -23,6 +23,7 @@ import {
   type Degradation,
   type Origine,
 } from './diagnostics.ts'
+import { analyseAmontAval, LECTURES, LIBELLES_POSITION, type Groupe, type Position } from './amontAval.ts'
 import { admissibiliteISDI } from './isdi.ts'
 import { analyseProfondeur, lireProfil, type SerieProfondeur, type Sondage } from './profondeur.ts'
 
@@ -452,6 +453,129 @@ function feuilleISDI(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   }
 }
 
+// ---- Groundwater: upgradient versus downgradient ------------------------------------------
+
+const COULEURS_POSITION: Record<Position, string> = { amont: '#2E75B6', droit: '#E69F00', aval: '#C0392B' }
+
+function feuilleAmontAval(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
+  if (!opts.positions) return
+  const a = analyseAmontAval(lecture, echantillonsRetenus(lecture, opts), opts.positions, opts.guides, opts.facteurAmontAval)
+  if (!a) return
+  const ws = wb.addWorksheet('Amont - aval', { views: [{ showGridLines: false }] })
+  const f = virgule(a.facteur)
+  ecrire(ws, 1, 1, `${opts.titre} — comparaison amont / aval hydraulique`, { gras: true, taille: 12, bord: false })
+  let r = 3
+  r = titre(ws, r, 'Comment lire cet onglet')
+  r = texte(ws, r, "• Les ouvrages en amont hydraulique représentent la qualité des eaux qui arrivent sur le site, hors de son influence : c'est l'état de référence (milieu témoin) auquel la méthodologie nationale de gestion des sites et sols pollués (2017) compare l'état des milieux. Une contribution du site se traduit par des concentrations plus élevées au droit ou en aval du site qu'en amont.")
+  r = texte(ws, r, "• Positions renseignées dans l'outil d'après le sens d'écoulement des eaux souterraines : à vérifier sur la carte piézométrique de la campagne, le sens pouvant varier selon les saisons.")
+  r = texte(ws, r, `• Comparaison des maxima : rapport = maximum au droit ou en aval / maximum en amont. Un écart est retenu à partir d'un facteur ${f} (rapport ≥ ${f} : hausse ; ≤ 1/${f} : baisse) ; en deçà, il reste du même ordre que l'incertitude analytique (de l'ordre de 30 % par résultat) et que la variabilité du prélèvement. Ce facteur est une convention d'usage, réglable dans l'outil, pas un seuil réglementaire.`)
+  r = texte(ws, r, `• Composé non quantifié en amont : rapport minorant (« > x »), calculé sur la limite de quantification amont ; la contribution du site n'est retenue que si la valeur au droit ou en aval dépasse ${f} fois cette LQ, sinon la lecture est non conclusive (LQ élevée par dilution ou effet de matrice). Même règle pour un composé quantifié en amont seulement. Seules les concentrations sont interprétées (pas le pH, la conductivité ni la température).`)
+  r = texte(ws, r, "• Couleurs : rouge = absent en amont, présent au droit ou en aval ; orange = hausse vers l'aval ; violet = produit de dégradation en hausse alors que ses parents baissent ; gris = comparable ; bleu = plus élevé en amont ; gris clair = non conclusif. Valeur grasse sur fond gris : supérieure à la valeur de comparaison. Le nom de l'échantillon où le maximum est atteint figure en commentaire de la cellule.", { italique: true })
+  r++
+
+  r = titre(ws, r, 'Réseau de surveillance')
+  for (const pos of ['amont', 'droit', 'aval'] as Position[]) {
+    r = texte(ws, r, `• ${LIBELLES_POSITION[pos]} : ${a.ouvrages[pos].length ? a.ouvrages[pos].join(', ') : 'aucun'}.`)
+  }
+  if (a.ouvrages.aval.length < 2) {
+    r = texte(ws, r, '• Moins de deux ouvrages en aval : le réseau est en deçà du schéma minimal de surveillance des installations classées (au moins un ouvrage en amont et deux en aval, non alignés — arrêté du 2 février 1998, art. 65). Lecture à conforter.', { gras: true })
+  }
+  r = texte(ws, r, "• Une campagne isolée donne un état ponctuel : le même écart retrouvé sur plusieurs campagnes, idéalement en hautes et basses eaux, est plus probant. La profondeur des crépines et l'aquifère capté doivent être comparables d'un ouvrage à l'autre.", { italique: true })
+  r++
+
+  r = titre(ws, r, 'Synthèse')
+  const par = (v: keyof typeof LECTURES) => a.lignes.filter((l) => l.verdict === v)
+  const noms = (ls: typeof a.lignes) => ls.map((l) => l.p.nom).join(', ')
+  const site = [...par('site'), ...par('hausse')].filter((l) => !l.degradation)
+  const filles = a.lignes.filter((l) => l.degradation)
+  const pl = (n: number) => (n > 1 ? 's' : '')
+  r = texte(ws, r, `• ${a.lignes.length} paramètre${pl(a.lignes.length)} quantifié${pl(a.lignes.length)} dans au moins un ouvrage positionné ; ${a.nonQuantifies} non quantifié${pl(a.nonQuantifies)} nulle part.`)
+  if (site.length) r = texte(ws, r, `• Contribution du site probable (${site.length}) : ${noms(site)}.`, { gras: true, couleur: 'FFC0392B' })
+  else r = texte(ws, r, '• Aucun paramètre ne montre de hausse marquée au droit ou en aval du site.', { gras: true })
+  if (filles.length) r = texte(ws, r, `• Produits de dégradation en hausse alors que leurs composés parents baissent (${filles.length}) : ${noms(filles)}. Signature compatible avec la dégradation d'un panache venu de l'amont, plutôt qu'avec un apport du site ; à confirmer avec l'onglet « Dégradation COHV » et les conditions du milieu.`)
+  if (par('comparable').length) r = texte(ws, r, `• Comparables en amont et en aval (${par('comparable').length}) : ${noms(par('comparable'))}.`)
+  const ext = [...par('baisse'), ...par('amont-seul')]
+  if (ext.length) r = texte(ws, r, `• Apport extérieur au site, depuis l'amont (${ext.length}) : ${noms(ext)}.`)
+  if (par('non-conclusif').length) r = texte(ws, r, `• Non conclusifs, limite de quantification trop élevée d'un côté (${par('non-conclusif').length}) : ${noms(par('non-conclusif'))}.`, { couleur: GRIS_LQ })
+  const apparait = a.lignes.filter((l) => l.depasseSite && !l.depasseAmont)
+  const deja = a.lignes.filter((l) => l.depasseAmont)
+  if (apparait.length) r = texte(ws, r, `• Dépassement de la valeur de comparaison apparaissant au droit ou en aval du site : ${noms(apparait)}.`, { gras: true })
+  if (deja.length) r = texte(ws, r, `• Valeur de comparaison déjà dépassée en amont (qualité dégradée avant le site) : ${noms(deja)}.`)
+  r++
+
+  const colonnes: [string, number][] = [
+    ['Paramètre', 30],
+    ['Unité', 8],
+    [opts.libelleGuide, 13],
+    ['Amont : maximum', 11],
+    ['Amont : quantifiés / analysés', 11],
+    ['Au droit : maximum', 11],
+    ['Au droit : quantifiés / analysés', 11],
+    ['Aval : maximum', 11],
+    ['Aval : quantifiés / analysés', 11],
+    ['Rapport (droit ou aval) / amont', 13],
+    ['Lecture', 64],
+    ['Valeur de comparaison', 34],
+  ]
+  entete(ws, r, colonnes)
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: r, showGridLines: false }]
+  r++
+  const cellule = (c: number, g: Groupe, guide: number | null) => {
+    if (!g.n) return ecrire(ws, r, c, '-', { h: 'center', couleur: GRIS_LQ })
+    if (!g.max) return ecrire(ws, r, c, g.lq === null ? '<LQ' : `<${virgule(Number(g.lq.toPrecision(2)))}`, { h: 'center', italique: true, couleur: GRIS_LQ })
+    const depasse = guide !== null && g.max.valeur > guide
+    ecrire(ws, r, c, Number(g.max.valeur.toPrecision(3)), { h: 'center', gras: depasse, fond: depasse ? GRIS_DEPASSEMENT : undefined })
+    ws.getCell(r, c).note = `Maximum : ${g.max.echantillon}`
+  }
+  for (const l of a.lignes) {
+    let c = 1
+    ecrire(ws, r, c++, l.p.nom, { gras: true, taille: 9 })
+    ecrire(ws, r, c++, l.p.unite, { h: 'center', taille: 9 })
+    ecrire(ws, r, c++, l.guide === null ? '-' : l.guide, { h: 'center', taille: 9 })
+    for (const g of [l.amont, l.droit, l.aval]) {
+      cellule(c++, g, l.guide)
+      ecrire(ws, r, c++, g.n ? `${g.quantifies} / ${g.n}` : '-', { h: 'center', taille: 9, couleur: GRIS_LQ })
+    }
+    ecrire(ws, r, c++, l.rapport ? `${l.rapport.borne ? '> ' : ''}${virgule(Number(l.rapport.valeur.toPrecision(2)))}` : '-', { h: 'center', gras: true })
+    const lec = LECTURES[l.verdict]
+    const remarque = l.degradation ? ` — mais ${l.degradation.join(', ')} ${l.degradation.length > 1 ? 'baissent' : 'baisse'} : dégradation d'un panache amont possible` : ''
+    ecrire(ws, r, c++, `${lec.libelle}${remarque}`, { taille: 9, wrap: true, fond: eclaircir(l.degradation ? '#B07AA1' : lec.couleur, 0.72) })
+    const vg =
+      l.guide === null
+        ? '-'
+        : l.depasseSite && !l.depasseAmont
+          ? 'Dépassement apparaissant au droit ou en aval'
+          : l.depasseAmont && l.depasseSite
+            ? 'Dépassée en amont comme au droit ou en aval'
+            : l.depasseAmont
+              ? 'Dépassée en amont seulement'
+              : 'Respectée'
+    ecrire(ws, r, c++, vg, { taille: 9, wrap: true, gras: l.depasseSite && !l.depasseAmont })
+    ws.getRow(r).height = l.degradation ? 40 : 26
+    r++
+  }
+  r++
+  const representes = (['amont', 'droit', 'aval'] as Position[]).filter((pos) => a.ouvrages[pos].length)
+  const enMicro = (g: Groupe, p: Parametre) =>
+    !g.n ? null : g.max ? { valeur: g.max.valeur * p.versMicrogrammes, lq: false } : g.lq ? { valeur: g.lq * p.versMicrogrammes, lq: true } : null
+  image(
+    wb,
+    ws,
+    r,
+    dessinerComparaison(
+      'Maximum par position hydraulique (de la plus forte contribution du site à la plus faible)',
+      representes.map((pos) => ({ nom: LIBELLES_POSITION[pos], couleur: COULEURS_POSITION[pos] })),
+      a.lignes.slice(0, 30).map((l) => ({
+        libelle: l.p.nom,
+        valeurs: Object.fromEntries(representes.map((pos) => [LIBELLES_POSITION[pos], enMicro(l[pos], l.p)])),
+        guide: l.guide === null ? null : l.guide * l.p.versMicrogrammes,
+      })),
+      'µg/l',
+    ),
+  )
+}
+
+
 // ---- References -----------------------------------------------------------------------------
 
 const REFERENCES: [string, string][] = [
@@ -463,6 +587,8 @@ const REFERENCES: [string, string][] = [
   ["INERIS, 2003, HAP — évaluation de la relation dose-réponse pour des effets cancérigènes (rapport INERIS-DRC-03-47026), facteurs d'équivalence toxique", 'https://www.ineris.fr/sites/default/files/contribution/Documents/HAP_4.pdf'],
   ['TPH Criteria Working Group, 1998, Volume 2 — Composition of Petroleum Mixtures (plages de carbone des produits pétroliers)', 'https://www.aehsfoundation.org/tph-working-group-series'],
   ["Arrêté du 12 décembre 2014 relatif aux conditions d'admission des déchets inertes dans les installations relevant des rubriques 2515, 2516, 2517 et 2760, annexe II", 'https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000029895647'],
+  ["Ministère de la Transition écologique et solidaire, 2017, Méthodologie nationale de gestion des sites et sols pollués (interprétation de l'état des milieux, comparaison au milieu témoin)", 'https://ssp-infoterre.brgm.fr/fr/methodologie/methodologie-nationale-gestion-sites-sols-pollues'],
+  ["Arrêté du 2 février 1998 relatif aux prélèvements et à la consommation d'eau ainsi qu'aux émissions de toute nature des installations classées, art. 65 (surveillance des eaux souterraines : au moins un ouvrage en amont et deux en aval)", 'https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000204891'],
   ["BRGM / INERIS, 2016, Guide pratique pour la caractérisation des gaz du sol et de l'air intérieur (BRGM RP-65870-FR)", 'http://infoterre.brgm.fr/rapports/RP-65870-FR.pdf'],
 ]
 
@@ -489,6 +615,7 @@ export function ajouterFeuillesExpert(wb: Workbook, lecture: Lecture, opts: Opti
         return c && !c.inferieur ? c.valeur : null
       }
     : undefined
+  if (!opts.conversion && /eau/i.test(opts.libelleMatrice)) feuilleAmontAval(wb, lecture, opts)
   const ds = degradations(lecture, echantillons, versMicrogrammesM3)
   const cohv = ds.filter((d) => d.chaine.nom !== 'Chlorobenzènes')
   const cb = ds.filter((d) => d.chaine.nom === 'Chlorobenzènes')

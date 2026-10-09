@@ -26,7 +26,7 @@
 import { normaliser } from '../guides.ts'
 import type { Lecture, Mesure, Parametre } from '../parse.ts'
 
-const compact = (nom: string) =>
+export const compact = (nom: string) =>
   normaliser(nom.replace(/\(([^)]{9,})\)/g, ' '))
     .replace(/ /g, '')
     .replace(/ethene/g, 'ethylene')
