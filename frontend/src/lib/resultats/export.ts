@@ -32,6 +32,7 @@ import { statistiques, valeursCompose } from './stats.ts'
 import { dessinerCamembert, HAUTEUR, LARGEUR } from './camembert.ts'
 import { signatures } from './signatures.ts'
 import type { Position } from './expert/amontAval.ts'
+import { libelleProfondeur, lireProfondeur } from './expert/profondeur.ts'
 
 export interface Legende {
   titre: string
@@ -222,6 +223,14 @@ function tableauSimple(ws: Worksheet, lecture: Lecture, opts: OptionsExport, ave
   points.forEach((p, k) => ecrire(ws, r0, colPremier + k, p.nom, { gras: true, fond: VERT_ENTETE, h: 'center', wrap: true }))
 
   let r = r0 + 1
+  // Soils: sampled interval under each sample, when the name gives it.
+  const profondeurs = /sol/i.test(opts.libelleMatrice) ? points.map((p) => lireProfondeur(p.nom)) : []
+  if (profondeurs.some(Boolean)) {
+    ecrire(ws, r, 1, 'Profondeur (m)', { gras: true, fond: VERT_ENTETE, h: 'center' })
+    for (let c = 2; c < colPremier; c++) ecrire(ws, r, c, '', { fond: VERT_ENTETE })
+    profondeurs.forEach((z, k) => ecrire(ws, r, colPremier + k, z ? libelleProfondeur(z) : '-', { fond: VERT_ENTETE, h: 'center' }))
+    r++
+  }
   let famille: string | null = null
   const premiere = r
   for (const pa of parametres) {

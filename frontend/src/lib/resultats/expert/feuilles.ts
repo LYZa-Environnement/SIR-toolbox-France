@@ -6,7 +6,7 @@
  */
 
 import type { Workbook, Worksheet } from 'exceljs'
-import { dessinerBarres, dessinerComparaison, dessinerProfil, type Serie } from '../barres.ts'
+import { dessinerBarres, dessinerComparaison, type Serie } from '../barres.ts'
 import { convertir, volumeLitres } from '../calc.ts'
 import { ecrire, GRIS_DEPASSEMENT, GRIS_FAMILLE, GRIS_LQ, VERT_ENTETE, type OptionsExport, type Style } from '../export.ts'
 import type { Lecture, Mesure, Parametre } from '../parse.ts'
@@ -25,9 +25,9 @@ import {
 } from './diagnostics.ts'
 import { analyseAmontAval, LECTURES, LIBELLES_POSITION, type Groupe, type Position } from './amontAval.ts'
 import { admissibiliteISDI } from './isdi.ts'
-import { analyseProfondeur, lireProfil, type SerieProfondeur, type Sondage } from './profondeur.ts'
 
 const nombre = (x: number | null | undefined, chiffres = 3) => (x === null || x === undefined || !Number.isFinite(x) ? '-' : Number(x.toPrecision(chiffres)))
+const virgule = (x: number | string) => String(x).replace(/(\d)\.(\d)/g, '$1,$2')
 
 /** Hex colour mixed with white: t = 0 the colour, t = 1 white. */
 function eclaircir(hex: string, t: number): string {
@@ -654,147 +654,6 @@ export function ajouterFeuillesExpert(wb: Workbook, lecture: Lecture, opts: Opti
   }
   feuilleHAP(wb, lecture, opts)
   feuilleHydrocarbures(wb, lecture, opts)
-  if (!opts.conversion && /sol/i.test(opts.libelleMatrice)) {
-    feuilleProfondeur(wb, lecture, opts)
-    feuilleISDI(wb, lecture, opts)
-  }
+  if (!opts.conversion && /sol/i.test(opts.libelleMatrice)) feuilleISDI(wb, lecture, opts)
   feuilleReferences(wb, opts)
-}
-
-// ---- Soil profiles against depth ----------------------------------------------------------
-
-const COULEURS_SONDAGES = ['#1F3864', '#C0392B', '#00A37E', '#E69F00', '#7C3F8F', '#2E75B6', '#8C564B', '#17BECF', '#6B8E23', '#E377C2']
-
-const virgule = (x: number | string) => String(x).replace(/(\d)\.(\d)/g, '$1,$2')
-const intervalle = (p: { haut: number; bas: number }) => virgule(p.haut === p.bas ? `${p.haut}` : `${p.haut}-${p.bas}`)
-
-function pointsProfil(serie: SerieProfondeur, sondage: Sondage) {
-  return sondage.echantillons.flatMap(({ echantillon, profondeur }) => {
-    const v = serie.valeurs[echantillon]
-    return v && v.valeur > 0 ? [{ haut: profondeur.haut, bas: profondeur.bas, valeur: v.valeur, lq: v.inferieur }] : []
-  })
-}
-
-function lectureSerie(serie: SerieProfondeur, sondage: Sondage, guide: number | null) {
-  return lireProfil(
-    sondage.echantillons.flatMap(({ echantillon, profondeur }) => {
-      const v = serie.valeurs[echantillon]
-      return v ? [{ echantillon, profondeur, v }] : []
-    }),
-    guide,
-    serie.unite,
-  )
-}
-
-function imageA(wb: Workbook, ws: Worksheet, r: number, col: number, dessin: ReturnType<typeof dessinerProfil>): number {
-  if (!dessin) return 0
-  const id = wb.addImage({ base64: dessin.image, extension: 'png' })
-  ws.addImage(id, { tl: { col, row: r - 1 }, ext: { width: dessin.largeur, height: dessin.hauteur } })
-  return Math.ceil(dessin.hauteur / 20) + 1
-}
-
-function feuilleProfondeur(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
-  const a = analyseProfondeur(lecture, echantillonsRetenus(lecture, opts), opts.guides)
-  if (!a) return
-  const ws = wb.addWorksheet('Profils en profondeur', { views: [{ showGridLines: false }] })
-  ws.getColumn(1).width = 16
-  for (let c = 2; c <= 24; c++) ws.getColumn(c).width = 12
-  ecrire(ws, 1, 1, `${opts.titre} — évolution des concentrations avec la profondeur`, { gras: true, taille: 12, bord: false })
-  let r = 3
-  r = titre(ws, r, 'Comment lire cet onglet')
-  r = texte(
-    ws,
-    r,
-    `• Sondage et profondeur lus dans le nom des échantillons, par exemple « MW6 (4-4,5) » : sondage MW6, prélevé de 4 à 4,5 m. ${a.sondages.length} sondage${a.sondages.length > 1 ? 's' : ''} avec au moins deux profondeurs : ${a.sondages.map((s) => `${s.nom} (${s.echantillons.length} échantillons)`).join(', ')}.`,
-  )
-  r = texte(ws, r, '• Graphiques : profondeur vers le bas, concentration en échelle logarithmique (les résultats couvrent plusieurs ordres de grandeur). Point plein : résultat quantifié ; point creux : inférieur à la LQ, placé à la LQ ; trait vertical : intervalle prélevé.')
-  r = texte(ws, r, "• Familles : total du laboratoire lorsqu'il est fourni (BTEX totaux, hydrocarbures C10-C40…), sinon somme des composés quantifiés. Tendance : corrélation de rang de Spearman entre profondeur et concentration (|ρ| ≥ 0,5 retenu comme tendance).")
-  r = texte(ws, r, "• Extension verticale : un composé encore quantifié, ou encore au-dessus de la valeur de comparaison, au fond d'un sondage n'est pas délimité en profondeur.", { gras: true })
-  r++
-
-  // 1. Key compound, all boreholes together, reading on the right.
-  if (a.cle) {
-    const cle = a.cle
-    r = bandeau(ws, r, `Composé clé : ${cle.parametre.nom}`, 16)
-    r = texte(ws, r, `Retenu comme composé clé pour son ${virgule(cle.raison)}.`)
-    if (a.suivants.length) r = texte(ws, r, `Autres composés marqués : ${a.suivants.map((s) => `${s.nom} (${s.score})`).join(' ; ')}.`, { italique: true })
-    r++
-    const hauteurImage = imageA(
-      wb,
-      ws,
-      r,
-      0,
-      dessinerProfil(
-        `${cle.parametre.nom} — profil par sondage`,
-        a.sondages.map((s, i) => ({ nom: s.nom, couleur: COULEURS_SONDAGES[i % COULEURS_SONDAGES.length], points: pointsProfil(cle.serie, s) })),
-        cle.serie.unite,
-        cle.guide !== null ? { valeur: cle.guide, libelle: `Valeur de comparaison ${virgule(Number(cle.guide.toPrecision(3)))}` } : null,
-      ),
-    )
-    let rt = r
-    for (const s of a.sondages) {
-      const l = lectureSerie(cle.serie, s, cle.guide)
-      ecrire(ws, rt++, 9, `Sondage ${s.nom}`, { gras: true, bord: false })
-      if (l.max) ecrire(ws, rt++, 9, `• Maximum : ${virgule(Number(l.max.valeur.toPrecision(3)))} ${cle.serie.unite} à ${intervalle(l.max.profondeur)} m.`, { taille: 9, bord: false })
-      for (const t of [l.tendance, l.extension, l.depassement]) if (t) ecrire(ws, rt++, 9, `• ${t}`, { taille: 9, bord: false })
-      rt++
-    }
-    r += Math.max(hauteurImage, rt - r) + 1
-  }
-
-  // 2. Per borehole: families and key compound, chart, table, reading.
-  for (const s of a.sondages) {
-    r = bandeau(ws, r, `Sondage ${s.nom} — profil par famille`, 16)
-    const series = [...a.familles, ...(a.cle ? [a.cle.serie] : [])]
-    const hauteurImage = imageA(
-      wb,
-      ws,
-      r,
-      0,
-      dessinerProfil(
-        `${s.nom} — familles de composés et composé clé`,
-        series.map((x) => ({ nom: x.nom, couleur: x.couleur, points: pointsProfil(x, s) })).filter((x) => x.points.length),
-        'mg/kg MS',
-      ),
-    )
-    const c0 = 9
-    const colonnes: [string, number][] = [['Profondeur (m)', 12], ...series.map((x): [string, number] => [`${x.nom} (mg/kg MS)`, 12])]
-    entete(ws, r, colonnes, c0)
-    let rt = r + 1
-    const r1 = rt
-    for (const { echantillon, profondeur } of s.echantillons) {
-      ecrire(ws, rt, c0, intervalle(profondeur).replace('-', ' – '), { h: 'center', gras: true })
-      series.forEach((x, j) => {
-        const v = x.valeurs[echantillon]
-        ecrire(ws, rt, c0 + 1 + j, !v ? '-' : v.inferieur ? `<${virgule(Number(v.valeur.toPrecision(2)))}` : Number(v.valeur.toPrecision(3)), {
-          h: 'center',
-          italique: !!v?.inferieur,
-          couleur: v?.inferieur ? GRIS_LQ : undefined,
-        })
-      })
-      rt++
-    }
-    series.forEach((x, j) => {
-      const l = ws.getColumn(c0 + 1 + j).letter
-      ws.addConditionalFormatting({
-        ref: `${l}${r1}:${l}${rt - 1}`,
-        rules: [
-          {
-            type: 'colorScale',
-            priority: 1,
-            cfvo: [{ type: 'min' }, { type: 'max' }],
-            color: [{ argb: 'FFFFFFFF' }, { argb: eclaircir(x.couleur, 0.35) }],
-          },
-        ],
-      })
-    })
-    rt++
-    ecrire(ws, rt++, c0, 'Lecture', { gras: true, bord: false })
-    for (const x of series) {
-      const l = lectureSerie(x, s, x === a.cle?.serie ? a.cle.guide : null)
-      const morceaux = [l.max ? `Maximum à ${intervalle(l.max.profondeur)} m.` : null, l.tendance, l.extension, l.depassement].filter(Boolean).join(' ')
-      ecrire(ws, rt++, c0, `• ${x.nom} : ${morceaux}`, { taille: 9, bord: false })
-    }
-    r += Math.max(hauteurImage, rt - r) + 2
-  }
 }

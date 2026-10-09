@@ -8,6 +8,7 @@ import { ordonnerCOHV } from '../lib/resultats/cohv'
 import { SignaturesApercu } from '../components/Signatures'
 import { PositionsHydrauliques } from '../components/PositionsHydrauliques'
 import { positionsAuto, type Position } from '../lib/resultats/expert/amontAval'
+import { libelleProfondeur, lireProfondeur, ordonnerParProfondeur } from '../lib/resultats/expert/profondeur'
 import {
   legendeGuides,
   valeurGuideEn,
@@ -72,7 +73,7 @@ async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
   }))
   if (matrice !== 'air') {
     const lecture = ordonnerCOHV(lireClasseur(feuilles, 'tout'))
-    return matrice === 'eau' ? ajouterSommesCalculees(lecture) : lecture
+    return matrice === 'eau' ? ajouterSommesCalculees(lecture) : ordonnerParProfondeur(lecture)
   }
   // Sorbent tubes (µg/support, to convert) first; failing that, results
   // already in µg/m³ (canisters, bags), which need no conversion.
@@ -675,6 +676,15 @@ export default function ResultatsLabo() {
                       </th>
                     ))}
                   </tr>
+                  {matrice === 'sol' && retenus.some((p) => lireProfondeur(p.nom)) && (
+                    <tr>
+                      <th colSpan={4}>Profondeur (m)</th>
+                      {retenus.map((p) => {
+                        const z = lireProfondeur(p.nom)
+                        return <th key={p.nom}>{z ? libelleProfondeur(z) : '-'}</th>
+                      })}
+                    </tr>
+                  )}
                   {conversion && (
                     <tr>
                       {retenus.map((p) => (
@@ -773,7 +783,6 @@ export default function ResultatsLabo() {
                   {matrice === 'eau' && <li>amont / aval hydraulique : contribution du site par paramètre, rapport aval / amont, dépassements apparaissant en aval, figure (positions à renseigner plus haut) ;</li>}
                   <li>hydrocarbures : répartition par classes de carbone et produits associés ; BTEX : indicateurs d'altération ;</li>
                     <li>signatures des composés organiques (camemberts par échantillon, ordonnés par similarité) ;</li>
-                  {matrice === 'sol' && <li>profils en profondeur : composé clé et familles par sondage, extension verticale (profondeur lue dans le nom, ex. « MW6 (4-4,5) ») ;</li>}
                 {matrice === 'sol' && <li>admissibilité ISDI par échantillon (arrêté du 12 décembre 2014, annexe II) ;</li>}
                   <li>références des méthodes.</li>
                 </ul>
