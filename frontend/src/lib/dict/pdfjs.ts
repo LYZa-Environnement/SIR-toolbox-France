@@ -1,6 +1,7 @@
 import { AnnotationMode, GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import travailleur from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
-import type { Raster } from './fusion'
+import type { Affine } from './calage'
+import type { Rendu } from './reseau'
 
 // Legacy build: the modern one relies on very recent JavaScript
 // (Math.sumPrecise…) that current browsers do not all have yet.
@@ -38,7 +39,7 @@ export interface PdfOuvert {
 }
 
 /** pdf.js takes ownership of the buffer it is given: it gets a copy, the
- *  original bytes stay available for the merge. */
+ *  original bytes stay with the caller. */
 export async function ouvrir(octets: Uint8Array): Promise<PdfOuvert> {
   const tache = getDocument({ data: octets.slice(), BinaryDataFactory: Ressources, useWorkerFetch: false })
   return { doc: await tache.promise, fermer: () => void tache.destroy() }
@@ -51,13 +52,16 @@ async function rendre(doc: PDFDocumentProxy, index: number, echelle: (largeur: n
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(vue.width)
   canvas.height = Math.round(vue.height)
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
   ctx.fillStyle = '#fff'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   // Form fields drawn too: a receipt's values are form fields.
   await page.render({ canvas, canvasContext: ctx, viewport: vue, annotationMode: AnnotationMode.ENABLE }).promise
   page.cleanup()
-  return { canvas, largeur: base.width, hauteur: base.height }
+  const t = vue.transform
+  // pdf.js matrices are column-wise; ours are row-wise.
+  const versPixel: Affine = [t[0], t[2], t[4], t[1], t[3], t[5]]
+  return { canvas, ctx, versPixel }
 }
 
 export async function vignette(doc: PDFDocumentProxy, index: number, largeurPx = 220): Promise<string> {
@@ -65,9 +69,17 @@ export async function vignette(doc: PDFDocumentProxy, index: number, largeurPx =
   return canvas.toDataURL('image/jpeg', 0.72)
 }
 
-/** Page as a 200 dpi JPEG, for files that cannot be copied as they are. */
-export async function rasteriser(doc: PDFDocumentProxy, index: number): Promise<Raster> {
-  const { canvas, largeur, hauteur } = await rendre(doc, index, (l) => Math.min(200 / 72, 9000 / l))
-  const blob = await new Promise<Blob>((ok, ko) => canvas.toBlob((b) => (b ? ok(b) : ko(new Error('rendu impossible'))), 'image/jpeg', 0.9))
-  return { jpeg: new Uint8Array(await blob.arrayBuffer()), largeur, hauteur }
+/** Page as pixels, `pixelsParPoint` pixels for each PDF point. */
+export async function rendrePage(doc: PDFDocumentProxy, index: number, pixelsParPoint: number): Promise<Rendu> {
+  const { canvas, ctx, versPixel } = await rendre(doc, index, () => pixelsParPoint)
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  canvas.width = canvas.height = 0
+  return { rgba: image.data, largeur: image.width, hauteur: image.height, versPixel }
+}
+
+/** Page as an image to point at, for the manual georeferencing. */
+export async function imagePage(doc: PDFDocumentProxy, index: number, largeurPx: number): Promise<{ url: string; versPixel: Affine; largeur: number; hauteur: number }> {
+  const { canvas, versPixel } = await rendre(doc, index, (l) => largeurPx / l)
+  const url = canvas.toDataURL('image/png')
+  return { url, versPixel, largeur: canvas.width, hauteur: canvas.height }
 }

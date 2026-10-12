@@ -1,5 +1,8 @@
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { crsIndique, lireEtiquette, type Crs, type Etiquette, type Rect } from './calage'
 import { estCategorie } from './categories'
+import { etiquettesDessinees, type EtiquetteDessinee } from './glyphes'
+import { lireTraces, rectangles } from './vecteurs'
 
 /** What the operator's receipt (récépissé de DT/DICT) tells about the reply. */
 export interface Recepisse {
@@ -31,6 +34,20 @@ export interface PageAnalysee {
   /** Network category printed in the plan's title block. */
   categorie: string | null
   recepisse: Recepisse | null
+  /** Grid coordinates printed on a plan, to georeference it. */
+  etiquettes: Etiquette[]
+  /** Coordinate system written on the plan. */
+  indiceCrs: Crs | null
+  /** Index sheet of the folios, not a network plan. */
+  assemblage: boolean
+  /** Page box in PDF user space. */
+  boite: Rect
+  /** Large rectangles drawn on a plan: candidates for the map frame. */
+  rectangles: Rect[]
+  /** Grid labels drawn as strokes, to be read across the operator's pages. */
+  dessinees: EtiquetteDessinee[]
+  /** Scale written on the plan ("Echelle : 1 / 500"), as 500. */
+  echelle: number | null
 }
 
 const A4 = 595 * 842
@@ -153,7 +170,22 @@ async function analyserPage(page: PDFPageProxy): Promise<PageAnalysee> {
   const vue = page.getViewport({ scale: 1 })
   const contenu = await page.getTextContent()
   const items: Item[] = []
-  for (const i of contenu.items) if ('str' in i) items.push({ str: i.str, x: i.transform[4], y: i.transform[5] })
+  const etiquettes: Etiquette[] = []
+  for (const i of contenu.items) {
+    if (!('str' in i)) continue
+    items.push({ str: i.str, x: i.transform[4], y: i.transform[5] })
+    const lue = lireEtiquette(i.str)
+    if (lue) {
+      // Centre of the label, whatever its direction: labels are centred
+      // on their grid line.
+      const [a, b, c, d, e, f] = i.transform
+      const nb = Math.hypot(a, b) || 1
+      const nh = Math.hypot(c, d) || 1
+      const x = e + (a / nb) * (i.width / 2) + (c / nh) * i.height * 0.35
+      const y = f + (b / nb) * (i.width / 2) + (d / nh) * i.height * 0.35
+      etiquettes.push({ ...lue, x, y })
+    }
+  }
   const texte = items
     .map((i) => i.str)
     .join(' ')
@@ -166,6 +198,8 @@ async function analyserPage(page: PDFPageProxy): Promise<PageAnalysee> {
   }
   const champsRecepisse = 'RaisonSocialeExploitant' in champs || 'NoGU' in champs
   const nature = natureDePage(texte, vue.width, vue.height, champsRecepisse)
+  const plan = nature === 'plan'
+  const traces = plan ? await lireTraces(page) : []
   const folio = texte.match(/\bFolio\b\s*(?:n°\s*)?:?\s*([A-Z]?\d[\w.-]*)/i)?.[1] ?? null
 
   return {
@@ -177,6 +211,13 @@ async function analyserPage(page: PDFPageProxy): Promise<PageAnalysee> {
     folio,
     categorie: categorieDuPlan(texte),
     recepisse: nature === 'recepisse' ? lireRecepisse(champs, lignes(items)) : null,
+    etiquettes: plan ? etiquettes : [],
+    indiceCrs: crsIndique(texte),
+    assemblage: /Plan d.assemblage|Tableau d.assemblage|assemblage des folios/i.test(texte),
+    boite: page.view as Rect,
+    rectangles: rectangles(traces),
+    dessinees: plan && !etiquettes.length ? etiquettesDessinees(traces) : [],
+    echelle: Number(texte.match(/[ÉE]chelle\s*:?\s*1\s*[:/]\s*(\d{1,3}(?:[ \u00a0]\d{3})+|\d+)\b/i)?.[1].replace(/\s/g, '')) || null,
   }
 }
 

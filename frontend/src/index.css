@@ -939,8 +939,21 @@ a.card:hover {
   border-radius: var(--radius);
   background: var(--color-surface);
   font-size: 0.78rem;
-  cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dict-page__clic {
+  cursor: pointer;
+}
+
+.dict-page__cale {
+  color: var(--level-faible);
+  font-weight: 600;
+}
+
+.dict-page__caler {
+  align-self: flex-start;
+  margin-top: auto;
 }
 
 .dict-page:hover {
@@ -1007,4 +1020,224 @@ a.card:hover {
 
 .dict-option input {
   accent-color: var(--color-accent);
+}
+
+/* Plan de synthèse */
+
+.synthese {
+  display: grid;
+  grid-template-columns: 18rem 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .synthese {
+    grid-template-columns: 1fr;
+  }
+}
+
+.synthese__reglages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.synthese__exploitant {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.synthese__tete {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.synthese__tete input[type='checkbox'] {
+  accent-color: var(--color-accent);
+}
+
+.synthese__tete input[type='color'] {
+  width: 2rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.synthese__couleurs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.synthese__teinte {
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px var(--color-border);
+  cursor: pointer;
+}
+
+.synthese__teinte--exclue {
+  opacity: 0.25;
+  background-image: linear-gradient(45deg, transparent 45%, #000 45%, #000 55%, transparent 55%) !important;
+}
+
+.synthese__carte {
+  min-width: 0;
+}
+
+.synthese__toile {
+  overflow: auto;
+  max-height: 75vh;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-section);
+  cursor: zoom-in;
+}
+
+.synthese__toile canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.synthese__toile--zoom {
+  cursor: zoom-out;
+}
+
+.synthese__toile--zoom canvas {
+  width: auto;
+  max-width: none;
+}
+
+/* Calage manuel */
+
+.calage {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(13, 36, 33, 0.55);
+}
+
+.calage__panneau {
+  display: grid;
+  grid-template-columns: 1fr 21rem;
+  width: min(100%, 96rem);
+  height: min(100%, 60rem);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .calage__panneau {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+}
+
+.calage__image {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-section);
+}
+
+.calage__zoom {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem;
+}
+
+.calage__defile {
+  flex: 1;
+  overflow: auto;
+}
+
+.calage__feuille {
+  position: relative;
+  cursor: crosshair;
+}
+
+.calage__feuille img {
+  display: block;
+  width: 100%;
+  user-select: none;
+}
+
+.calage__point {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: -0.75rem 0 0 -0.75rem;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--level-elevee);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.calage__point::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.calage__point--actif {
+  background: var(--color-accent);
+}
+
+.calage__saisie {
+  padding: 1.25rem;
+  overflow: auto;
+  border-left: 1px solid var(--color-border);
+}
+
+.calage__ligne {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: end;
+  margin-top: 0.75rem;
+  padding: 0.4rem;
+  border-radius: var(--radius);
+}
+
+.calage__ligne input {
+  width: 100%;
+  min-width: 0;
+}
+
+.calage__ligne--actif {
+  background: var(--color-accent-soft);
+}
+
+.calage__numero {
+  height: 2rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--level-elevee);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.calage__ligne--actif .calage__numero {
+  background: var(--color-accent);
 }

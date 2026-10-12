@@ -29,10 +29,10 @@ const OUTILS: Outil[] = [
   },
   {
     titre: 'Plans DICT',
-    accroche: 'Réponses des exploitants',
+    accroche: 'Synthèse des réseaux',
     description:
-      'Déposez les récépissés de DT / DICT et leurs plans : un seul PDF, chaque plan légendé du nom de son exploitant et de la catégorie du réseau.',
-    points: ['Exploitant lu dans le récépissé', 'Sommaire, signets, doublons écartés'],
+      'Déposez les réponses des exploitants aux DT / DICT : leurs plans sont calés, et tous les réseaux réunis sur un même plan, une couleur par exploitant.',
+    points: ['Calage sur les coordonnées des plans', 'Export PDF à l’échelle et image géoréférencée'],
     route: '/plans-dict',
   },
   {
