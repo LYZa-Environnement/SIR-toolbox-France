@@ -43,6 +43,8 @@ export interface LigneTableau {
   activites: string
   distanceM: number | null
   direction: string | null
+  /** The record's official fiche, linked from the extracted spreadsheet. */
+  url?: string
 }
 
 export interface Indicator {
@@ -76,9 +78,31 @@ export interface Source {
 
 /** A feature to draw on the rubrique's map, in WGS84. */
 export type MapFeature =
-  | { kind: 'point'; lat: number; lon: number; label: string; color: string; group: string; href?: string }
+  | {
+      kind: 'point'
+      lat: number
+      lon: number
+      label: string
+      color: string
+      group: string
+      /** Online record: a click on the point opens a popup linking to it. */
+      href?: string
+      /** Extra lines shown in that popup. */
+      detail?: string
+      /** Link text in the popup, when the target is not a fiche. */
+      lienLibelle?: string
+    }
   | { kind: 'line'; path: [number, number][]; label: string; color: string; group: string }
-  | { kind: 'area'; geometry: { type: 'Polygon' | 'MultiPolygon'; coordinates: unknown }; label: string; color: string; group: string }
+  | {
+      kind: 'area'
+      geometry: { type: 'Polygon' | 'MultiPolygon'; coordinates: unknown }
+      label: string
+      color: string
+      group: string
+      /** Fill opacity (0.15 by default); low for a large frame such as a grid cell. */
+      remplissage?: number
+      pointille?: boolean
+    }
 
 export interface ThemeReport {
   /** Narrative reading of the data, one entry per paragraph. */

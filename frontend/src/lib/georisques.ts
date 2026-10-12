@@ -428,11 +428,15 @@ export async function countTim(lat: number, lon: number, rayon: number): Promise
 }
 
 // ---- Mouvements de terrain (BRGM) — fields verified live: identifiant,
-// type, lieu, commentaire_lieu, date_debut, longitude, latitude. No public
-// per-item fiche URL was found (unlike ICPE/CASIAS/SIS), so these are listed
-// with their own detail (type, lieu, date, distance) rather than a link.
+// type, lieu, commentaire_lieu, date_debut, longitude, latitude. The BRGM
+// publishes no per-event fiche (every fiches-risques.brgm.fr pattern tried
+// 404s, unlike cavities), so the link points to the record itself in the
+// Géorisques API: a 1 m search around its own coordinates returns it alone.
 
 export interface MvtItem {
+  identifiant: string | null
+  /** The record in the Géorisques API (JSON). */
+  ficheUrl: string | null
   type: string
   lieu: string | null
   dateDebut: string | null
@@ -444,7 +448,11 @@ export async function fetchMvt(lat: number, lon: number, rayon: number): Promise
   if (raw === null) return null
   const items: MvtItem[] = raw.map((entry) => {
     const item = (entry ?? {}) as Record<string, unknown>
+    const x = typeof item.longitude === 'number' ? item.longitude : null
+    const y = typeof item.latitude === 'number' ? item.latitude : null
     return {
+      identifiant: str(item.identifiant),
+      ficheUrl: x !== null && y !== null ? `https://georisques.gouv.fr/api/v1/mvt?latlon=${x},${y}&rayon=1` : null,
       type: str(item.type) ?? 'Mouvement de terrain',
       lieu: str(item.lieu) ?? str(item.commentaire_lieu),
       dateDebut: str(item.date_debut),
@@ -455,10 +463,12 @@ export async function fetchMvt(lat: number, lon: number, rayon: number): Promise
 }
 
 // ---- Cavités souterraines (BRGM) — fields verified live: identifiant,
-// type, nom, reperage_geo, longitude, latitude. Same absence of a public
-// per-item fiche URL.
+// type, nom, reperage_geo, longitude, latitude. Each cavity has a BRGM fiche
+// at fiches-risques.brgm.fr/georisques/cavite/<identifiant> (checked live).
 
 export interface CaviteItem {
+  identifiant: string | null
+  ficheUrl: string | null
   type: string
   nom: string | null
   localisation: Localisation | null
@@ -469,7 +479,10 @@ export async function fetchCavites(lat: number, lon: number, rayon: number): Pro
   if (raw === null) return null
   const items: CaviteItem[] = raw.map((entry) => {
     const item = (entry ?? {}) as Record<string, unknown>
+    const identifiant = str(item.identifiant)
     return {
+      identifiant,
+      ficheUrl: identifiant ? `https://fiches-risques.brgm.fr/georisques/cavite/${encodeURIComponent(identifiant)}` : null,
       type: str(item.type) ?? 'Cavité souterraine',
       nom: str(item.nom),
       localisation: localisePoint(lat, lon, item.longitude, item.latitude),

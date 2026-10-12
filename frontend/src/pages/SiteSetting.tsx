@@ -19,6 +19,20 @@ function loadSite(): Site | null {
   }
 }
 
+/** Jumps to a rubrique. The rubriques above it load as they come into view
+ * and grow, pushing the target down, so the jump is re-aligned a few times
+ * while the layout settles (a smooth scroll stops short of a moving target). */
+function allerALaRubrique(id: string) {
+  const cible = document.getElementById(id)
+  if (!cible) return
+  cible.scrollIntoView({ block: 'start' })
+  for (const delai of [250, 700, 1500]) {
+    setTimeout(() => {
+      if (Math.abs(cible.getBoundingClientRect().top) > 40) cible.scrollIntoView({ block: 'start' })
+    }, delai)
+  }
+}
+
 export default function SiteSetting() {
   const [site, setSite] = useState<Site | null>(loadSite)
   // The site goes through two steps: an address, then the parcels that give it
@@ -105,9 +119,15 @@ export default function SiteSetting() {
           {site && etape === 'lecture' && (
             <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginTop: '1.5rem' }}>
               {RUBRIQUES.map((rubrique) => (
+                // The app routes on the URL hash, so a plain "#eau" anchor would be
+                // read as a route and land on the home page: scroll instead.
                 <a
                   key={rubrique.id}
                   href={`#${rubrique.id}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    allerALaRubrique(rubrique.id)
+                  }}
                   className="badge"
                   style={{ textDecoration: 'none', color: 'var(--color-accent)', background: 'var(--color-accent-soft)' }}
                 >

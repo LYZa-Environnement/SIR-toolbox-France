@@ -1,6 +1,6 @@
 import { niveauAspitet, situerDansAspitet } from '../lib/aspitet'
 import { cached, pointKey } from '../lib/cache'
-import { cardinalLabelFr, formatDistance } from '../lib/geo'
+import { bearingDegrees, cardinalDirection, cardinalLabelFr, formatDistance, haversineMeters } from '../lib/geo'
 import { fetchSsp, type CasiasItem, type SisItem } from '../lib/georisques'
 import { surveyNearbyParcels } from '../lib/parcelles'
 import { fetchFondGeochimique, fetchTypeDeSol } from '../lib/sols'
@@ -10,11 +10,14 @@ import { pluriel, situation, suiviDe, type Suivi } from './common'
 const RAYON_M = 1000
 /** How many nearby sites are detailed individually before the list is capped. */
 const MAX_SITES_DETAILLES = 12
+/** Programme page of the RMQS, which publishes the background contents. */
+const SOURCE_RMQS = 'https://www.gissol.fr/le-gis/programmes/rmqs-3'
 
 const COULEURS = {
   casias: '#a3671a',
   sis: '#8c1d0f',
   sol: '#5f8c3a',
+  rmqs: '#6b4f9e',
 }
 
 type SitePositionne<T> = T & { localisation: NonNullable<CasiasItem['localisation']> }
@@ -72,16 +75,49 @@ export async function buildSol(site: Site, suivi?: Suivi): Promise<ThemeReport> 
   if (fond) {
     const lectures = fond.elements.map((element) => ({ element, lecture: situerDansAspitet(element.symbole, element.valeur) }))
     const horsOrdinaire = lectures.filter(({ lecture }) => lecture.situation === 'anomalie-moderee' || lecture.situation === 'anomalie-forte' || lecture.situation === 'au-dela')
+    const maille = `maille RMQS${fond.cellule !== null ? ` n° ${fond.cellule}` : ''}`
+    const centre = fond.centre
+      ? situation(haversineMeters(lat, lon, fond.centre.lat, fond.centre.lon), cardinalDirection(bearingDegrees(lat, lon, fond.centre.lat, fond.centre.lon)))
+      : null
+
+    // The cell is what the values describe; its centre is where the RMQS site
+    // sits, give or take, its exact coordinates being withheld.
+    if (fond.geometrie) {
+      features.push({
+        kind: 'area',
+        geometry: fond.geometrie,
+        label: `Maille RMQS${fond.cellule !== null ? ` n° ${fond.cellule}` : ''} — teneurs de fond en éléments traces (16 × 16 km)`,
+        color: COULEURS.rmqs,
+        group: 'Maille RMQS (teneurs de fond)',
+        remplissage: 0.03,
+        pointille: true,
+      })
+    }
+    if (fond.centre) {
+      features.push({
+        kind: 'point',
+        lat: fond.centre.lat,
+        lon: fond.centre.lon,
+        label: `Centre de la ${maille} — emplacement théorique du site de prélèvement`,
+        color: COULEURS.rmqs,
+        group: 'Maille RMQS (teneurs de fond)',
+        href: SOURCE_RMQS,
+        detail: `Teneurs de fond de l'horizon ${fond.profondeur}. Le site RMQS est implanté au centre de la maille, ou au plus près ; ses coordonnées exactes ne sont pas publiées.`,
+        lienLibelle: 'Réseau de Mesures de la Qualité des Sols (GIS Sol)',
+      })
+    }
 
     indicateurs.push({
       label: 'Teneurs de fond en éléments traces dans les sols',
       value: pluriel(fond.elements.length, 'élément mesuré', 'éléments mesurés'),
-      situation: `Horizon ${fond.profondeur}${fond.cellule !== null ? ` — maille n° ${fond.cellule}` : ''}`,
+      situation: `Horizon ${fond.profondeur} — ${maille} de 16 × 16 km ${fond.contientSite ? 'contenant le site' : 'la plus proche du site'}${centre ? `, centre ${centre}` : ''}`,
       detail:
-        horsOrdinaire.length > 0
+        (horsOrdinaire.length > 0
           ? `${horsOrdinaire.map(({ element }) => element.nom.toLowerCase()).join(', ')} se situe${horsOrdinaire.length > 1 ? 'nt' : ''} au-dessus des gammes couramment observées dans les sols « ordinaires » de France.`
-          : 'Tous les éléments se situent dans les gammes couramment observées dans les sols « ordinaires » de France.',
+          : 'Tous les éléments se situent dans les gammes couramment observées dans les sols « ordinaires » de France.') +
+        " Source : Réseau de Mesures de la Qualité des Sols (GIS Sol, INRAE Infosol), valeurs par maille de la couche « vibrisses RMQS » diffusée sur la Géoplateforme de l'IGN. La maille (contour violet en pointillé) et son centre figurent sur la carte : dézoomer pour la voir en entier.",
       level: horsOrdinaire.length === 0 ? 'favorable' : 'attention',
+      href: SOURCE_RMQS,
     })
 
     for (const { element, lecture } of lectures) {
@@ -125,6 +161,7 @@ export async function buildSol(site: Site, suivi?: Suivi): Promise<ThemeReport> 
         label: `Ancien site industriel — ${item.nom}${item.activite ? ` (${item.activite})` : ''}`,
         color: COULEURS.casias,
         group: 'Ancien site industriel (CASIAS)',
+        href: item.ficheUrl ?? undefined,
       })
     }
     for (const item of sis.slice(0, 40)) {
@@ -135,6 +172,7 @@ export async function buildSol(site: Site, suivi?: Suivi): Promise<ThemeReport> 
         label: `Secteur d'information sur les sols — ${item.nom}`,
         color: COULEURS.sis,
         group: "Secteur d'information sur les sols (SIS)",
+        href: item.ficheUrl ?? undefined,
       })
     }
 
@@ -161,6 +199,7 @@ export async function buildSol(site: Site, suivi?: Suivi): Promise<ThemeReport> 
           activites: [item.activite, item.statut, item.adresse].filter(Boolean).join(' — '),
           distanceM: item.localisation.distanceM,
           direction: cardinalLabelFr(item.localisation.direction),
+          url: item.ficheUrl ?? undefined,
         },
         label: item.nom,
         value: item.activite ?? item.statut ?? 'Ancien site industriel',
@@ -199,6 +238,7 @@ export async function buildSol(site: Site, suivi?: Suivi): Promise<ThemeReport> 
             .join(' — '),
           distanceM: item.localisation.distanceM,
           direction: cardinalLabelFr(item.localisation.direction),
+          url: item.ficheUrl ?? undefined,
         },
         label: item.nom,
         value: item.superficieM2 !== null ? `${Math.round(item.superficieM2).toLocaleString('fr-FR')} m²` : 'Secteur d’information sur les sols',

@@ -30,7 +30,7 @@
  * source.
  */
 
-import { fromLambert93, lambert93Bbox } from './geo'
+import { centroidOfGeometry, fromLambert93, haversineMeters, isPointInGeometry, lambert93Bbox } from './geo'
 
 const WFS_BASE = 'https://data.geopf.fr/wfs/ows'
 
@@ -109,6 +109,13 @@ export interface FondPedoGeochimique {
   profondeur: string
   /** Grid cell the values describe — they are not point measurements. */
   cellule: number | null
+  /** The cell itself (16 × 16 km), in WGS84, to draw on the map. */
+  geometrie: { type: 'Polygon' | 'MultiPolygon'; coordinates: unknown } | null
+  /** Centre of the cell: the RMQS site is placed at the centre of each cell
+   * (or as close to it as the ground allows); its exact position is withheld. */
+  centre: { lat: number; lon: number } | null
+  /** Whether the cell contains the site, or is only the nearest one. */
+  contientSite: boolean
 }
 
 // The attribute names on the full `vibrisses_RMQS` layer, verified live:
@@ -132,9 +139,24 @@ const ELEMENTS: { cle: string; symbole: string; nom: string }[] = [
  * publishes — ten of them, not just cadmium: the per-element layers only cover
  * Cd, but the base layer carries every element as an attribute. */
 export async function fetchFondGeochimique(lat: number, lon: number): Promise<FondPedoGeochimique | null> {
-  const features = await queryWfs(TYPE_FOND_TOUS_ELEMENTS, lat, lon, 5000, 3)
+  // Cells are 16 km wide: a 12 km search window is sure to hold the one
+  // containing the site, which is then picked by geometry — the first cell the
+  // service returns is just any cell crossing the window.
+  const features = await queryWfs(TYPE_FOND_TOUS_ELEMENTS, lat, lon, 12000, 12)
   if (!features || features.length === 0) return null
-  const props = features[0].properties ?? {}
+  const cellules = features.map((f) => {
+    const geometrie = f.geometry ? reproject(f.geometry) : null
+    const c = geometrie ? centroidOfGeometry(geometrie) : null
+    return { f, geometrie, centre: c ? { lon: c[0], lat: c[1] } : null }
+  })
+  const contenant = cellules.find((c) => c.geometrie && isPointInGeometry(lat, lon, c.geometrie))
+  const choisie =
+    contenant ??
+    cellules
+      .filter((c) => c.centre)
+      .sort((a, b) => haversineMeters(lat, lon, a.centre!.lat, a.centre!.lon) - haversineMeters(lat, lon, b.centre!.lat, b.centre!.lon))[0] ??
+    cellules[0]
+  const props = choisie.f.properties ?? {}
   const elements: ElementTrace[] = []
   for (const { cle, symbole, nom } of ELEMENTS) {
     const valeur = props[cle]
@@ -146,5 +168,8 @@ export async function fetchFondGeochimique(lat: number, lon: number): Promise<Fo
     elements,
     profondeur: '0 – 30 cm',
     cellule: typeof props.no_cellule === 'number' ? props.no_cellule : null,
+    geometrie: choisie.geometrie,
+    centre: choisie.centre,
+    contientSite: !!contenant,
   }
 }

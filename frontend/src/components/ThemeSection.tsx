@@ -3,7 +3,7 @@ import { enFile } from '../lib/queue'
 import BarreProgression from './BarreProgression'
 import type { Suivi } from '../themes/common'
 import ThemeMap from './ThemeMap'
-import { nomFichier, telechargerCsv } from '../lib/tableau'
+import { nomFichier, telechargerTableau } from '../lib/tableau'
 import type { Indicator, LigneTableau, Level, Site, ThemeReport } from '../types/site'
 
 const LEVEL_STYLE: Record<Level, { color: string; background: string }> = {
@@ -94,8 +94,8 @@ function BlocPliable({ titre, indicateurs, site }: { titre: string; indicateurs:
       {lignes.length > 0 && (
         <button
           type="button"
-          onClick={() => telechargerCsv(lignes, nomFichier(titre, site.citycode || 'site'))}
-          title="Télécharger la liste au format tableur (CSV)"
+          onClick={() => void telechargerTableau(lignes, titre, nomFichier(titre, site.citycode || 'site'))}
+          title="Télécharger la liste au format Excel, avec le lien vers chaque fiche"
           style={{
             padding: '0.3rem 0.8rem',
             borderRadius: '999px',

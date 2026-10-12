@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Circle, CircleMarker, GeoJSON, MapContainer, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import { Circle, CircleMarker, GeoJSON, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import { BASE_LAYERS } from '../lib/basemap'
 import { formatSurface } from '../lib/cadastre'
 import type { MapFeature, Site } from '../types/site'
@@ -64,7 +64,23 @@ export default function ThemeMap({ site, features, rayonM, height = '26rem' }: P
                   radius={6}
                   pathOptions={{ color: '#0d2421', weight: 1.5, fillColor: feature.color, fillOpacity: 0.9 }}
                 >
-                  <Tooltip>{feature.label}</Tooltip>
+                  <Tooltip>
+                    {feature.label}
+                    {feature.href ? ' — cliquer pour la fiche' : ''}
+                  </Tooltip>
+                  {/* A click opens the record itself: the point is a pointer to
+                      the official data, not just a dot on a map. */}
+                  {feature.href && (
+                    <Popup>
+                      <strong>{feature.label}</strong>
+                      {feature.detail && <div style={{ marginTop: '0.3rem', fontSize: '0.8rem' }}>{feature.detail}</div>}
+                      <div style={{ marginTop: '0.4rem' }}>
+                        <a href={feature.href} target="_blank" rel="noopener noreferrer">
+                          {feature.lienLibelle ?? 'Consulter la fiche en ligne'} ↗
+                        </a>
+                      </div>
+                    </Popup>
+                  )}
                 </CircleMarker>
               )
             }
@@ -79,7 +95,7 @@ export default function ThemeMap({ site, features, rayonM, height = '26rem' }: P
               <GeoJSON
                 key={`a${i}`}
                 data={{ type: 'Feature', geometry: feature.geometry, properties: {} } as never}
-                style={{ color: feature.color, weight: 2, fillColor: feature.color, fillOpacity: 0.15 }}
+                style={{ color: feature.color, weight: 2, fillColor: feature.color, fillOpacity: feature.remplissage ?? 0.15, dashArray: feature.pointille ? '6 5' : undefined }}
               >
                 <Tooltip sticky>{feature.label}</Tooltip>
               </GeoJSON>

@@ -6,29 +6,21 @@
  * where errors get introduced, so the same rows the rubrique shows can be
  * downloaded as they stand.
  *
- * CSV rather than a fancier format: it opens in any spreadsheet without a
- * library, and this platform ships no server to render anything else.
+ * An Excel workbook rather than a CSV: the reference of each record links to
+ * its official fiche (Géorisques, BRGM), and a CSV cannot carry a link.
+ * ExcelJS is loaded only when the reader asks for the file.
  */
 
 import type { LigneTableau } from '../types/site'
 
-const COLONNES = ['Référence', 'Nom du site', 'Activités', 'Distance (m)', 'Direction'] as const
-
-/** Escapes one field. Semicolons separate the columns because that is what a
- * French locale spreadsheet expects, and these labels are full of commas. */
-function champ(valeur: string | number | null): string {
-  if (valeur === null || valeur === undefined) return ''
-  const texte = String(valeur)
-  return /[";\n\r]/.test(texte) ? `"${texte.replace(/"/g, '""')}"` : texte
-}
-
-export function versCsv(lignes: LigneTableau[]): string {
-  const corps = lignes.map((ligne) =>
-    [champ(ligne.reference), champ(ligne.nom), champ(ligne.activites), champ(ligne.distanceM === null ? '' : Math.round(ligne.distanceM)), champ(ligne.direction)].join(';'),
-  )
-  // A BOM, so Excel opens the file as UTF-8 instead of mangling every accent.
-  return `﻿${COLONNES.join(';')}\r\n${corps.join('\r\n')}\r\n`
-}
+const COLONNES: [string, number][] = [
+  ['Référence', 16],
+  ['Nom du site', 40],
+  ['Activités', 70],
+  ['Distance (m)', 12],
+  ['Direction', 12],
+  ['Fiche en ligne', 18],
+]
 
 /** Turns a block title into a usable file name — "Détail des installations
  * classées" becomes "detail-des-installations-classees". */
@@ -39,18 +31,44 @@ export function nomFichier(titre: string, suffixe: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-  return `${base || 'extraction'}-${suffixe}.csv`
+  return `${base || 'extraction'}-${suffixe}.xlsx`
 }
 
-export function telechargerCsv(lignes: LigneTableau[], nom: string): void {
-  const blob = new Blob([versCsv(lignes)], { type: 'text/csv;charset=utf-8' })
+export async function telechargerTableau(lignes: LigneTableau[], titre: string, nom: string): Promise<void> {
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  // Excel caps sheet names at 31 characters: rather than a title cut mid-word.
+  const nomOnglet = titre.length <= 31 ? titre.replace(/[\\/?*[\]:]/g, ' ') : 'Extraction'
+  const ws = wb.addWorksheet(nomOnglet, { views: [{ state: 'frozen', ySplit: 1 }] })
+  ws.columns = COLONNES.map(([header, width]) => ({ header, width }))
+  const entete = ws.getRow(1)
+  entete.font = { bold: true }
+  entete.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCDDCD1' } }
+  const lien = { color: { argb: 'FF00756A' }, underline: true } as const
+  for (const ligne of lignes) {
+    const row = ws.addRow([
+      ligne.url && ligne.reference ? { text: ligne.reference, hyperlink: ligne.url } : ligne.reference,
+      ligne.nom,
+      ligne.activites,
+      ligne.distanceM === null ? null : Math.round(ligne.distanceM),
+      ligne.direction,
+      ligne.url ? { text: 'Consulter la fiche', hyperlink: ligne.url } : null,
+    ])
+    row.alignment = { vertical: 'top', wrapText: true }
+    if (ligne.url) {
+      if (ligne.reference) row.getCell(1).font = lien
+      row.getCell(6).font = lien
+    }
+  }
+  const buffer = await wb.xlsx.writeBuffer()
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const url = URL.createObjectURL(blob)
-  const lien = document.createElement('a')
-  lien.href = url
-  lien.download = nom
-  document.body.appendChild(lien)
-  lien.click()
-  lien.remove()
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nom
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
   // Revoked on the next tick, not immediately: Safari cancels a download whose
   // object URL disappears in the same turn of the event loop.
   setTimeout(() => URL.revokeObjectURL(url), 1000)

@@ -965,57 +965,35 @@
   compareDivider.style.display = 'none';
   compareDivider.innerHTML = '<div class="compare-handle">⇔</div>';
   map.getContainer().appendChild(compareDivider);
-  var comparePaneBefore = map.getPane('pane-compare-before');
-  var comparePaneAfter = map.getPane('pane-compare-after');
 
-  // Leaflet panes are position:absolute with no width/height of their own —
-  // every child (the tile-container divs) is ALSO position:absolute and
-  // placed purely via CSS transforms, so none of them count towards the
-  // pane's box size, leaving it a phantom 0x0 element (confirmed via
-  // getBoundingClientRect). clip-path's inset() is computed against that
-  // box, so no matter the inset values — percentage or pixel — the
-  // resulting clip region was degenerate, and Chromium fell back to
-  // rendering the pane fully unclipped: "after" covered the entire map,
-  // so both sides of the divider showed "after", i.e. the same image
-  // twice. Giving the pane an explicit real-pixel size makes clip-path's
-  // reference box match the actual visible map area, so the inset from
-  // its left edge means what it looks like it means.
-  function syncComparePaneSize(){
-    var w = map.getContainer().clientWidth + 'px';
-    var h = map.getContainer().clientHeight + 'px';
-    comparePaneBefore.style.width = w; comparePaneBefore.style.height = h;
-    comparePaneAfter.style.width = w; comparePaneAfter.style.height = h;
-  }
-  map.on('resize', syncComparePaneSize);
-
+  // Each side is clipped with a CSS clip rectangle on its own tile layer
+  // container, expressed in Leaflet's layer coordinates — the method of the
+  // leaflet-side-by-side plugin. The previous approach (clip-path on a pane
+  // given the map's size) broke as soon as the map was panned: tiles are
+  // positioned in layer coordinates that drift away from the pane's fixed
+  // box, so the inset ended up outside the box (2 318 px on a 952 px map,
+  // measured) and hid one side entirely — both sides then showed the same
+  // image, or nothing. Converting the screen split through
+  // containerPointToLayerPoint on every move keeps the cut under the divider
+  // whatever the pan or zoom.
   var compareSplitPct = 50;
   function updateCompareClip(){
-    // The pane inherits its ancestor (.leaflet-map-pane)'s pan/zoom
-    // transform, which Leaflet shifts continuously while panning and only
-    // periodically "recenters" — so the pane's own coordinate origin moves
-    // relative to the viewport while a drag is in progress. The divider is
-    // deliberately outside that transform (appended straight to the map
-    // container) so it stays screen-fixed, which is what you want for a
-    // comparator handle — but it means a clip-path inset expressed in the
-    // pane's own (moving) coordinate space drifts away from the (fixed)
-    // divider as soon as you pan, even though it was correct the instant
-    // it was set. Recomputing from each element's actual current
-    // getBoundingClientRect() (which reflects any inherited transform)
-    // converts the desired *screen* split position into the pane's
-    // *local* coordinate space fresh each time, so the clip line tracks
-    // the divider regardless of how far the map has panned since.
-    var containerRect = map.getContainer().getBoundingClientRect();
-    var paneRect = comparePaneAfter.getBoundingClientRect();
-    var dividerScreenX = containerRect.left + containerRect.width * compareSplitPct / 100;
-    var clipPx = dividerScreenX - paneRect.left;
-    comparePaneAfter.style.clipPath = 'inset(0 0 0 ' + clipPx + 'px)';
+    if (!compareActive || !compareBeforeLayer || !compareAfterLayer) return;
+    var size = map.getSize();
+    var nw = map.containerPointToLayerPoint([0, 0]);
+    var se = map.containerPointToLayerPoint(size);
+    var clipX = nw.x + size.x * compareSplitPct / 100;
+    var avant = compareBeforeLayer.getContainer();
+    var apres = compareAfterLayer.getContainer();
+    if (avant) avant.style.clip = 'rect(' + [nw.y, clipX, se.y, nw.x].join('px,') + 'px)';
+    if (apres) apres.style.clip = 'rect(' + [nw.y, se.x, se.y, clipX].join('px,') + 'px)';
   }
   function setCompareSplit(pct){
     compareSplitPct = pct;
     compareDivider.style.left = pct + '%';
     updateCompareClip();
   }
-  map.on('move zoom', function(){ if (compareActive) updateCompareClip(); });
+  map.on('move zoom zoomend resize viewreset', updateCompareClip);
   var compareDragging = false;
   compareDivider.addEventListener('mousedown', function(e){ compareDragging = true; e.preventDefault(); e.stopPropagation(); map.dragging.disable(); });
   document.addEventListener('mouseup', function(){ if (compareDragging) map.dragging.enable(); });
@@ -1044,12 +1022,12 @@
     compareAfterLayer = compareLayerForOption(compareRightSelect.value, 'pane-compare-after');
     compareBeforeLayer.addTo(map);
     compareAfterLayer.addTo(map);
+    updateCompareClip();
   }
   function startCompare(){
     compareActive = true;
     map.removeLayer(currentBase);
     rebuildCompareLayers();
-    syncComparePaneSize();
     compareDivider.style.display = 'block';
     setCompareSplit(50);
     compareToggleBtn.textContent = '✕ Désactiver le comparateur';

@@ -149,6 +149,9 @@ export async function buildRisques(site: Site, suivi?: Suivi): Promise<ThemeRepo
         label: `${item.nom} — ${item.regime}${isSeveso ? ` (${item.seveso})` : ''}`,
         color: isSeveso ? COULEURS.seveso : COULEURS.icpe,
         group: isSeveso ? 'Établissement SEVESO' : 'Installation classée',
+        href: item.ficheUrl ?? undefined,
+        detail: [item.secteur, item.etatActivite, item.adresse].filter(Boolean).join(' — ') || undefined,
+        lienLibelle: 'Fiche de l’installation sur Géorisques',
       })
     }
 
@@ -178,6 +181,7 @@ export async function buildRisques(site: Site, suivi?: Suivi): Promise<ThemeRepo
             .join(' — '),
           distanceM: item.localisation!.distanceM,
           direction: cardinalLabelFr(item.localisation!.direction),
+          url: item.ficheUrl ?? undefined,
         },
         label: item.nom,
         value: item.secteur ?? item.regime,
@@ -219,6 +223,9 @@ export async function buildRisques(site: Site, suivi?: Suivi): Promise<ThemeRepo
         label: `Mouvement de terrain — ${item.type}`,
         color: COULEURS.mvt,
         group: 'Mouvement de terrain',
+        href: item.ficheUrl ?? undefined,
+        detail: [item.identifiant ? `Identifiant BDMvt ${item.identifiant}` : null, item.lieu, item.dateDebut].filter(Boolean).join(' — ') || undefined,
+        lienLibelle: 'Enregistrement BRGM (API Géorisques)',
       })
     }
     const proche = [...mvt.items].filter((i) => i.localisation).sort((a, b) => a.localisation!.distanceM - b.localisation!.distanceM)[0]
@@ -242,6 +249,9 @@ export async function buildRisques(site: Site, suivi?: Suivi): Promise<ThemeRepo
         label: `Cavité — ${item.type}`,
         color: COULEURS.cavite,
         group: 'Cavité souterraine',
+        href: item.ficheUrl ?? undefined,
+        detail: [item.identifiant ? `Identifiant BDCavité ${item.identifiant}` : null, item.nom].filter(Boolean).join(' — ') || undefined,
+        lienLibelle: 'Fiche BRGM de la cavité',
       })
     }
     const proche = [...cavites.items].filter((i) => i.localisation).sort((a, b) => a.localisation!.distanceM - b.localisation!.distanceM)[0]
@@ -299,6 +309,9 @@ export async function buildRisques(site: Site, suivi?: Suivi): Promise<ThemeRepo
       label: `Installation nucléaire — ${inb.nom}`,
       color: COULEURS.nucleaire,
       group: 'Installation nucléaire de base',
+      href: 'https://www.asnr.fr/',
+      detail: [inb.type, inb.exploitant ? `exploitant ${inb.exploitant}` : null].filter(Boolean).join(' — ') || undefined,
+      lienLibelle: 'Autorité de sûreté nucléaire et de radioprotection',
     })
     indicateurs.push({
       label: 'Installation nucléaire de base la plus proche',
