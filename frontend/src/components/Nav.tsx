@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 
 // Each tool gets a single way out — back to the home page, which presents
-// all the tools — rather than links to the other tools.
+// all four tools — rather than links to the other tools.
 export default function Nav() {
   const surAccueil = useLocation().pathname === '/'
   return (

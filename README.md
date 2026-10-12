@@ -5,7 +5,7 @@ l'échelle d'une adresse ou d'un ensemble de parcelles. Tout tourne dans le
 navigateur : les pages interrogent directement les API publiques (Géorisques,
 Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
 
-## Les outils
+## Les trois outils
 
 - **Site Setting** (`frontend/src/pages/Accueil.tsx`) — saisie d'une adresse,
   délimitation du site par ses parcelles cadastrales, puis six lectures
@@ -27,20 +27,6 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   et export Excel « Tableau X - Résultats [matrice] » avec un onglet mis en
   forme et un onglet comparé aux valeurs guides ERM (mise en forme
   conditionnelle, sources sous le tableau).
-
-- **Plans DICT** (`frontend/src/pages/PlansDict.tsx`) — synthèse des
-  réseaux des exploitants répondant à une DT / DICT : dépôt de leurs PDF
-  (récépissés et plans joints), exploitant et catégories lus dans chaque
-  récépissé Cerfa 14435, puis calage de chaque plan sur ses coordonnées —
-  écrites (`X=657792`, `657 640`…) ou dessinées en police CAO, ces
-  dernières lues d'après la forme de leurs chiffres —, en Lambert 93 ou
-  conique CC42 à CC50, contrôlé par la commune des travaux. Les plans sans
-  coordonnées lisibles se calent à la main (un ou plusieurs points). Les
-  réseaux (tracés en couleur) sont extraits de chaque plan, la grille
-  colorée retirée, et réunis sur fond IGN (Plan IGN, photo aérienne,
-  cadastre), une couleur par exploitant selon le code couleur des réseaux
-  (NF P 98-332). Exports : PDF à l'échelle (A3, A1, A0) avec légende et
-  liste des plans, PNG géoréférencé (.pgw). Code dans `src/lib/dict/`.
 
 ### Valeurs guides ERM
 

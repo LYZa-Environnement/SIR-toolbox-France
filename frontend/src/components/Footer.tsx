@@ -40,7 +40,7 @@ export default function Footer() {
           <strong>Navigation</strong>
           <p style={{ marginTop: '0.5rem' }}>
             <Link to="/" style={lien}>
-              Accueil — les cinq outils
+              Accueil — les quatre outils
             </Link>
           </p>
         </div>
