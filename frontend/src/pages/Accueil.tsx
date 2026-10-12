@@ -28,6 +28,14 @@ const OUTILS: Outil[] = [
     route: '/resultats-labo',
   },
   {
+    titre: 'Plans DICT',
+    accroche: 'Réponses des exploitants',
+    description:
+      'Déposez les récépissés de DT / DICT et leurs plans : un seul PDF, chaque plan légendé du nom de son exploitant et de la catégorie du réseau.',
+    points: ['Exploitant lu dans le récépissé', 'Sommaire, signets, doublons écartés'],
+    route: '/plans-dict',
+  },
+  {
     titre: 'Données environnementales publiques',
     accroche: 'Carte interactive',
     description:
@@ -80,8 +88,8 @@ export default function Accueil() {
         <p className="eyebrow">ERM — boîte à outils</p>
         <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
         <p className="lede">
-          Quatre outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
-          d'analyses.
+          Cinq outils pour préparer une étude de site, de la lecture des données publiques et des plans de réseaux à la mise en
+          forme des résultats d'analyses.
         </p>
         <div className="grid grid--2" style={{ marginTop: '2.5rem', gap: '1.25rem' }}>
           {OUTILS.map((outil, i) => (

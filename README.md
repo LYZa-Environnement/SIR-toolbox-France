@@ -5,7 +5,7 @@ l'échelle d'une adresse ou d'un ensemble de parcelles. Tout tourne dans le
 navigateur : les pages interrogent directement les API publiques (Géorisques,
 Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
 
-## Les trois outils
+## Les outils
 
 - **Site Setting** (`frontend/src/pages/Accueil.tsx`) — saisie d'une adresse,
   délimitation du site par ses parcelles cadastrales, puis six lectures
@@ -27,6 +27,16 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   et export Excel « Tableau X - Résultats [matrice] » avec un onglet mis en
   forme et un onglet comparé aux valeurs guides ERM (mise en forme
   conditionnelle, sources sous le tableau).
+
+- **Plans DICT** (`frontend/src/pages/PlansDict.tsx`) — fusion des réponses
+  des exploitants aux DT / DICT : dépôt de leurs PDF (récépissés et plans
+  joints), lecture de l'exploitant et des catégories de réseau dans chaque
+  récépissé Cerfa 14435 (champs de formulaire, sinon texte imprimé),
+  repérage des pages de plans, mise à l'écart des plans reçus en double, puis
+  un seul PDF : sommaire, signets, et un bandeau ajouté au-dessus de chaque
+  plan (exploitant, catégorie, n° de DICT) sans en masquer le contenu
+  (`src/lib/dict/`). Les fichiers protégés contre la copie sont repris en
+  image à 200 dpi.
 
 ### Valeurs guides ERM
 
