@@ -8,7 +8,8 @@
 import type { Workbook, Worksheet } from 'exceljs'
 import { dessinerBarres, dessinerComparaison, type Serie } from '../barres.ts'
 import { convertir, volumeLitres } from '../calc.ts'
-import { ecrire, GRIS_DEPASSEMENT, GRIS_FAMILLE, GRIS_LQ, VERT_ENTETE, type OptionsExport, type Style } from '../export.ts'
+import { argb, BANDEAU, barre, eclaircir, echelle, ETAT, GROUPES } from '../couleurs.ts'
+import { ecrire, GRIS_FAMILLE, GRIS_LQ, VERT_ENTETE, type OptionsExport, type Style } from '../export.ts'
 import type { Lecture, Mesure, Parametre } from '../parse.ts'
 import { estControle } from '../qualite.ts'
 import {
@@ -29,15 +30,6 @@ import { admissibiliteISDI } from './isdi.ts'
 const nombre = (x: number | null | undefined, chiffres = 3) => (x === null || x === undefined || !Number.isFinite(x) ? '-' : Number(x.toPrecision(chiffres)))
 const virgule = (x: number | string) => String(x).replace(/(\d)\.(\d)/g, '$1,$2')
 
-/** Hex colour mixed with white: t = 0 the colour, t = 1 white. */
-function eclaircir(hex: string, t: number): string {
-  const v = hex.replace('#', '')
-  const c = [0, 2, 4].map((i) => Math.round(parseInt(v.slice(i, i + 2), 16) * (1 - t) + 255 * t))
-  return `FF${c.map((x) => x.toString(16).padStart(2, '0')).join('').toUpperCase()}`
-}
-
-const argb = (hex: string) => `FF${hex.replace('#', '').toUpperCase()}`
-
 function entete(ws: Worksheet, r: number, colonnes: [string, number][], c0 = 1) {
   ws.getRow(r).height = 46
   colonnes.forEach(([libelle, largeur], j) => {
@@ -57,46 +49,8 @@ function titre(ws: Worksheet, r: number, t: string): number {
 
 function bandeau(ws: Worksheet, r: number, t: string, largeur: number): number {
   ws.mergeCells(r, 1, r, largeur)
-  ecrire(ws, r, 1, t.toUpperCase(), { gras: true, fond: GRIS_FAMILLE })
+  ecrire(ws, r, 1, t.toUpperCase(), { gras: true, fond: BANDEAU.fond, couleur: BANDEAU.texte })
   return r + 1
-}
-
-/** Excel colour scale white → colour on a column of shares (0–1). */
-function echelle(ws: Worksheet, r1: number, r2: number, c: number, hex: string) {
-  if (r2 < r1) return
-  const l = ws.getColumn(c).letter
-  ws.addConditionalFormatting({
-    ref: `${l}${r1}:${l}${r2}`,
-    rules: [
-      {
-        type: 'colorScale',
-        priority: 1,
-        cfvo: [
-          { type: 'num', value: 0 },
-          { type: 'num', value: 1 },
-        ],
-        color: [{ argb: 'FFFFFFFF' }, { argb: eclaircir(hex, 0.35) }],
-      },
-    ],
-  })
-}
-
-/** Excel data bar on a column. */
-function barre(ws: Worksheet, r1: number, r2: number, c: number, hex: string, max?: number) {
-  if (r2 < r1) return
-  const l = ws.getColumn(c).letter
-  ws.addConditionalFormatting({
-    ref: `${l}${r1}:${l}${r2}`,
-    rules: [
-      {
-        type: 'dataBar',
-        priority: 1,
-        gradient: false,
-        cfvo: [{ type: 'num', value: 0 }, max === undefined ? { type: 'max' } : { type: 'num', value: max }],
-        color: { argb: eclaircir(hex, 0.3) },
-      } as never,
-    ],
-  })
 }
 
 function image(wb: Workbook, ws: Worksheet, r: number, dessin: ReturnType<typeof dessinerBarres>): number {
@@ -420,8 +374,8 @@ function feuilleISDI(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   r = texte(ws, r, "Verdict « Incomplet » : un ou plusieurs critères n'ont pas été analysés. L'admissibilité suppose aussi l'absence d'autre contamination (amiante, odeurs, déchets non inertes) et les conditions de l'annexe I et de l'acceptation préalable.", { italique: true })
   r++
   const criteres = res.criteres
-  ecrire(ws, r, 1, 'Valeur limite (mg/kg MS)', { gras: true, taille: 9, fond: GRIS_FAMILLE })
-  criteres.forEach((c, j) => ecrire(ws, r, j + 2, c.valeur, { gras: true, taille: 9, fond: GRIS_FAMILLE, h: 'center' }))
+  ecrire(ws, r, 1, 'Valeur limite (mg/kg MS)', { gras: true, taille: 9, fond: GROUPES.comparaison.clair })
+  criteres.forEach((c, j) => ecrire(ws, r, j + 2, c.valeur, { gras: true, taille: 9, fond: GROUPES.comparaison.clair, h: 'center' }))
   r++
   const colonnes: [string, number][] = [['Échantillon', 22], ...criteres.map((c): [string, number] => [c.libelle, 10]), ['Verdict', 17], ['Paramètres déclassants', 30], ['Non analysés', 30], ['Remarques', 60]]
   entete(ws, r, colonnes)
@@ -434,9 +388,9 @@ function feuilleISDI(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
       ecrire(ws, r, j + 2, x.mesure && !x.mesure.inferieur ? Number(x.affichage.replace(',', '.')) : x.affichage, {
         h: 'center',
         gras: depasse,
-        fond: depasse ? GRIS_DEPASSEMENT : undefined,
+        fond: depasse ? ETAT.alerte.fond : undefined,
         italique: x.mesure?.inferieur || !x.mesure,
-        couleur: x.mesure?.inferieur || !x.mesure ? GRIS_LQ : undefined,
+        couleur: depasse ? ETAT.alerte.texte : x.mesure?.inferieur || !x.mesure ? GRIS_LQ : undefined,
       })
     })
     const c0 = criteres.length + 2
@@ -470,7 +424,7 @@ function feuilleAmontAval(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   r = texte(ws, r, "• Positions renseignées dans l'outil d'après le sens d'écoulement des eaux souterraines : à vérifier sur la carte piézométrique de la campagne, le sens pouvant varier selon les saisons.")
   r = texte(ws, r, `• Comparaison des maxima : rapport = maximum au droit ou en aval / maximum en amont. Un écart est retenu à partir d'un facteur ${f} (rapport ≥ ${f} : hausse ; ≤ 1/${f} : baisse) ; en deçà, il reste du même ordre que l'incertitude analytique (de l'ordre de 30 % par résultat) et que la variabilité du prélèvement. Ce facteur est une convention d'usage, réglable dans l'outil, pas un seuil réglementaire.`)
   r = texte(ws, r, `• Composé non quantifié en amont : rapport minorant (« > x »), calculé sur la limite de quantification amont ; la contribution du site n'est retenue que si la valeur au droit ou en aval dépasse ${f} fois cette LQ, sinon la lecture est non conclusive (LQ élevée par dilution ou effet de matrice). Même règle pour un composé quantifié en amont seulement. Seules les concentrations sont interprétées (pas le pH, la conductivité ni la température).`)
-  r = texte(ws, r, "• Couleurs : rouge = absent en amont, présent au droit ou en aval ; orange = hausse vers l'aval ; violet = produit de dégradation en hausse alors que ses parents baissent ; gris = comparable ; bleu = plus élevé en amont ; gris clair = non conclusif. Valeur grasse sur fond gris : supérieure à la valeur de comparaison. Le nom de l'échantillon où le maximum est atteint figure en commentaire de la cellule.", { italique: true })
+  r = texte(ws, r, "• Couleurs : rouge = absent en amont, présent au droit ou en aval ; orange = hausse vers l'aval ; violet = produit de dégradation en hausse alors que ses parents baissent ; gris = comparable ; bleu = plus élevé en amont ; gris clair = non conclusif. Valeur grasse sur fond rouge : supérieure à la valeur de comparaison. Le nom de l'échantillon où le maximum est atteint figure en commentaire de la cellule.", { italique: true })
   r++
 
   r = titre(ws, r, 'Réseau de surveillance')
@@ -524,7 +478,12 @@ function feuilleAmontAval(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
     if (!g.n) return ecrire(ws, r, c, '-', { h: 'center', couleur: GRIS_LQ })
     if (!g.max) return ecrire(ws, r, c, g.lq === null ? '<LQ' : `<${virgule(Number(g.lq.toPrecision(2)))}`, { h: 'center', italique: true, couleur: GRIS_LQ })
     const depasse = guide !== null && g.max.valeur > guide
-    ecrire(ws, r, c, Number(g.max.valeur.toPrecision(3)), { h: 'center', gras: depasse, fond: depasse ? GRIS_DEPASSEMENT : undefined })
+    ecrire(ws, r, c, Number(g.max.valeur.toPrecision(3)), {
+      h: 'center',
+      gras: depasse,
+      fond: depasse ? ETAT.alerte.fond : undefined,
+      couleur: depasse ? ETAT.alerte.texte : undefined,
+    })
     ws.getCell(r, c).note = `Maximum : ${g.max.echantillon}`
   }
   for (const l of a.lignes) {

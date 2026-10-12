@@ -28,6 +28,7 @@ import {
   type PerceePoint,
   type Qualification,
 } from './qualite.ts'
+import { argb, BANDEAU, barre, ETAT, echelle, GROUPES, TEINTES_FAMILLES } from './couleurs.ts'
 import { statistiques, valeursCompose } from './stats.ts'
 import { dessinerCamembert, HAUTEUR, LARGEUR } from './camembert.ts'
 import { signatures } from './signatures.ts'
@@ -470,29 +471,46 @@ function concentrationMinimale(masseTotale: number | null, point: string, opts: 
 
 // ---- Per-compound analysis ----------------------------------------------------
 
-const COLONNES_ANALYSE: [string, number][] = [
-  ['Composé', 34],
-  ['Unité', 11],
-  ['Nb analysés', 9],
-  ['Nb de dépassements de la LQ', 12],
-  ['Fréquence de dépassement de la LQ (%)', 15],
-  ['LQ min', 9],
-  ['LQ max', 9],
-  ['Minimum', 10],
-  ['Maximum', 10],
-  ['Échantillon du maximum', 16],
-  ['Moyenne', 10],
-  ['Médiane', 10],
-  ['Écart-type', 10],
-  ['Percentile 90', 10],
-  ['Valeur de comparaison', 13],
-  ['Source', 8],
-  ['Nb dépassements de la valeur de comparaison', 15],
-  ['Fréquence de dépassement de la valeur de comparaison (%)', 15],
-  ['Maximum / valeur de comparaison', 15],
-  ['Nb LQ > valeur de comparaison', 13],
-  ['Échantillons en dépassement', 40],
+type Groupe = keyof typeof GROUPES | null
+
+/** Columns of the analysis by compound, with the group each belongs to. */
+const COLONNES_ANALYSE: [string, number, Groupe][] = [
+  ['Composé', 34, null],
+  ['Unité', 11, null],
+  ['Nb analysés', 9, 'quantification'],
+  ['Nb de dépassements de la LQ', 12, 'quantification'],
+  ['Fréquence de dépassement de la LQ (%)', 15, 'quantification'],
+  ['LQ min', 9, 'quantification'],
+  ['LQ max', 9, 'quantification'],
+  ['Minimum', 10, 'distribution'],
+  ['Maximum', 10, 'distribution'],
+  ['Échantillon du maximum', 16, 'distribution'],
+  ['Moyenne', 10, 'distribution'],
+  ['Médiane', 10, 'distribution'],
+  ['Écart-type', 10, 'distribution'],
+  ['Percentile 90', 10, 'distribution'],
+  ['Valeur de comparaison', 13, 'comparaison'],
+  ['Source', 8, 'comparaison'],
+  ['Nb dépassements de la valeur de comparaison', 15, 'comparaison'],
+  ['Fréquence de dépassement de la valeur de comparaison (%)', 15, 'comparaison'],
+  ['Maximum / valeur de comparaison', 15, 'comparaison'],
+  ['Nb LQ > valeur de comparaison', 13, 'comparaison'],
+  ['Échantillons en dépassement', 40, 'comparaison'],
 ]
+
+const LIBELLES_GROUPES: Record<keyof typeof GROUPES, string> = {
+  quantification: 'Quantification',
+  distribution: 'Distribution des résultats quantifiés',
+  comparaison: 'Comparaison à la valeur de comparaison',
+}
+
+const colonne = (titre: string) => COLONNES_ANALYSE.findIndex(([t]) => t === titre) + 1
+
+/** Maximum over the comparison value: below half, up to it, beyond. */
+function etatRatio(ratio: number | null) {
+  if (ratio === null) return null
+  return ratio >= 1 ? ETAT.alerte : ratio >= 0.5 ? ETAT.vigilance : ETAT.ok
+}
 
 function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   const ws = wb.addWorksheet('Analyse par composé', { views: [{ state: 'frozen', xSplit: 1, ySplit: 5, showGridLines: false }] })
@@ -515,20 +533,31 @@ function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
     'Dépassement de la LQ : résultat quantifié. Minimum, maximum, moyenne, médiane, écart-type et percentile 90 : sur les seuls résultats supérieurs à la LQ.',
     { italique: true, taille: 9, bord: false },
   )
+
+  // Group bands above the headers, each in its colour.
   const r0 = 5
+  ws.getRow(4).height = 20
+  for (const g of Object.keys(GROUPES) as (keyof typeof GROUPES)[]) {
+    const cols = COLONNES_ANALYSE.map((c, j) => (c[2] === g ? j + 1 : 0)).filter(Boolean)
+    ws.mergeCells(4, cols[0], 4, cols[cols.length - 1])
+    ecrire(ws, 4, cols[0], LIBELLES_GROUPES[g], { gras: true, taille: 9, h: 'center', fond: argb(GROUPES[g].fort), couleur: 'FFFFFFFF' })
+  }
   ws.getRow(r0).height = 45
-  COLONNES_ANALYSE.forEach(([titre, largeur], j) => {
+  COLONNES_ANALYSE.forEach(([titre, largeur, groupe], j) => {
     ws.getColumn(j + 1).width = largeur
-    ecrire(ws, r0, j + 1, titre, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true })
+    ecrire(ws, r0, j + 1, titre, { gras: true, taille: 9, fond: groupe ? GROUPES[groupe].clair : VERT_ENTETE, h: 'center', wrap: true })
   })
+
   let r = r0 + 1
   let famille: string | null = null
   const conversion = opts.conversion ? { prelevements: opts.prelevements, unite: opts.unite } : null
   const nombre = (x: number | null) => (x === null ? '-' : Number(x.toPrecision(4)))
+  const debut = r
   for (const pa of lecture.parametres.CM) {
     if (pa.famille && pa.famille !== famille) {
       famille = pa.famille
-      ligneFamille(ws, r++, famille, COLONNES_ANALYSE.length)
+      ws.mergeCells(r, 1, r, COLONNES_ANALYSE.length)
+      ecrire(ws, r++, 1, famille, { gras: true, fond: BANDEAU.fond, couleur: BANDEAU.texte })
     }
     const g = opts.guides[pa.cle]
     const s = statistiques(valeursCompose(lecture, pa, echantillons, conversion), g?.valeur ?? null)
@@ -555,20 +584,47 @@ function feuilleAnalyse(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
       g ? s.lqSuperieures : '-',
       s.echantillonsDepassement.join(', ') || '-',
     ]
+    // What each cell says: exceedances in red, the ratio graded, LQ above
+    // the comparison value in orange, compounds within limits in green.
+    const depasse = g && s.depassements > 0
+    const etats: Record<number, (typeof ETAT)[keyof typeof ETAT] | null> = {
+      [colonne('Composé')]: depasse ? ETAT.alerte : null,
+      [colonne('Nb dépassements de la valeur de comparaison')]: g ? (s.depassements > 0 ? ETAT.alerte : ETAT.ok) : null,
+      [colonne('Maximum / valeur de comparaison')]: etatRatio(s.ratioMaxGuide),
+      [colonne('Nb LQ > valeur de comparaison')]: g && s.lqSuperieures > 0 ? ETAT.vigilance : null,
+      [colonne('Échantillons en dépassement')]: depasse ? ETAT.alerte : null,
+    }
     const derniere = valeurs.length - 1
     valeurs.forEach((v, j) => {
-      const depasse = COLONNES_ANALYSE[j][0] === 'Nb dépassements de la valeur de comparaison' && typeof v === 'number' && v > 0
+      const e = etats[j + 1]
       ecrire(ws, r, j + 1, v, {
         h: j === 0 || j === derniere ? 'left' : 'center',
         indent: j === 0 ? 1 : undefined,
         italique: j === 0 && pa.somme,
         wrap: j === derniere,
-        gras: depasse,
-        fond: depasse ? GRIS_DEPASSEMENT : undefined,
+        gras: !!e && e !== ETAT.ok,
+        fond: e?.fond,
+        couleur: e?.texte,
       })
     })
     r++
   }
+  // Frequencies as bars, 0 to 100 %.
+  barre(ws, debut, r - 1, colonne('Fréquence de dépassement de la LQ (%)'), GROUPES.quantification.fort, 100)
+  barre(ws, debut, r - 1, colonne('Fréquence de dépassement de la valeur de comparaison (%)'), GROUPES.comparaison.fort, 100)
+
+  r++
+  ecrire(ws, r++, 1, 'Lecture des couleurs', { gras: true, taille: 9, bord: false })
+  const legende: [(typeof ETAT)[keyof typeof ETAT], string][] = [
+    [ETAT.alerte, 'Dépassement de la valeur de comparaison ; maximum au moins égal à la valeur de comparaison'],
+    [ETAT.vigilance, 'Maximum entre la moitié de la valeur de comparaison et celle-ci ; LQ supérieure à la valeur de comparaison'],
+    [ETAT.ok, 'Aucun dépassement ; maximum inférieur à la moitié de la valeur de comparaison'],
+  ]
+  for (const [e, t] of legende) {
+    ecrire(ws, r, 1, '', { fond: e.fond })
+    ecrire(ws, r++, 2, t, { taille: 9, bord: false, couleur: e.texte })
+  }
+  ecrire(ws, r, 1, 'Barres : fréquences de dépassement, de 0 à 100 %.', { taille: 9, italique: true, bord: false })
 }
 
 // ---- Signatures of the organic families -------------------------------------
@@ -603,19 +659,21 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
     return
   }
   let r = 4
-  for (const f of familles) {
+  familles.forEach((f, k) => {
+    const teinte = TEINTES_FAMILLES[k % TEINTES_FAMILLES.length]
     const ordre = f.composes.map((c) => c.nom)
     const largeur = f.composes.length + 2
     ws.mergeCells(r, 1, r, largeur)
-    ecrire(ws, r++, 1, f.famille.toUpperCase(), { gras: true, fond: GRIS_FAMILLE })
+    ecrire(ws, r++, 1, f.famille.toUpperCase(), { gras: true, fond: argb(teinte), couleur: 'FFFFFFFF' })
     ws.getRow(r).height = 42
     ecrire(ws, r, 1, 'Échantillon', { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center' })
     f.composes.forEach((c, j) => ecrire(ws, r, j + 2, c.nom, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true }))
     ecrire(ws, r, largeur, `Total (${f.unite})`, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true })
     r++
+    const premiere = r
     for (const s of [...f.echantillons, f.ensemble]) {
       const ensemble = s === f.ensemble
-      ecrire(ws, r, 1, s.echantillon, { gras: ensemble, italique: ensemble })
+      ecrire(ws, r, 1, s.echantillon, { gras: ensemble, italique: ensemble, fond: ensemble ? GRIS_FAMILLE : undefined })
       f.composes.forEach((c, j) => {
         const part = s.parts.find((p) => p.nom === c.nom)
         ecrire(ws, r, j + 2, part ? part.valeur / s.total : '-', { h: 'center', fmt: part ? '0.0%' : undefined, gras: ensemble })
@@ -623,6 +681,9 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
       ecrire(ws, r, largeur, Number(s.total.toPrecision(4)), { h: 'center', gras: ensemble })
       r++
     }
+    // The heavier a compound in a sample, the deeper its cell; totals as bars.
+    echelle(ws, premiere, r - 1, 2, teinte, largeur - 1)
+    barre(ws, premiere, r - 2, largeur, teinte)
     r++
 
     // Pies: all samples together first, then one per sample, three per row.
@@ -639,7 +700,7 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
     })
     r += dessinees ? Math.ceil(pies.length / 3) * lignes + 1 : 0
     r++
-  }
+  })
 }
 
 // ---- Quality control -----------------------------------------------------------
@@ -650,16 +711,26 @@ function feuilleQualite(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   ecrire(ws, 1, 1, `${opts.titre} — contrôle qualité`, { gras: true, taille: 12, bord: false })
   let r = 3
   const titre = (t: string) => {
-    ecrire(ws, r++, 1, t, { gras: true, taille: 11, bord: false })
+    ws.mergeCells(r, 1, r, 7)
+    ecrire(ws, r++, 1, t, { gras: true, taille: 11, fond: BANDEAU.fond, couleur: BANDEAU.texte })
   }
   const entetes = (cols: string[]) => {
     cols.forEach((c, j) => ecrire(ws, r, j + 1, c, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true }))
     r++
   }
-  const ligne = (vals: (string | number)[], alerte = false) => {
-    vals.forEach((v, j) =>
-      ecrire(ws, r, j + 1, v, { h: j < 2 ? 'left' : 'center', gras: alerte && j >= 2, fond: alerte ? GRIS_DEPASSEMENT : undefined, wrap: j === 6 }),
-    )
+  /** A row: in red when it signals a problem; `ok` marks, in green, the
+   *  cell that says all is well; `fonds` colours given cells. */
+  const ligne = (vals: (string | number)[], alerte = false, ok?: number, fonds: Record<number, string> = {}) => {
+    vals.forEach((v, j) => {
+      const vert = !alerte && ok === j
+      ecrire(ws, r, j + 1, v, {
+        h: j < 2 ? 'left' : 'center',
+        gras: (alerte && j >= 2) || vert,
+        fond: alerte ? ETAT.alerte.fond : vert ? ETAT.ok.fond : fonds[j],
+        couleur: alerte ? ETAT.alerte.texte : vert ? ETAT.ok.texte : undefined,
+        wrap: j === 6,
+      })
+    })
     r++
   }
   const note = (t: string) => {
@@ -674,7 +745,9 @@ function feuilleQualite(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
     entetes(['Échantillon', 'Type', 'Doublon de'])
     for (const p of controles) {
       const q = opts.qualifications[p.nom]
-      ligne([p.nom, LIBELLES_TYPE[q.type], q.type === 'doublon' ? (q.de ?? 'non renseigné') : '-'])
+      ligne([p.nom, LIBELLES_TYPE[q.type], q.type === 'doublon' ? (q.de ?? 'non renseigné') : '-'], false, undefined, {
+        1: q.type === 'doublon' ? GROUPES.distribution.clair : GROUPES.quantification.clair,
+      })
     }
   }
   r++
@@ -687,7 +760,7 @@ function feuilleQualite(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
     entetes(['Blanc', 'Composé quantifié', 'Résultat', 'Unité'])
     for (const b of blancs) {
       const nom = `${b.blanc} (${LIBELLES_TYPE[b.type].toLowerCase()})`
-      if (!b.composes.length) ligne([nom, 'Aucun composé quantifié', '-', '-'])
+      if (!b.composes.length) ligne([nom, 'Aucun composé quantifié', '-', '-'], false, 1)
       for (const c of b.composes) ligne([nom, c.parametre.nom, brutFrancais(c.mesure), c.parametre.unite], true)
     }
   }
@@ -709,6 +782,7 @@ function feuilleQualite(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
       ligne(
         [`${d.doublon} / ${d.original}`, e.parametre.nom, brutFrancais(e.original!), brutFrancais(e.doublon!), Number(e.ecart!.toFixed(1)), e.conforme ? 'Conforme' : 'Écart > seuil'],
         !e.conforme,
+        5,
       )
     }
     const isoles = d.ecarts.filter((e) => e.ecart === null && ((e.original && !e.original.inferieur) || (e.doublon && !e.doublon.inferieur)))
@@ -757,6 +831,7 @@ function feuilleQualite(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
           pt.perceeGlobale ? 'Percée : prélèvement non conclusif pour tous les composés' : 'Conforme',
         ],
         pt.perceeGlobale,
+        6,
       )
     }
     r++
