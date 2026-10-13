@@ -26,7 +26,12 @@ type MilieuAir = 'gaz du sol' | 'air ambiant' | 'air intérieur'
 const MATRICES: { id: Matrice; titre: string; detail: string }[] = [
   { id: 'eau', titre: 'Eaux souterraines', detail: 'Résultats en µg/l, mg/l… comparés aux valeurs ERM eaux souterraines' },
   { id: 'sol', titre: 'Sols', detail: 'Résultats en mg/kg MS comparés aux valeurs ERM sols (bruit de fond, note interministérielle, ISDI)' },
-  { id: 'air', titre: 'Gaz du sol / air', detail: 'Tubes (µg/support, convertis en concentrations) ou canisters (µg/m³), comparés aux valeurs repères R1, R2, R3' },
+  {
+    id: 'air',
+    titre: 'Gaz du sol / air',
+    detail:
+      'Tubes (µg/support, convertis en concentrations), ou résultats déjà en µg/m³ (canisters, Radiello…) repris tels quels ; comparés aux valeurs repères R1, R2, R3',
+  },
 ]
 
 
@@ -75,14 +80,24 @@ async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
     const lecture = ordonnerCOHV(lireClasseur(feuilles, 'tout'))
     return matrice === 'eau' ? ajouterSommesCalculees(lecture) : ordonnerParProfondeur(lecture)
   }
-  // Sorbent tubes (µg/support, to convert) first; failing that, results
-  // already in µg/m³ (canisters, bags), which need no conversion.
-  try {
-    return ordonnerCOHV(lireClasseur(feuilles, 'support'))
-  } catch (e) {
-    if (!(e instanceof LectureImpossible)) throw e
-    return ordonnerCOHV(lireClasseur(feuilles, 'concentration'))
+  const essayer = (mode: 'support' | 'concentration') => {
+    try {
+      return lireClasseur(feuilles, mode)
+    } catch (e) {
+      if (!(e instanceof LectureImpossible)) throw e
+      return null
+    }
   }
+  // Concentrations the lab already gives (canisters, bags, passive samplers
+  // such as Radiello, where the lab applies the uptake rate) are taken as
+  // they are, with no conversion — even when the report also lists the
+  // mass on each tube. Masses per support are converted only when the lab
+  // gives no concentration for the compounds.
+  const support = essayer('support')
+  const concentration = essayer('concentration')
+  const lecture =
+    concentration && (!support || concentration.parametres.CM.length >= support.parametres.CM.length) ? concentration : support
+  return ordonnerCOHV(lecture ?? lireClasseur(feuilles, 'support'))
 }
 
 /** A file whose units belong to another matrix is most likely a wrong pick. */
@@ -121,7 +136,8 @@ export default function ResultatsLabo() {
   const [export_, setExport] = useState<'standard' | 'expert' | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
-  // Conversion only for sorbent tubes: canister results come in µg/m³.
+  // Conversion only for masses per support: concentrations given by the lab
+  // (canisters, Radiello…) are used as they are.
   const conversion = matrice === 'air' && lecture?.mode !== 'concentration'
   const libelle = matrice ? libelleMatrice(matrice, milieu) : ''
   const titreParDefaut = `Tableau X - Résultats dans ${dansLa(libelle)}`
@@ -407,8 +423,8 @@ export default function ResultatsLabo() {
               </p>
               {lecture.mode === 'concentration' && (
                 <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>
-                  Résultats fournis directement en µg/m³ (prélèvement par canister ou sac) : aucune conversion nécessaire, les colonnes en
-                  ppbV ne sont pas reprises.
+                  Résultats fournis directement en concentration dans l'air par le laboratoire (canister, sac, Radiello…) : l'étape de
+                  conversion est sautée. Les masses par support et les colonnes en ppbV éventuelles ne sont pas reprises.
                 </p>
               )}
               {conversion && lecture.lignesIgnorees.length > 0 && (

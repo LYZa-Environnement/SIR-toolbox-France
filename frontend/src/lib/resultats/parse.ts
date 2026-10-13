@@ -69,7 +69,7 @@ export interface Lecture {
   feuille?: string
 }
 
-const UNITE_CONCENTRATION_AIR = /^\s*([nµμum]|mc)?g\s*\/\s*m\s*[3³]/i
+const UNITE_CONCENTRATION_AIR = /^\s*([nµμum]|mc)?g\s*\/\s*N?m\s*[3³]/i
 const UNITE_SUPPORT = /^\s*([nµμum]|mc)?g\s*\/\s*(support|supp?\.?|[ée]ch\.?|[ée]chantillon|tube|cartouche|badge|filtre|t[êe]te|m[ée]dia|cassette)\b/i
 const UNITE = /^\s*(([nµμum]|mc)?g\s*\/\s*\S+|%|‰|°\s*c|ms\/m|µs\/cm|us\/cm|mv|upH|unit[ée]s?\s*ph|ntu|ufc)/i
 const EN_TETE_UNITE = /^(unit[ée]s?|units?)$/i
