@@ -11,7 +11,7 @@ interface Props {
   onFacteur: (f: number) => void
 }
 
-const POSITIONS: Position[] = ['amont', 'droit', 'aval']
+const POSITIONS: Position[] = ['amont', 'droit', 'aval', 'autre']
 
 /** Hydraulic position of each well, for the upgradient / downgradient
  *  sheet of the expert export. */
@@ -25,9 +25,10 @@ export function PositionsHydrauliques({ points, positions, auto, onPositions, fa
       <strong>Position hydraulique des ouvrages</strong>
       <p style={{ margin: '0.35rem 0 0.75rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
         Indiquez la position de chaque ouvrage par rapport au sens d'écoulement des eaux souterraines : l'export expert compare alors
-        l'amont et l'aval du site (onglet « Amont - aval »). Les blancs et doublons ne sont pas repris.{' '}
+        l'amont et l'aval du site (onglet « Amont - aval »). Les blancs et doublons ne sont pas repris, ni les ouvrages classés « Autre »
+        (autre nappe, ouvrage hors de l'axe d'écoulement…).{' '}
         {pret
-          ? `${compte('amont')} en amont, ${compte('droit')} au droit du site, ${compte('aval')} en aval.`
+          ? `${compte('amont')} en amont, ${compte('droit')} au droit du site, ${compte('aval')} en aval${compte('autre') ? `, ${compte('autre')} hors comparaison` : ''}.`
           : 'Il faut au moins un ouvrage en amont et un au droit du site ou en aval.'}
       </p>
 

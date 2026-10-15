@@ -24,7 +24,7 @@ import {
   type Degradation,
   type Origine,
 } from './diagnostics.ts'
-import { analyseAmontAval, LECTURES, LIBELLES_POSITION, type Groupe, type Position } from './amontAval.ts'
+import { analyseAmontAval, LECTURES, LIBELLES_POSITION, type Groupe, type PositionComparee } from './amontAval.ts'
 import { admissibiliteISDI } from './isdi.ts'
 
 const nombre = (x: number | null | undefined, chiffres = 3) => (x === null || x === undefined || !Number.isFinite(x) ? '-' : Number(x.toPrecision(chiffres)))
@@ -409,7 +409,7 @@ function feuilleISDI(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
 
 // ---- Groundwater: upgradient versus downgradient ------------------------------------------
 
-const COULEURS_POSITION: Record<Position, string> = { amont: '#2E75B6', droit: '#E69F00', aval: '#C0392B' }
+const COULEURS_POSITION: Record<PositionComparee, string> = { amont: '#2E75B6', droit: '#E69F00', aval: '#C0392B' }
 
 function feuilleAmontAval(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   if (!opts.positions) return
@@ -428,9 +428,10 @@ function feuilleAmontAval(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   r++
 
   r = titre(ws, r, 'Réseau de surveillance')
-  for (const pos of ['amont', 'droit', 'aval'] as Position[]) {
+  for (const pos of ['amont', 'droit', 'aval'] as PositionComparee[]) {
     r = texte(ws, r, `• ${LIBELLES_POSITION[pos]} : ${a.ouvrages[pos].length ? a.ouvrages[pos].join(', ') : 'aucun'}.`)
   }
+  if (a.autres.length) r = texte(ws, r, `• Autres ouvrages, non pris en compte dans la comparaison : ${a.autres.join(', ')}.`)
   if (a.ouvrages.aval.length < 2) {
     r = texte(ws, r, '• Moins de deux ouvrages en aval : le réseau est en deçà du schéma minimal de surveillance des installations classées (au moins un ouvrage en amont et deux en aval, non alignés — arrêté du 2 février 1998, art. 65). Lecture à conforter.', { gras: true })
   }
@@ -514,7 +515,7 @@ function feuilleAmontAval(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
     r++
   }
   r++
-  const representes = (['amont', 'droit', 'aval'] as Position[]).filter((pos) => a.ouvrages[pos].length)
+  const representes = (['amont', 'droit', 'aval'] as PositionComparee[]).filter((pos) => a.ouvrages[pos].length)
   const enMicro = (g: Groupe, p: Parametre) =>
     !g.n ? null : g.max ? { valeur: g.max.valeur * p.versMicrogrammes, lq: false } : g.lq ? { valeur: g.lq * p.versMicrogrammes, lq: true } : null
   image(

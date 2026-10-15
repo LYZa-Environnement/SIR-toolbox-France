@@ -9,12 +9,17 @@
 import type { Lecture, Mesure, Parametre, Point } from '../parse.ts'
 import { CHAINES, compact } from './diagnostics.ts'
 
-export type Position = 'amont' | 'droit' | 'aval'
+/** `autre`: a well kept out of the comparison (another aquifer, a well
+ *  off the flow line, a supply well…). */
+export type Position = 'amont' | 'droit' | 'aval' | 'autre'
+/** Positions compared to one another. */
+export type PositionComparee = Exclude<Position, 'autre'>
 
 export const LIBELLES_POSITION: Record<Position, string> = {
   amont: 'Amont hydraulique',
   droit: 'Au droit du site',
   aval: 'Aval hydraulique',
+  autre: 'Autre (hors comparaison)',
 }
 
 /** Position read from the sample name when it says so ("PZ amont", "Pz-aval 2"). */
@@ -70,7 +75,9 @@ export interface LigneAmontAval {
 }
 
 export interface AnalyseAmontAval {
-  ouvrages: Record<Position, string[]>
+  ouvrages: Record<PositionComparee, string[]>
+  /** Wells marked "autre", listed but not compared. */
+  autres: string[]
   lignes: LigneAmontAval[]
   /** Parameters analysed but never quantified in a positioned well. */
   nonQuantifies: number
@@ -116,8 +123,13 @@ export function analyseAmontAval(
   guides: Record<string, { valeur: number } | null>,
   facteur = 2,
 ): AnalyseAmontAval | null {
-  const ouvrages: Record<Position, string[]> = { amont: [], droit: [], aval: [] }
-  for (const e of echantillons) if (positions[e]) ouvrages[positions[e]].push(e)
+  const ouvrages: Record<PositionComparee, string[]> = { amont: [], droit: [], aval: [] }
+  const autres: string[] = []
+  for (const e of echantillons) {
+    const pos = positions[e]
+    if (pos === 'autre') autres.push(e)
+    else if (pos) ouvrages[pos].push(e)
+  }
   if (!ouvrages.amont.length || !(ouvrages.droit.length + ouvrages.aval.length)) return null
 
   const lignes: LigneAmontAval[] = []
@@ -168,5 +180,5 @@ export function analyseAmontAval(
   if (!lignes.length) return null
   marquerDegradation(lignes)
   lignes.sort((a, b) => ORDRE.indexOf(a.verdict) - ORDRE.indexOf(b.verdict) || (b.rapport?.valeur ?? 0) - (a.rapport?.valeur ?? 0))
-  return { ouvrages, lignes, nonQuantifies, facteur }
+  return { ouvrages, autres, lignes, nonQuantifies, facteur }
 }
