@@ -32,7 +32,10 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   de chaque campagne, association des échantillons par ouvrage (corrigeable,
   ouvrages non échantillonnés admis), et onglets « Comparaison campagnes »,
   « Évolutions et tendances » (sommes COHV, BTEX, HAP, HCT, contraste
-  HE / BE) et « Graphiques évolution » dans l'export.
+  HE / BE) et « Graphiques évolution », limités aux ouvrages échantillonnés
+  lors d'au moins deux campagnes, et « Statistiques campagnes » sur
+  l'ensemble des données (distribution, par campagne, par régime, par
+  ouvrage, corrélations de rang) dans l'export.
 
 ### Valeurs guides ERM
 

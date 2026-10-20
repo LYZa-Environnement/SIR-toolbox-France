@@ -59,13 +59,14 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
   }
 
   const absents = (i: number) => ouvrages.filter((o) => !o.echantillons[i]).length
+  const uniques = ouvrages.filter((o) => o.echantillons.filter(Boolean).length < 2).length
 
   return (
     <div className="card" style={{ marginTop: '1.5rem' }}>
       <strong>Campagnes à comparer</strong>
       <p style={{ margin: '0.35rem 0 0.75rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
         Ajoutez le fichier d'une autre campagne sur les mêmes ouvrages : les exports comparent alors les campagnes (onglets
-        « Comparaison campagnes », « Évolutions et tendances » et « Graphiques évolution »). Indiquez la date et le régime de chaque
+        « Comparaison campagnes », « Évolutions et tendances », « Graphiques évolution » et « Statistiques campagnes »). Indiquez la date et le régime de chaque
         campagne : les tendances hautes eaux / basses eaux demandent au moins une campagne de chaque. Les onglets de mise en forme
         portent sur le fichier principal.
       </p>
@@ -168,6 +169,11 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
                 .filter(Boolean)
                 .join(' ; ') + '.'}
           </p>
+          <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+            Comparaisons, évolutions et graphiques : seuls les ouvrages échantillonnés lors d'au moins deux campagnes
+            {uniques > 0 && ` (${uniques} ouvrage${uniques > 1 ? 's' : ''} grisé${uniques > 1 ? 's' : ''} écarté${uniques > 1 ? 's' : ''})`}. Les statistiques
+            portent sur l'ensemble des données.
+          </p>
           <div className="tableau-defile" style={{ maxHeight: '24rem' }}>
             <table className="tableau">
               <thead>
@@ -181,7 +187,9 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
               <tbody>
                 {ouvrages.map((o, ligne) => (
                   <tr key={`${ligne}-${o.nom}`} className={o.echantillons.every(Boolean) ? 'tableau__selection' : undefined}>
-                    <th scope="row">{o.nom}</th>
+                    <th scope="row" style={o.echantillons.filter(Boolean).length < 2 ? { color: 'var(--color-muted)', fontWeight: 400 } : undefined}>
+                      {o.nom}
+                    </th>
                     {campagnes.map((c, i) => (
                       <td key={i}>
                         <select
