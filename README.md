@@ -26,7 +26,13 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   `src/lib/resultats/parse.ts`), conversion µg/support → µg/m³ pour les gaz,
   et export Excel « Tableau X - Résultats [matrice] » avec un onglet mis en
   forme et un onglet comparé aux valeurs guides ERM (mise en forme
-  conditionnelle, sources sous le tableau).
+  conditionnelle, sources sous le tableau). Pour les eaux souterraines,
+  jusqu'à quatre campagnes peuvent être comparées
+  (`src/lib/resultats/campagnes.ts`) : date et régime (hautes / basses eaux)
+  de chaque campagne, association des échantillons par ouvrage (corrigeable,
+  ouvrages non échantillonnés admis), et onglets « Comparaison campagnes »,
+  « Évolutions et tendances » (sommes COHV, BTEX, HAP, HCT, contraste
+  HE / BE) et « Graphiques évolution » dans l'export.
 
 ### Valeurs guides ERM
 

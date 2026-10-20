@@ -33,6 +33,7 @@ import { statistiques, valeursCompose } from './stats.ts'
 import { dessinerCamembert, HAUTEUR, LARGEUR } from './camembert.ts'
 import { signatures } from './signatures.ts'
 import type { Position } from './expert/amontAval.ts'
+import type { DonneesCampagnes } from './feuillesCampagnes.ts'
 import { libelleProfondeur, lireProfondeur } from './expert/profondeur.ts'
 
 export interface Legende {
@@ -66,6 +67,9 @@ export interface OptionsExport {
    *  downgradient sheet, and the ratio taken as a real difference. */
   positions?: Record<string, Position>
   facteurAmontAval?: number
+  /** Groundwater: other campaigns of the same wells, for the comparison
+   *  sheets (evolution, high / low water, charts). */
+  campagnes?: DonneesCampagnes
 }
 
 // Colours of the ERM Office theme, as resolved in the reference table.
@@ -853,6 +857,10 @@ export async function construireClasseur(lecture: Lecture, opts: OptionsExport):
   feuille(wb, 'Valeurs guides ERM', lecture, opts, true)
   feuilleAnalyse(wb, lecture, opts)
   feuilleQualite(wb, lecture, opts)
+  if (opts.campagnes) {
+    const { ajouterFeuillesCampagnes } = await import('./feuillesCampagnes.ts')
+    ajouterFeuillesCampagnes(wb, opts.campagnes, opts.titre)
+  }
   if (opts.expert) {
     // Signatures are part of the expert reading only.
     feuilleSignatures(wb, lecture, opts)

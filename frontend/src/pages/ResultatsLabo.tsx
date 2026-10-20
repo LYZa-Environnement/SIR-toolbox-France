@@ -7,6 +7,8 @@ import { ajouterSommesCalculees } from '../lib/resultats/sommes'
 import { ordonnerCOHV } from '../lib/resultats/cohv'
 import { SignaturesApercu } from '../components/Signatures'
 import { PositionsHydrauliques } from '../components/PositionsHydrauliques'
+import { Campagnes, type AutreCampagne, type InfoCampagne } from '../components/Campagnes'
+import { associer, composes, type Campagne, type Ouvrage } from '../lib/resultats/campagnes'
 import { positionsAuto, type Position } from '../lib/resultats/expert/amontAval'
 import { libelleProfondeur, lireProfondeur, ordonnerParProfondeur } from '../lib/resultats/expert/profondeur'
 import {
@@ -130,6 +132,11 @@ export default function ResultatsLabo() {
   const [positions, setPositions] = useState<Record<string, Position>>({})
   const [positionsDetectees, setPositionsDetectees] = useState<Record<string, Position>>({})
   const [facteurAmontAval, setFacteurAmontAval] = useState(2)
+  const [infoPrincipale, setInfoPrincipale] = useState<InfoCampagne>({ date: '', regime: null })
+  const [autres, setAutres] = useState<AutreCampagne[]>([])
+  /** Wells matched by hand; null: matched by name. */
+  const [ouvragesManuels, setOuvragesManuels] = useState<Ouvrage[] | null>(null)
+  const [facteurEvolution, setFacteurEvolution] = useState(2)
   const [titre, setTitre] = useState('')
   const [sousTitre, setSousTitre] = useState('Echantillons prélevés par ERM le ')
   const [coucheApercu, setCoucheApercu] = useState<Couche>('CM')
@@ -173,6 +180,7 @@ export default function ResultatsLabo() {
       setPositionsDetectees(detectees)
       setSeuilDoublon(matrice === 'sol' ? 50 : 30)
       setCoucheApercu('CM')
+      setOuvragesManuels(null)
     } catch (e) {
       setLecture(null)
       setErreur(
@@ -186,7 +194,7 @@ export default function ResultatsLabo() {
   }
 
   const points = useMemo(() => lecture?.points ?? [], [lecture])
-  const retenus = points.filter((p) => !exclus[p.nom])
+  const retenus = useMemo(() => points.filter((p) => !exclus[p.nom]), [points, exclus])
   const selectionnes = points.filter((p) => selection[p.nom])
   const prelevements = useMemo(
     () => Object.fromEntries(points.map((p) => [p.nom, versPrelevement(saisies[p.nom])])),
@@ -240,6 +248,46 @@ export default function ResultatsLabo() {
     }
     return g
   }, [lecture, surcharges, parFamille, automatiques])
+
+  // Other campaigns of the same wells (groundwater).
+  const campagnes = useMemo((): Campagne[] => {
+    if (!lecture || matrice !== 'eau' || !autres.length) return []
+    const principale: Campagne = {
+      lecture: { ...lecture, points: retenus },
+      fichier,
+      ...infoPrincipale,
+      controles: retenus.filter((p) => estControle(qualifications[p.nom])).map((p) => p.nom),
+    }
+    return [principale, ...autres]
+  }, [lecture, matrice, autres, fichier, infoPrincipale, qualifications, retenus])
+  const ouvrages = useMemo(() => ouvragesManuels ?? associer(campagnes), [ouvragesManuels, campagnes])
+
+  /** Comparison value of each compound across the campaigns' files: the
+   *  main file's, else the ERM value in the compound's unit. */
+  const guidesCampagnes = useMemo(() => {
+    const g: Record<string, { valeur: number; source: string } | null> = {}
+    if (!campagnes.length || !matrice) return g
+    for (const c of composes(campagnes)) {
+      const principal = c.parametres[0]
+      const ref = c.parametres.find((x) => x && x.unite === c.unite)!
+      g[c.cle] = principal && principal.unite === c.unite ? (guides[principal.cle] ?? null) : valeurGuideEn(matrice, ref, { metaux, repere }, c.unite)
+    }
+    return g
+  }, [campagnes, guides, matrice, metaux, repere])
+
+  async function ajouterCampagne(f: File): Promise<string | null> {
+    try {
+      const l = await lireFichier(f, 'eau')
+      const q = qualifierAuto(l.points)
+      setAutres((a) => [...a, { lecture: l, fichier: f.name, date: '', regime: null, controles: l.points.filter((p) => estControle(q[p.nom])).map((p) => p.nom) }])
+      setOuvragesManuels(null)
+      return null
+    } catch (e) {
+      return e instanceof LectureImpossible
+        ? `${e.message} Si ce fichier vient bien d'un laboratoire, transmettez-le pour que son format soit pris en charge.`
+        : "Le fichier n'a pas pu être lu. Vérifiez qu'il s'agit d'un classeur Excel (.xlsx, .xls) ou d'un CSV."
+    }
+  }
 
   function modifier(nom: string, champ: Champ, valeur: string) {
     setSaisies((s) => ({ ...s, [nom]: { ...vide, ...s[nom], [champ]: valeur } }))
@@ -299,8 +347,9 @@ export default function ResultatsLabo() {
           expert,
           positions: matrice === 'eau' ? positions : undefined,
           facteurAmontAval,
+          campagnes: campagnes.length > 1 ? { campagnes, ouvrages, facteur: facteurEvolution, guides: guidesCampagnes } : undefined,
         },
-        `Tableau X - Résultats ${libelle}${expert ? ' - expert' : ''}.xlsx`,
+        `Tableau X - Résultats ${libelle}${campagnes.length > 1 ? ' - comparaison campagnes' : ''}${expert ? ' - expert' : ''}.xlsx`,
       )
     } finally {
       setExport(null)
@@ -455,6 +504,33 @@ export default function ResultatsLabo() {
               onPositions={setPositions}
               facteur={facteurAmontAval}
               onFacteur={setFacteurAmontAval}
+            />
+          )}
+
+          {lecture && matrice === 'eau' && (
+            <Campagnes
+              campagnes={
+                campagnes.length
+                  ? campagnes
+                  : [
+                      {
+                        lecture,
+                        fichier,
+                        ...infoPrincipale,
+                        controles: lecture.points.filter((p) => estControle(qualifications[p.nom])).map((p) => p.nom),
+                      },
+                    ]
+              }
+              ouvrages={ouvrages}
+              onInfo={(i, info) => (i === 0 ? setInfoPrincipale((x) => ({ ...x, ...info })) : setAutres((a) => a.map((c, k) => (k === i - 1 ? { ...c, ...info } : c))))}
+              onAjouter={ajouterCampagne}
+              onRetirer={(i) => {
+                setAutres((a) => a.filter((_, k) => k !== i - 1))
+                setOuvragesManuels(null)
+              }}
+              onOuvrages={setOuvragesManuels}
+              facteur={facteurEvolution}
+              onFacteur={setFacteurEvolution}
             />
           )}
         </div>
