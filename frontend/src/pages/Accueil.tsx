@@ -28,6 +28,14 @@ const OUTILS: Outil[] = [
     route: '/resultats-labo',
   },
   {
+    titre: 'Conformité des rejets',
+    accroche: 'Arrêté du 2 février 1998',
+    description:
+      "Vérifiez les rejets d'une unité de traitement d'air ou d'eau (extraction des gaz du sol, pompage-traitement) au regard des valeurs limites de l'arrêté du 2 février 1998.",
+    points: ['Article 27 (air), articles 31, 32 et 34 (eau)', 'Seuils de flux, sommes de COV, rapport Excel'],
+    route: '/conformite-rejets',
+  },
+  {
     titre: 'Données environnementales publiques',
     accroche: 'Carte interactive',
     description:
@@ -80,8 +88,8 @@ export default function Accueil() {
         <p className="eyebrow">ERM — boîte à outils</p>
         <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
         <p className="lede">
-          Quatre outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
-          d'analyses.
+          Cinq outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
+          d'analyses et au contrôle des rejets.
         </p>
         <div className="grid grid--2" style={{ marginTop: '2.5rem', gap: '1.25rem' }}>
           {OUTILS.map((outil, i) => (

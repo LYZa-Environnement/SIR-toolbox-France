@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import Accueil from './pages/Accueil'
 import ResultatsLabo from './pages/ResultatsLabo'
+import ConformiteRejets from './pages/ConformiteRejets'
 import SiteSetting from './pages/SiteSetting'
 
 export default function App() {
@@ -11,6 +12,7 @@ export default function App() {
         <Route path="/" element={<Accueil />} />
         <Route path="/site-setting" element={<SiteSetting />} />
         <Route path="/resultats-labo" element={<ResultatsLabo />} />
+        <Route path="/conformite-rejets" element={<ConformiteRejets />} />
         <Route path="/conversion" element={<Navigate to="/resultats-labo" replace />} />
 
         {/* Former pages no longer exist; old links land on the home page

@@ -5,7 +5,7 @@ l'échelle d'une adresse ou d'un ensemble de parcelles. Tout tourne dans le
 navigateur : les pages interrogent directement les API publiques (Géorisques,
 Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
 
-## Les trois outils
+## Les outils
 
 - **Site Setting** (`frontend/src/pages/Accueil.tsx`) — saisie d'une adresse,
   délimitation du site par ses parcelles cadastrales, puis six lectures
@@ -36,6 +36,17 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   lors d'au moins deux campagnes, et « Statistiques campagnes » sur
   l'ensemble des données (distribution, par campagne, par régime, par
   ouvrage, corrélations de rang) dans l'export.
+- **Conformité des rejets** (`frontend/src/pages/ConformiteRejets.tsx`) —
+  rejets d'une unité de traitement d'air ou d'eau comparés aux valeurs
+  limites générales de l'arrêté du 2 février 1998 modifié
+  (`src/lib/rejets/`) : article 27 pour l'air (seuils de flux horaire, COV en
+  carbone total, sommes annexe III, CMR et halogénés H341/H351, métaux,
+  cancérigènes de l'annexe IV, oxydation, conditions normales et oxygène de
+  référence), articles 31, 32 et 34 pour l'eau (pH, température, MES, DBO5,
+  DCO, azote et phosphore, substances des 3° et 4°, raccordement à une
+  station d'épuration). Résultats lus dans le fichier du laboratoire ou
+  saisis, résultats <LQ en bornes basse et haute, tolérance de 10 % de
+  l'autosurveillance permanente (article 21), rapport Excel.
 
 ### Valeurs guides ERM
 
