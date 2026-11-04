@@ -570,6 +570,18 @@ function loadLab(sheets, fileName){
     }
   }
   if (!params.length) throw new Error('Échantillons reconnus, mais aucun résultat chiffré associé.');
+  // The same sample on several columns (a second analytical programme, such
+  // as asbestos, reported alongside): one sample, its results merged.
+  const groupe = samples.map(s => norm(s.rawId));
+  const uniques = samples.filter((s, i) => groupe.indexOf(groupe[i]) === i);
+  if (uniques.length < samples.length){
+    for (const p of params){
+      const v = uniques.map(() => null);
+      p.vals.forEach((x, i) => { const k = uniques.findIndex(u => norm(u.rawId) === groupe[i]); if (x && (!v[k] || (v[k].num == null && !v[k].lt))) v[k] = x; });
+      p.vals = v;
+    }
+    samples.splice(0, samples.length, ...uniques);
+  }
   // Clés uniques
   const seen = {};
   params.forEach(p => { const k = norm(p.name) + '|' + norm(p.unit); seen[k] = (seen[k] || 0) + 1; p.key = seen[k] > 1 ? `${k}#${seen[k]}` : k; p.computed = false; });
@@ -744,9 +756,11 @@ const CONSTR_PAT = {
 let svgSeq = 0;
 /** Largest PID value of the whole workbook: one bar scale for every log,
  *  so that bars compare from one borehole to the next. */
+/** A PID reading as a number: "> 5 000" counts as 5 000 for the bars. */
+const pidNum = v => typeof v === 'string' ? num(v.replace(/^\s*[<>≤≥~]=?\s*/, '')) : num(v);
 function pidMax(){
   let m = 0;
-  for (const h of state.holes.values()) for (const r of h.pid){ const v = num(r.value); if (v != null && v > m) m = v; }
+  for (const h of state.holes.values()) for (const r of h.pid){ const v = pidNum(r.value); if (v != null && v > m) m = v; }
   return m;
 }
 const pidFrac = (v, max) => Math.log10(1 + v) / Math.log10(1 + max);
@@ -754,6 +768,42 @@ function pageDepthFor(h){
   if (state.opt.depth !== 'auto') return +state.opt.depth;
   const D = Math.max(h.depth || 0, ...h.litho.map(l => l.to || 0), ...h.construction.map(c => c.to || 0), 1);
   return D <= 30 ? Math.max(5, Math.ceil((D + .3) / 5) * 5) : 20;
+}
+/* Results column: the normal layout while it fits; when the column is
+   crowded, the results below the LQ are gathered on one line, then the
+   type gets smaller; failing that, the page covers less depth. A log with
+   few results keeps the normal layout. */
+const LAB_MODES = [
+  { head:9, row:9, gap:4, fs:7.5, fsId:6.5, group:false },
+  { head:9, row:9, gap:3, fs:7.5, fsId:6.5, group:true },
+  { head:7.6, row:7.6, gap:2.5, fs:6.6, fsId:5.8, group:true },
+];
+function labContent(s, sp){
+  if (s.labIdx == null) return sampleStatus(s) === false ? { kept:true, rows:[] } : null;
+  const rows = [];
+  for (const q of sp){
+    const v = q.p.vals[s.labIdx]; if (!v) continue;
+    if (state.hideLQ && v.lt) continue;
+    const txt = v.lt ? (v.num != null ? '<' + fmtNum(v.num) : '<LQ') : v.num != null ? (v.gt ? '>' : '') + fmtNum(v.num) : v.txt;
+    const over = q.t != null && !v.lt && v.num != null && v.num > q.t;
+    rows.push({ label:q.label, txt, over, lt:v.lt });
+  }
+  return rows.length ? { kept:false, rows } : null;
+}
+function labLayout(ct, mode, w, nSel){
+  const m = LAB_MODES[mode];
+  if (ct.kept) return { shown:[], lq:[], h: m.head + m.row + m.gap - 1 };
+  const shown = m.group ? ct.rows.filter(r => !r.lt) : ct.rows;
+  const lt = m.group ? ct.rows.filter(r => r.lt) : [];
+  const txt = !lt.length ? '' : !shown.length && lt.length === nSel ? 'Tous les paramètres < LQ' : '< LQ : ' + lt.map(r => r.label).join(', ');
+  const lq = txt ? wrap(txt, w - 12, m.fs - .5) : [];
+  return { shown, lq, h: m.head + shown.length * m.row + lq.length * (m.row - .8) + m.gap };
+}
+function labNeed(h, sp, mode, p0, p1, w){
+  let t = 0;
+  for (const s of h.samples){ if (s.from == null || s.to == null || !(s.to > p0 && s.from < p1)) continue;
+    const ct = labContent(s, sp); if (ct) t += labLayout(ct, mode, w, sp.length).h; }
+  return t;
 }
 function selParams(){
   if (!state.lab) return [];
@@ -789,11 +839,18 @@ function buildPages(h){
   cols.find(c => c.k === 'desc').w = avail - fixed;
   let x = M; for (const c of cols){ c.x = x; x += c.w; }
   const C = Object.fromEntries(cols.map(c => [c.k, c]));
-  const pd = pageDepthFor(h);
+  let pd = pageDepthFor(h);
   const D = Math.max(h.depth || 0, ...h.litho.map(l => l.to || 0), ...h.construction.map(c => c.to || 0), .5);
-  const nPages = Math.max(1, Math.ceil((D - 1e-6) / pd));
+  // Results column: the first layout that fits every page; when even the
+  // most compact does not, less depth per page (automatic depth only).
+  const hauteur = bodyBot - bodyTop - 2, sp = hasLab ? selParams() : [];
+  const pagesOf = d => Array.from({ length: Math.max(1, Math.ceil((D - 1e-6) / d)) }, (_, p) => [p * d, (p + 1) * d]);
+  const fits = (d, mode) => pagesOf(d).every(([a, b]) => labNeed(h, sp, mode, a, b, C.lab.w) <= hauteur);
+  if (hasLab && state.opt.depth === 'auto') while (pd > 5 && !fits(pd, 2)) pd -= 5;
+  const labMode = !hasLab ? 0 : [0, 1, 2].find(mo => fits(pd, mo)) ?? 2;
+  const nPages = pagesOf(pd).length;
   const pages = [];
-  for (let p = 0; p < nPages; p++) pages.push(drawPage(h, { land, W, Hh, M, headH, footH, bodyTop, bodyBot, cols, C, pd, p0:p*pd, p1:(p+1)*pd, pageNo:p+1, nPages, hasSamples, hasLab, isWell }));
+  for (let p = 0; p < nPages; p++) pages.push(drawPage(h, { land, W, Hh, M, headH, footH, bodyTop, bodyBot, cols, C, pd, p0:p*pd, p1:(p+1)*pd, pageNo:p+1, nPages, hasSamples, hasLab, isWell, labMode }));
   return { land, pages };
 }
 
@@ -857,7 +914,7 @@ function drawPage(h, L){
   { const c = C.pid; const items = [];
     const pmax = pidMax();
     for (const r of h.pid){
-      const pv = num(r.value);
+      const pv = pidNum(r.value);
       // Bar length on a log scale: 0,1 ppm and 1 000 ppm both readable.
       if (pv != null && pv > 0 && pmax > 0 && r.from != null && r.to != null && inPage(r.from, r.to)){
         const f = pidFrac(pv, pmax), y0 = cl(Y(r.from)), y1 = cl(Y(r.to));
@@ -910,6 +967,11 @@ function drawPage(h, L){
       const lines = [s.id]; const dt = [s.date, s.time].filter(Boolean).join(' ');
       if (dt) lines.push(dt);
       if (st === false) lines.push('non analysé');
+      // A thin interval: the date goes first, then the « non analysé » line
+      // (the hatching and the legend still say it).
+      const bh = Math.max(1.5, Y(s.to) - Y(s.from));
+      if (lines.length > 1 && lines.length * 8.6 > bh + 6 && dt) lines.splice(1, 1);
+      if (lines.length > 1 && lines.length * 8.6 > bh + 6) lines.splice(1);
       const sz = fit(s.id, c.w - 6, 7.5, 5.5);
       items.push({ y: (cl(Y(s.from)) + cl(Y(s.to))) / 2 - lines.length * 4.5, h: lines.length * 8.6 + 1, lines, sz }); }
     stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((t,i) => {
@@ -919,35 +981,24 @@ function drawPage(h, L){
   }
   // Résultats analytiques
   if (L.hasLab){
-    const c = C.lab, sp = selParams(), items = [];
+    const c = C.lab, sp = selParams(), m = LAB_MODES[L.labMode], items = [];
     for (const s of h.samples){ if (!inPage(s.from, s.to)) continue;
-      if (s.labIdx == null){
-        if (sampleStatus(s) !== false) continue;
-        const y0 = cl(Y(s.from)), y1 = cl(Y(s.to));
-        items.push({ y: y0, h: 18, rows: [], kept: true, id: s.id, mid: (y0 + y1) / 2 });
-        continue;
-      }
-      const rows = [];
-      for (const q of sp){
-        const v = q.p.vals[s.labIdx]; if (!v) continue;
-        if (state.hideLQ && v.lt) continue;
-        const txt = v.lt ? (v.num != null ? '<' + fmtNum(v.num) : '<LQ') : v.num != null ? (v.gt ? '>' : '') + fmtNum(v.num) : v.txt;
-        const over = q.t != null && !v.lt && v.num != null && v.num > q.t;
-        rows.push({ label:q.label, txt, over, lt:v.lt });
-      }
-      if (!rows.length) continue;
+      const ct = labContent(s, sp); if (!ct) continue;
+      const lay = labLayout(ct, L.labMode, c.w, sp.length);
       const y0 = cl(Y(s.from)), y1 = cl(Y(s.to));
-      B.push(`<path d="M${c.x+4} ${y0} h-2.5 V${y1} h2.5" fill="none" stroke="#6aa86a" stroke-width=".7"/>`);
-      items.push({ y: y0, h: 9 + rows.length * 9 + 4, rows, id:s.id, mid:(y0+y1)/2 }); }
+      if (!ct.kept) B.push(`<path d="M${c.x+4} ${y0} h-2.5 V${y1} h2.5" fill="none" stroke="#6aa86a" stroke-width=".7"/>`);
+      items.push({ y: y0, h: lay.h, lay, kept: ct.kept, id: s.id });
+    }
     stack(items, bodyTop + 1, bodyBot - 1).forEach((it, n) => {
-      if (n) B.push(line(c.x + 8, it.ty - 1.5, c.x + c.w - 4, it.ty - 1.5, .35, '#bbb'));
-      B.push(T(c.x + 8, it.ty + 7, it.id, 6.5, `fill="${it.kept ? '#888' : '#4c7d4c'}" font-style="italic"`));
-      if (it.kept) B.push(T(c.x + 8, it.ty + 15.5, 'Prélevé, non analysé', 7.5, 'fill="#888" font-style="italic"'));
-      it.rows.forEach((r,i) => {
-        const yy = it.ty + 16 + i*9;
-        B.push(T(c.x + 8, yy, r.label, 7.5, r.lt ? 'fill="#777"' : ''));
-        B.push(T(c.x + c.w - 4, yy, r.txt, 7.5, `text-anchor="end" ${r.over ? 'fill="#d00" font-weight="bold"' : r.lt ? 'fill="#777"' : ''}`));
+      if (n) B.push(line(c.x + 8, it.ty - 1.2, c.x + c.w - 4, it.ty - 1.2, .35, '#bbb'));
+      B.push(T(c.x + 8, it.ty + m.head * .78, it.id, m.fsId, `fill="${it.kept ? '#888' : '#4c7d4c'}" font-style="italic"`));
+      if (it.kept){ B.push(T(c.x + 8, it.ty + m.head + m.row * .78, 'Prélevé, non analysé', m.fs, 'fill="#888" font-style="italic"')); return; }
+      it.lay.shown.forEach((r, i) => {
+        const yy = it.ty + m.head + m.row * .78 + i * m.row;
+        B.push(T(c.x + 8, yy, r.label, m.fs, r.lt ? 'fill="#777"' : ''));
+        B.push(T(c.x + c.w - 4, yy, r.txt, m.fs, `text-anchor="end" ${r.over ? 'fill="#d00" font-weight="bold"' : r.lt ? 'fill="#777"' : ''}`));
       });
+      it.lay.lq.forEach((t, j) => B.push(T(c.x + 8, it.ty + m.head + it.lay.shown.length * m.row + (m.row - .8) * (j + .78), t, m.fs - .5, 'fill="#777"')));
     });
   }
   // Échelles
@@ -1098,23 +1149,23 @@ function drawFooter(h, L, T, line, cId, cItems, id){
   let ny = y1 + 28; const maxY = yEnd - 6;
   // PID bar scale, the same on every log of the workbook.
   const pmax = pidMax();
-  if (pmax > 0 && h.pid.some(r => (num(r.value) ?? 0) > 0)){
+  if (pmax > 0 && h.pid.some(r => (pidNum(r.value) ?? 0) > 0)){
     const lt = 'Barres PID (ppm), échelle logarithmique commune à tous les logs :';
     o.push(T(nx, y1 + 27, lt, 8));
     const bx = nx + tw(lt, 8) + 8, bw = Math.min(190, W - M - 76 - bx - 14), by = y1 + 20;
     if (bw > 60){
       o.push(`<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="7" fill="#f6cdc8" stroke="#c98f88" stroke-width=".5"/>`);
-      const ticks = [0];
-      for (let d = 0.1; d < pmax * 0.95; d *= 10) ticks.push(d);
+      // Decades, and the maximum; a graduation too close to its neighbour
+      // or to the maximum is left out.
+      const at = v => bx + bw * (v === 0 ? 0 : pidFrac(v, pmax));
+      const xMax = at(pmax), ticks = [0];
+      for (let d = 0.1; d < pmax; d *= 10){ const x = at(d); if (x - at(ticks[ticks.length - 1]) >= 18 && xMax - x >= 22) ticks.push(d); }
       ticks.push(pmax);
-      let last = -99;
-      ticks.forEach((v, i) => {
-        const x = bx + bw * (v === 0 ? 0 : pidFrac(v, pmax));
-        if (x - last < 16 && i !== ticks.length - 1) return;
-        last = x;
+      for (const v of ticks){
+        const x = at(v);
         o.push(line(x, by + 7, x, by + 10, .5));
         o.push(T(x, by + 17, fmtNum(v), 6.5, 'text-anchor="middle"'));
-      });
+      }
     }
     ny = y1 + 46;
   }
