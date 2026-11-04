@@ -742,6 +742,14 @@ const CONSTR_PAT = {
    Construction du log (SVG)
    ============================================================ */
 let svgSeq = 0;
+/** Largest PID value of the whole workbook: one bar scale for every log,
+ *  so that bars compare from one borehole to the next. */
+function pidMax(){
+  let m = 0;
+  for (const h of state.holes.values()) for (const r of h.pid){ const v = num(r.value); if (v != null && v > m) m = v; }
+  return m;
+}
+const pidFrac = (v, max) => Math.log10(1 + v) / Math.log10(1 + max);
 function pageDepthFor(h){
   if (state.opt.depth !== 'auto') return +state.opt.depth;
   const D = Math.max(h.depth || 0, ...h.litho.map(l => l.to || 0), ...h.construction.map(c => c.to || 0), 1);
@@ -847,12 +855,12 @@ function drawPage(h, L){
   }
   // PID
   { const c = C.pid; const items = [];
-    const pmax = Math.max(0, ...h.pid.map(r => num(r.value) ?? 0));
+    const pmax = pidMax();
     for (const r of h.pid){
       const pv = num(r.value);
       // Bar length on a log scale: 0,1 ppm and 1 000 ppm both readable.
       if (pv != null && pv > 0 && pmax > 0 && r.from != null && r.to != null && inPage(r.from, r.to)){
-        const f = Math.log10(1 + pv) / Math.log10(1 + pmax), y0 = cl(Y(r.from)), y1 = cl(Y(r.to));
+        const f = pidFrac(pv, pmax), y0 = cl(Y(r.from)), y1 = cl(Y(r.to));
         B.push(`<rect x="${c.x + 1}" y="${(y0 + .8).toFixed(1)}" width="${((c.w - 2) * f).toFixed(1)}" height="${Math.max(1, y1 - y0 - 1.6).toFixed(1)}" fill="#f6cdc8"/>`);
       } if (r.from == null || r.to == null || !inPage(r.from, r.to)) continue;
       B.push(line(c.x, Y(r.from), c.x + c.w, Y(r.from), .5)); B.push(line(c.x, Y(r.to), c.x + c.w, Y(r.to), .5));
@@ -1080,6 +1088,28 @@ function drawFooter(h, L, T, line, cId, cItems, id){
   const nx = xs + 8, nw = W - M - nx - 70;
   o.push(T(nx, y1 + 14, 'NOTE :', 9, 'font-weight="bold" text-decoration="underline"'));
   let ny = y1 + 28; const maxY = yEnd - 6;
+  // PID bar scale, the same on every log of the workbook.
+  const pmax = pidMax();
+  if (pmax > 0 && h.pid.some(r => (num(r.value) ?? 0) > 0)){
+    const lt = 'Barres PID (ppm), échelle logarithmique commune à tous les logs :';
+    o.push(T(nx, y1 + 27, lt, 8));
+    const bx = nx + tw(lt, 8) + 8, bw = Math.min(190, W - M - 76 - bx - 14), by = y1 + 20;
+    if (bw > 60){
+      o.push(`<rect x="${bx.toFixed(1)}" y="${by}" width="${bw.toFixed(1)}" height="7" fill="#f6cdc8" stroke="#c98f88" stroke-width=".5"/>`);
+      const ticks = [0];
+      for (let d = 0.1; d < pmax * 0.95; d *= 10) ticks.push(d);
+      ticks.push(pmax);
+      let last = -99;
+      ticks.forEach((v, i) => {
+        const x = bx + bw * (v === 0 ? 0 : pidFrac(v, pmax));
+        if (x - last < 16 && i !== ticks.length - 1) return;
+        last = x;
+        o.push(line(x, by + 7, x, by + 10, .5));
+        o.push(T(x, by + 17, fmtNum(v), 6.5, 'text-anchor="middle"'));
+      });
+    }
+    ny = y1 + 46;
+  }
   for (const n of notes){
     for (const t of wrap(n, nw, 8.5)){ if (ny > maxY) break; o.push(T(nx, ny, t, 8.5)); ny += 10.5; }
     ny += 2;
