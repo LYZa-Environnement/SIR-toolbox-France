@@ -1057,11 +1057,19 @@ function drawFooter(h, L, T, line, cId, cItems, id){
     const per = legW > 300 ? 4 : 3, cw = (legW - 10) / per;
     const order = ['BENTONITE','CIMENT','CUTTINGS','BENTO/CIMENT','BETON','SABLE','MASSIF FILTRANT','TUBE PLEIN','CREPINE','BOUCHON','CAPOT'];
     const used = (L.isWell ? order.filter(k => cItems.includes(k)).concat(cItems.filter(k => !order.includes(k))) : []).concat(sampleKeys);
-    // Sample entries on a row of their own, two cells each (longer labels).
-    const nC = used.filter(k => !k.startsWith('ECH_')).length, rowS = Math.ceil(nC / per);
-    used.forEach((k, i) => {
-      const j = k.startsWith('ECH_') ? (i - nC) * 2 : i;
-      const x = M + 6 + (j % per) * cw, y = y1 + 22 + (k.startsWith('ECH_') ? rowS + Math.floor(j / per) : Math.floor(j / per)) * 15;
+    // Construction items in a grid; sample entries after them, on rows of
+    // their own, each as many cells wide as its label needs — never past
+    // the legend box.
+    const pos = {}; let row = 0, col = 0;
+    for (const k of used.filter(k => !k.startsWith('ECH_'))){ pos[k] = { col, row, span:1 }; if (++col === per){ col = 0; row++; } }
+    if (col){ row++; col = 0; }
+    for (const k of sampleKeys){
+      const span = Math.min(per, Math.ceil((tw(SAMPLE_LABEL[k], 7.5) + 24) / cw));
+      if (col + span > per){ row++; col = 0; }
+      pos[k] = { col, row, span }; col += span;
+    }
+    used.forEach(k => {
+      const x = M + 6 + pos[k].col * cw, y = y1 + 22 + pos[k].row * 15;
       let sw;
       if (k === 'CAPOT') sw = `<rect x="${x}" y="${y}" width="14" height="5" y-off="0" fill="#000" transform="translate(0 2.5)"/>`;
       else if (k === 'CREPINE') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#fff" stroke="#000" stroke-width=".6"/>` + line(x+3, y+3.5, x+11, y+3.5, .6) + line(x+3, y+6.5, x+11, y+6.5, .6);
@@ -1071,7 +1079,7 @@ function drawFooter(h, L, T, line, cId, cItems, id){
       else if (k === 'ECH_N') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="url(#${id}-kept)" stroke="#8a8a8a" stroke-width=".7" stroke-dasharray="2.5 1.5"/>`;
       else sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="url(#${cId(k)})" stroke="#000" stroke-width=".6"/>`;
       const lb = SAMPLE_LABEL[k] || ITEM_LABEL[k] || k;
-      o.push(sw + T(x + 17, y + 8, lb, fit(lb, (k.startsWith('ECH_') ? 2 : 1) * cw - 20, 7.5, 5.5)));
+      o.push(sw + T(x + 17, y + 8, lb, fit(lb, pos[k].span * cw - 22, 7.5, 5.5)));
     });
   }
   // Note
