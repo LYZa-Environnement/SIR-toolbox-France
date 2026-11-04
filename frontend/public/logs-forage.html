@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logs de forage · SIR Toolbox</title>
+<script src="vendor/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#e7e9e3; --panel:#f7f7f3; --ink:#22271f; --muted:#5f665a; --line:#cdd2c5;
+  --accent:#2f6b3a; --accent-ink:#ffffff; --warn:#9a4f16; --err:#ad2a20; --chip:#dfe4d8; --field:#ffffff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#191c17; --panel:#22261f; --ink:#e5e8df; --muted:#a2a99b; --line:#3a4135;
+    --accent:#86bf88; --accent-ink:#0f140e; --warn:#e3a464; --err:#f0857a; --chip:#2d3328; --field:#1b1f18;
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:390px 1fr;height:100vh}
+aside{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:22px 22px 40px}
+main{overflow:auto;display:flex;flex-direction:column}
+h1{font-size:20px;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
+.lede{color:var(--muted);margin:0 0 20px;font-size:13px}
+section.step{border-top:1px solid var(--line);padding:16px 0 18px}
+section.step h2{font-size:14.5px;margin:0 0 4px;font-weight:650;display:flex;align-items:baseline;gap:8px}
+section.step h2 .n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--panel);font-size:11.5px;flex:none}
+section.step.off{opacity:.5;pointer-events:none}
+.hint{color:var(--muted);font-size:12.5px;margin:2px 0 10px}
+.drop{display:block;border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;cursor:pointer;background:var(--field);font-size:13px}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop strong{color:var(--accent)}
+.drop input{display:none}
+.file-ok{font-size:12.5px;margin-top:8px;color:var(--accent)}
+button,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:7px 12px;border-radius:6px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;font-size:12.5px;cursor:pointer}
+label.row{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
+.field{display:grid;gap:4px;margin:8px 0;font-size:12.5px;color:var(--muted)}
+input[type=text],input[type=number],select,textarea{font:inherit;font-size:13px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:5px;padding:5px 7px;width:100%}
+textarea{resize:vertical;min-height:72px}
+.checks{list-style:none;margin:0;padding:0;font-size:12.5px}
+.checks li{padding:6px 0 6px 12px;border-left:3px solid var(--line);margin:4px 0}
+.checks li.warn{border-color:var(--warn)}
+.checks li.err{border-color:var(--err)}
+.checks li b{font-weight:650}
+.checks .lvl{font-size:11px;color:var(--muted)}
+.empty-checks{font-size:12.5px;color:var(--accent)}
+.params{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--field)}
+.param{display:grid;grid-template-columns:20px 1fr auto;gap:6px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12.5px}
+.param:last-child{border-bottom:0}
+.param .u{color:var(--muted);font-size:11.5px}
+.param .calc{font-size:11px;color:var(--accent)}
+.param .opts{grid-column:2/4;display:grid;grid-template-columns:1fr 92px;gap:6px}
+.param .opts input{padding:3px 6px;font-size:12px}
+.summary{font-size:12.5px;margin:8px 0}
+.summary .bad{color:var(--warn)}
+.toolbar{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 22px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar .sp{flex:1}
+.toolbar{padding-right:140px} /* room for the « Accueil » button */
+.chip{border-radius:999px;padding:4px 11px;font-size:12.5px;background:var(--chip);border:1px solid transparent}
+.chip[aria-pressed=false]{background:transparent;border-color:var(--line);color:var(--muted);text-decoration:line-through}
+#pages{padding:26px 22px 60px;display:flex;flex-direction:column;align-items:center;gap:26px}
+.page{background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.18),0 8px 24px rgba(0,0,0,.08);width:min(100%,860px)}
+.page.land{width:min(100%,1180px)}
+.page svg{display:block;width:100%;height:auto}
+.page-cap{font-size:12px;color:var(--muted);margin:-18px 0 0;align-self:center}
+.welcome{max-width:620px;margin:60px auto;padding:0 22px}
+.welcome h2{font-size:22px;margin:0 0 10px;font-weight:650}
+.welcome p{color:var(--muted)}
+.welcome table{border-collapse:collapse;font-size:13px;width:100%;margin-top:14px}
+.welcome td{border-top:1px solid var(--line);padding:6px 8px 6px 0;vertical-align:top}
+.welcome td:first-child{font-weight:600;white-space:nowrap}
+@media (max-width:900px){body{grid-template-columns:1fr;height:auto}aside{border-right:0;border-bottom:1px solid var(--line)}main{overflow:visible}}
+@media print{
+  body{display:block;background:#fff;height:auto}
+  aside,.toolbar,.page-cap,.welcome,.retour-accueil{display:none!important}
+  main{overflow:visible}
+  #pages{padding:0;gap:0;display:block}
+  .page{box-shadow:none;width:210mm;height:297mm;page:portrait;break-after:page}
+  .page.land{width:297mm;height:210mm;page:landscape}
+  .page svg{width:100%;height:100%}
+}
+@page portrait{size:A4 portrait;margin:0}
+@page landscape{size:A4 landscape;margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<a href="./" class="retour-accueil" title="Retour à l'accueil de SIR Toolbox France" style="position:fixed;top:10px;right:10px;z-index:2000;display:inline-flex;align-items:center;gap:6px;background:#00ffbe;color:#0d2421;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.25);">← Accueil</a>
+<aside>
+  <h1>Logs de forage</h1>
+  <p class="lede">Génère les logs de sondages et de piézomètres au format ERM à partir du classeur de saisie, avec en option les résultats d'analyses des échantillons.</p>
+
+  <section class="step" id="step1">
+    <h2><span class="n">1</span>Données de forage</h2>
+    <p class="hint">Classeur Excel de saisie (onglets Collars, Log Info, Lithology, Well Construction, PID, Water Level, Comments, Samples).</p>
+    <label class="drop" id="dropLogs"><input type="file" id="fileLogs" accept=".xlsx,.xlsm,.xls"><strong>Choisir le classeur</strong> ou le déposer ici</label>
+    <div class="file-ok" id="logsOk" hidden></div>
+    <p class="hint" style="margin-top:10px"><button class="linkbtn" id="btnTemplate" type="button">Télécharger le modèle de saisie vierge</button></p>
+  </section>
+
+  <section class="step off" id="step2">
+    <h2><span class="n">2</span>Résultats d'analyses <span class="lvl" style="font-weight:400;color:var(--muted);font-size:12px">facultatif</span></h2>
+    <p class="hint">Fichier du laboratoire ou tableau de résultats. Les échantillons sont rattachés aux forages par leur nom, par exemple « MW6 (3,4-4 m) », ou via l'onglet Samples.</p>
+    <label class="drop" id="dropLab"><input type="file" id="fileLab" accept=".xlsx,.xlsm,.xls,.csv"><strong>Joindre les résultats</strong> ou les déposer ici</label>
+    <div id="labPanel" hidden>
+      <div class="summary" id="labSummary"></div>
+      <input type="text" id="paramSearch" placeholder="Filtrer les paramètres (ex. C10-C40, benzène)" aria-label="Filtrer les paramètres">
+      <p class="hint" style="margin:8px 0 6px">Cochez jusqu'à 8 paramètres à reporter sur les logs. Le seuil est facultatif : les valeurs au-dessus s'affichent en rouge gras.</p>
+      <div class="params" id="paramList"></div>
+      <label class="row"><input type="checkbox" id="hideLQ"> Masquer les valeurs inférieures à la LQ</label>
+      <div class="field">Référence des seuils (reportée en note)
+        <input type="text" id="thrSource" placeholder="ex. Valeurs guides ERM – sols, 2026">
+      </div>
+      <button class="linkbtn" id="btnClearLab" type="button">Retirer les résultats d'analyses</button>
+    </div>
+  </section>
+
+  <section class="step off" id="step3">
+    <h2><span class="n">3</span>Contrôles de cohérence</h2>
+    <p class="hint">À vérifier avant diffusion. Les logs restent générés malgré les alertes.</p>
+    <ul class="checks" id="checks"></ul>
+  </section>
+
+  <section class="step off" id="step4">
+    <h2><span class="n">4</span>Mise en page</h2>
+    <div class="field">Orientation
+      <select id="optOrient">
+        <option value="auto">Automatique (paysage si résultats d'analyses)</option>
+        <option value="portrait">Portrait</option>
+        <option value="landscape">Paysage</option>
+      </select>
+    </div>
+    <div class="field">Profondeur représentée par page
+      <select id="optDepth">
+        <option value="auto">Automatique (tout le forage, jusqu'à 30 m)</option>
+        <option value="10">10 m</option><option value="15">15 m</option><option value="20">20 m</option><option value="25">25 m</option><option value="30">30 m</option>
+      </select>
+    </div>
+    <label class="row"><input type="checkbox" id="optCoords"> Ajouter coordonnées, cote du terrain et niveau d'eau en m NGF</label>
+    <div class="field">Bloc société
+      <textarea id="optCompany">ERM France
+Bureau de Paris
+40 avenue des Terroirs de France
+75012 Paris
+Tel: 01.53.24.10.30</textarea>
+    </div>
+    <div class="field">Logo (PNG, JPG ou SVG)
+      <input type="file" id="optLogo" accept="image/*">
+    </div>
+  </section>
+
+  <section class="step off" id="step5">
+    <h2><span class="n">5</span>Exporter</h2>
+    <p class="hint">Pour le PDF, choisissez « Enregistrer au format PDF » dans la fenêtre d'impression, marges : aucune.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="primary" id="btnPrint" type="button">Imprimer ou enregistrer en PDF</button>
+      <button id="btnSvg" type="button">Télécharger les SVG</button>
+    </div>
+  </section>
+</aside>
+
+<main>
+  <div class="toolbar" id="toolbar" hidden>
+    <span style="font-size:12.5px;color:var(--muted)">Forages inclus :</span>
+    <span id="chips" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+    <span class="sp"></span>
+    <span id="pageCount" style="font-size:12.5px;color:var(--muted)"></span>
+  </div>
+  <div id="pages">
+    <div class="welcome" id="welcome">
+      <h2>Chargez un classeur de saisie pour voir les logs</h2>
+      <p>Chaque onglet est lu par son nom et ses en-têtes de colonnes, en anglais ou en français. Seuls Collars ou Log Info et Lithology sont indispensables.</p>
+      <table>
+        <tr><td>Project Settings</td><td>Hole ID, Project Name, Client, Location</td></tr>
+        <tr><td>Collars</td><td>Hole ID, Easting, Northing, Elevation, Starting Depth, Ending Depth</td></tr>
+        <tr><td>Log Info</td><td>Hole ID, Depth, Method, Drilling Diameter, Screen Type, Screen Diameter, Slots Size, Logged by, Subcontractor, Starting / Ending Date - Time, Note ; facultatif : Laboratory, Shipping Date, Analyses, Bottle Type, Shipping</td></tr>
+        <tr><td>Lithology</td><td>Hole ID, From, To, Lithology Keyword, Lithology Description</td></tr>
+        <tr><td>Well Construction</td><td>Hole ID, From, To, Item</td></tr>
+        <tr><td>PID</td><td>Hole ID, From, To, PID (ppm)</td></tr>
+        <tr><td>Water Level</td><td>Hole ID, Depth</td></tr>
+        <tr><td>Comments</td><td>Hole ID, From, To, Remarks, Organoleptic Observations, Moisture Indication</td></tr>
+        <tr><td>Samples</td><td>Hole ID, From, To, Sample ID, Date, Time (facultatif)</td></tr>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+"use strict";
+/* ============================================================
+   Utilitaires
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const up = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+const fmtD = d => (Math.round(d*100)/100).toFixed(2);
+const fmtM = d => String(Math.round(d*100)/100).replace('.',',');
+function num(v){
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  const s = String(v).replace(/\s|\u202f|\u00a0/g,'').replace(',','.');
+  const n = parseFloat(s);
+  return isFinite(n) && /^[-+]?\d*\.?\d+(e[-+]?\d+)?$/i.test(s) ? n : null;
+}
+function str(v){
+  if (v == null) return '';
+  if (v instanceof Date) return fmtDate(v);
+  if (typeof v === 'number') return String(v);
+  return String(v).replace(/\s+/g,' ').trim();
+}
+function fmtDate(d){ const p = n => String(n).padStart(2,'0'); return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`; }
+function fmtTime(v){
+  if (v instanceof Date) return `${String(v.getHours()).padStart(2,'0')}h${String(v.getMinutes()).padStart(2,'0')}`;
+  if (typeof v === 'number' && v < 1){ const m = Math.round(v*1440); return `${String(Math.floor(m/60)).padStart(2,'0')}h${String(m%60).padStart(2,'0')}`; }
+  return str(v);
+}
+function fmtNum(n){
+  if (n == null) return '';
+  const a = Math.abs(n); let s;
+  if (a >= 1000) return Math.round(n).toLocaleString('fr-FR').replace(/\u202f/g,'\u00a0');
+  if (a >= 100) s = n.toFixed(0);
+  else if (a >= 10) s = String(Math.round(n*10)/10);
+  else if (a >= 1) s = String(Math.round(n*100)/100);
+  else s = String(Number(n.toPrecision(2)));
+  return s.replace('.',',');
+}
+// Largeur approximative d'un texte Arial (unités SVG)
+function tw(t, size){
+  let w = 0;
+  for (const ch of String(t)){
+    w += /[MWmw@%]/.test(ch) ? .83 : /[A-Z0-9#&ÉÈÀ]/.test(ch) ? .64 : /[il.,;:'|!()\[\] fjt]/.test(ch) ? .3 : .53;
+  }
+  return w*size;
+}
+function wrap(text, maxW, size){
+  const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
+  const lines = []; let cur = '';
+  for (const w of words){
+    const t = cur ? cur + ' ' + w : w;
+    if (tw(t,size) <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+function fit(text, maxW, size, min = 6){ while (size > min && tw(text,size) > maxW) size -= .25; return size; }
+// Empile des étiquettes sans chevauchement entre minY et maxY
+function stack(items, minY, maxY){
+  items.sort((a,b) => a.y - b.y);
+  let cur = minY;
+  for (const it of items){ it.ty = Math.max(it.y, cur); cur = it.ty + it.h; }
+  let lim = maxY;
+  for (let i = items.length-1; i >= 0; i--){ const it = items[i]; if (it.ty + it.h > lim) it.ty = lim - it.h; lim = it.ty; }
+  return items;
+}
+const natSort = (a,b) => String(a).localeCompare(String(b), 'fr', {numeric:true, sensitivity:'base'});
+
+/* ============================================================
+   Lecture du classeur de saisie
+   ============================================================ */
+const SYN = {
+  hole:['holeid','hole','sondage','ouvrage','piezometre','forage','idouvrage','pointid'],
+  project:['projectname','project','projet','numeroprojet','nprojet'],
+  client:['client'], location:['location','lieu','site','commune'],
+  east:['easting','x','xlambert'], north:['northing','y','ylambert'], elev:['elevation','cote','z','altitude','cotetn','cotengf'],
+  sdepth:['startingdepth'], edepth:['endingdepth','profondeurfinale'],
+  depth:['depth','profondeur','profondeurm'],
+  method:['method','methode'], ddiam:['drillingdiameter','diametreforage','diametredeforage'],
+  stype:['screentype','typecrepine','typedecrepine'], sdiam:['screendiameter','diametrecrepine','diametredecrepine'],
+  slot:['slotssize','slotsize','taillefentes','tailledesfentes'],
+  logged:['loggedby','suivipar'], sub:['subcontractor','soustraitant','foreur'],
+  start:['startingdatetime','startingdate','dateheuredebut','datedebut'], end:['endingdatetime','endingdate','dateheurefin','datefin'],
+  note:['note','notes'], lab:['laboratory','laboratoire'], ship:['shippingdate','datedenvoi','dateenvoi'],
+  analyses:['analyses','analysis','programmeanalytique'], bottle:['bottletype','typedeflaconnage','flaconnage'],
+  shipping:['shipping','envoi','envoiengla','envoienglacieresrefrigerees','transport'],
+  from:['from','de','depuis','profondeurdebut'], to:['to','a','jusqua','profondeurfin'],
+  item:['item','element','equipement'], pid:['pidppm','pid','valeurpid','pidvalue'],
+  key:['lithologykeyword','motcle','motclelithologie','keyword'], desc:['lithologydescription','description','descriptionlithologique'],
+  rem:['remarks','remarques','remarque'], org:['organolepticobservations','observationsorganoleptiques','organoleptique'],
+  moist:['moistureindication','indicationhumidite','humidite','moisture'],
+  sid:['sampleid','echantillon','sample','idechantillon','nomechantillon'], sdate:['date','datedeprelevement','dateprelevement','samplingdate'],
+  stime:['time','heure','heuredeprelevement','heureprelevement','samplingtime'], wdate:['date','datemesure']
+};
+function findSheet(sheets, names){
+  const want = names.map(norm);
+  const k = Object.keys(sheets).find(n => want.includes(norm(n)));
+  return k ? sheets[k] : null;
+}
+function table(rows){
+  if (!rows) return null;
+  const hi = rows.findIndex(r => r && r.filter(v => v != null && v !== '').length >= 2);
+  if (hi < 0) return null;
+  const head = rows[hi].map(norm);
+  const idx = key => { for (const s of SYN[key] || [key]){ const i = head.indexOf(s); if (i >= 0) return i; } return -1; };
+  const data = rows.slice(hi+1).filter(r => r && r.some(v => v != null && v !== ''));
+  return { idx, data, get:(r,key) => { const i = idx(key); return i < 0 ? null : r[i]; } };
+}
+
+const ITEM_DIAM = {'BENTO/CIMENT':10,'BENTONITE':10,'BETON':10,'BOUCHON':3.5,'CAPOT':7,'CIMENT':10,'CREPINE':3.5,'CUTTINGS':10,'MASSIF FILTRANT':10,'TUBE PLEIN':3.5,'SABLE':10};
+const ITEM_LABEL = {'BENTONITE':'Bentonite','CIMENT':'Ciment','CUTTINGS':'Cuttings','BENTO/CIMENT':'Bentonite/Ciment','BETON':'Béton','CREPINE':'Crépine','TUBE PLEIN':'Tube plein','MASSIF FILTRANT':'Massif filtrant','CAPOT':'Capot','BOUCHON':'Bouchon de fond','SABLE':'Sable'};
+function itemKey(v){
+  const u = up(v);
+  if (/BENTO/.test(u) && /CIMENT/.test(u)) return 'BENTO/CIMENT';
+  if (/BENTO/.test(u)) return 'BENTONITE';
+  if (/MASSIF|GRAVIER FILTRANT|FILTRE/.test(u)) return 'MASSIF FILTRANT';
+  if (/CREPINE|SCREEN/.test(u)) return 'CREPINE';
+  if (/TUBE|CASING|PLEIN/.test(u)) return 'TUBE PLEIN';
+  if (/CAPOT|BOUCHE A CLE|COVER/.test(u)) return 'CAPOT';
+  if (/BOUCHON|BOTTOM CAP/.test(u)) return 'BOUCHON';
+  if (/CUTTING/.test(u)) return 'CUTTINGS';
+  if (/BETON|CONCRETE/.test(u)) return 'BETON';
+  if (/CIMENT|CEMENT|GROUT/.test(u)) return 'CIMENT';
+  if (/SABLE|SAND/.test(u)) return 'SABLE';
+  return u;
+}
+
+const state = {
+  holes: new Map(), listLitho: null, fileName:'', warnings:[],
+  lab: null, sel: [], hideLQ:false, thrSource:'',
+  include: new Set(),
+  opt: { orient:'auto', depth:'auto', coords:false, company:'', logo:null }
+};
+
+function loadSheets(sheets, fileName){
+  const holes = new Map();
+  const H = id => { const k = str(id); if (!k) return null;
+    if (!holes.has(k)) holes.set(k, {id:k, project:'', client:'', location:'', collar:{}, info:{}, construction:[], pid:[], water:[], litho:[], comments:[], samples:[]});
+    return holes.get(k); };
+
+  let t = table(findSheet(sheets, ['Project Settings','Projet','Project','Parametres projet']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); if (!h) continue; h.project = str(t.get(r,'project')); h.client = str(t.get(r,'client')); h.location = str(t.get(r,'location')); }
+
+  t = table(findSheet(sheets, ['Collars','Collar','Têtes','Tetes de forage','Coordonnees']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); if (!h) continue;
+    h.collar = { x:num(t.get(r,'east')), y:num(t.get(r,'north')), z:num(t.get(r,'elev')), from:num(t.get(r,'sdepth')), to:num(t.get(r,'edepth')) }; }
+
+  t = table(findSheet(sheets, ['Log Info','Infos log','Informations']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); if (!h) continue;
+    const g = k => str(t.get(r,k));
+    h.info = { depth:num(t.get(r,'depth')), method:g('method'), ddiam:g('ddiam'), stype:g('stype'), sdiam:g('sdiam'), slot:g('slot'),
+      logged:g('logged'), sub:g('sub'), start:g('start'), end:g('end'), note:g('note'), lab:g('lab'),
+      ship: t.get(r,'ship') instanceof Date ? fmtDate(t.get(r,'ship')) : g('ship'), analyses:g('analyses'), bottle:g('bottle'), shipping:g('shipping') }; }
+
+  t = table(findSheet(sheets, ['Well Construction','Equipement','Construction']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); const it = str(t.get(r,'item')); if (!h || !it) continue;
+    h.construction.push({ from:num(t.get(r,'from')), to:num(t.get(r,'to')), item:itemKey(it), raw:it }); }
+
+  t = table(findSheet(sheets, ['PID','PID (ppm)','Mesures PID']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); const v = t.get(r,'pid'); if (!h || v == null || v === '') continue;
+    h.pid.push({ from:num(t.get(r,'from')), to:num(t.get(r,'to')), value:v }); }
+
+  t = table(findSheet(sheets, ['Water Level','Niveau d eau','Niveaux','Niveau eau']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); const d = num(t.get(r,'depth')); if (!h || d == null) continue;
+    h.water.push({ depth:d }); }
+
+  t = table(findSheet(sheets, ['Lithology','Lithologie']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); if (!h) continue;
+    h.litho.push({ from:num(t.get(r,'from')), to:num(t.get(r,'to')), key:up(t.get(r,'key')), desc:str(t.get(r,'desc')) }); }
+
+  t = table(findSheet(sheets, ['Comments','Commentaires','Observations']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); if (!h) continue;
+    const c = { from:num(t.get(r,'from')), to:num(t.get(r,'to')), rem:str(t.get(r,'rem')), org:str(t.get(r,'org')), moist:str(t.get(r,'moist')) };
+    if (c.rem || c.org || c.moist) h.comments.push(c); }
+
+  t = table(findSheet(sheets, ['Samples','Echantillons','Échantillons','Sampling']));
+  if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); if (!h) continue;
+    const d = t.get(r,'sdate');
+    h.samples.push({ id:str(t.get(r,'sid')) || `${h.id} (${fmtM(num(t.get(r,'from')))}-${fmtM(num(t.get(r,'to')))} m)`,
+      from:num(t.get(r,'from')), to:num(t.get(r,'to')), date: d instanceof Date ? fmtDate(d) : str(d), time:fmtTime(t.get(r,'stime')), labIdx:null, fromSheet:true }); }
+
+  const lists = findSheet(sheets, ['Lists','Listes']);
+  state.listLitho = null;
+  if (lists){ const t2 = table(lists); const i = t2 ? t2.idx('lithology') : -1;
+    const col = i >= 0 ? i : 0; state.listLitho = new Set(t2 ? t2.data.map(r => up(r[col])).filter(Boolean) : []); }
+
+  for (const h of holes.values()){
+    for (const k of ['litho','construction','pid','comments','samples']) h[k].sort((a,b) => (a.from ?? 0) - (b.from ?? 0));
+    h.depth = h.info.depth ?? h.collar.to ?? Math.max(0, ...h.litho.map(l => l.to ?? 0), ...h.construction.map(c => c.to ?? 0));
+  }
+  state.holes = holes; state.fileName = fileName;
+  state.include = new Set(holes.keys());
+  if (state.lab) attachLab();
+  validate(); renderAll();
+}
+
+/* ============================================================
+   Contrôles de cohérence
+   ============================================================ */
+function validate(){
+  const W = []; const add = (hole, lvl, msg) => W.push({hole, lvl, msg});
+  const eps = 0.005;
+  for (const h of state.holes.values()){
+    if (!h.info || !Object.keys(h.info).length) add(h.id,'info','Absent de l\'onglet Log Info : en-tête du log incomplet.');
+    if (h.info.depth != null && h.collar.to != null && Math.abs(h.info.depth - h.collar.to) > eps)
+      add(h.id,'warn',`Profondeur différente entre Log Info (${fmtM(h.info.depth)} m) et Collars (${fmtM(h.collar.to)} m).`);
+    const D = h.depth;
+    const bad = (arr, name) => arr.forEach(r => { if (r.from == null || r.to == null || r.to <= r.from) add(h.id,'err',`${name} : intervalle invalide (${r.from ?? '?'} – ${r.to ?? '?'} m).`); });
+    bad(h.litho,'Lithologie'); bad(h.construction,'Équipement'); bad(h.samples,'Échantillon');
+    // Lithologie : continuité
+    if (!h.litho.length) add(h.id,'warn','Aucune lithologie saisie.');
+    else {
+      if (h.litho[0].from > eps) add(h.id,'warn',`Lithologie non décrite entre 0 et ${fmtM(h.litho[0].from)} m.`);
+      for (let i = 1; i < h.litho.length; i++){
+        const a = h.litho[i-1], b = h.litho[i];
+        if (b.from > a.to + eps) add(h.id,'warn',`Lacune de lithologie entre ${fmtM(a.to)} et ${fmtM(b.from)} m.`);
+        if (b.from < a.to - eps) add(h.id,'warn',`Chevauchement de lithologie entre ${fmtM(b.from)} et ${fmtM(a.to)} m.`);
+      }
+      const last = Math.max(...h.litho.map(l => l.to ?? 0));
+      if (D && last < D - eps) add(h.id,'warn',`Lithologie non décrite entre ${fmtM(last)} et ${fmtM(D)} m (fond du forage).`);
+      if (D && last > D + eps) add(h.id,'warn',`Lithologie décrite jusqu'à ${fmtM(last)} m, au-delà de la profondeur du forage (${fmtM(D)} m).`);
+      const unknown = [...new Set(h.litho.filter(l => !litComponents(l.key).length).map(l => l.key || '(vide)'))];
+      if (unknown.length) add(h.id,'warn',`Mot-clé lithologique sans figuré associé : ${unknown.join(', ')}.`);
+      if (state.listLitho && state.listLitho.size){
+        const off = [...new Set(h.litho.map(l => l.key).filter(k => k && !state.listLitho.has(k)))];
+        if (off.length) add(h.id,'info',`Mot-clé absent de l'onglet Lists : ${off.join(', ')}.`);
+      }
+    }
+    // Équipement
+    const screens = h.construction.filter(c => c.item === 'CREPINE');
+    const packs = h.construction.filter(c => c.item === 'MASSIF FILTRANT');
+    for (const s of screens){
+      const inside = packs.some(p => p.from <= s.from + eps && p.to >= s.to - eps);
+      if (packs.length && !inside) add(h.id,'warn',`Crépine ${fmtM(s.from)}–${fmtM(s.to)} m pas entièrement au droit d'un massif filtrant.`);
+    }
+    for (const c of h.construction){
+      if (!ITEM_DIAM[c.item]) add(h.id,'warn',`Élément d'équipement non reconnu : « ${c.raw} ».`);
+      if (D && c.to > D + eps) add(h.id,'warn',`${ITEM_LABEL[c.item] || c.raw} jusqu'à ${fmtM(c.to)} m, sous le fond du forage (${fmtM(D)} m).`);
+    }
+    // Niveau d'eau
+    if (h.construction.length && !h.water.length) add(h.id,'info','Pas de niveau d\'eau saisi.');
+    if (h.water.length > 1) add(h.id,'info',`${h.water.length} niveaux d'eau saisis : seul le premier est reporté sur le log.`);
+    for (const w of h.water){
+      if (D && w.depth > D) add(h.id,'err',`Niveau d'eau (${fmtM(w.depth)} m) sous le fond du forage.`);
+      if (screens.length && w.depth > Math.max(...screens.map(s => s.to))) add(h.id,'warn',`Niveau d'eau (${fmtM(w.depth)} m) sous la base de la crépine.`);
+    }
+    // Commentaires et PID
+    for (const c of h.comments) if (D && c.to > D + eps) add(h.id,'warn',`Commentaire au-delà du fond du forage (${fmtM(c.from)}–${fmtM(c.to)} m).`);
+    if (!h.pid.length && h.comments.some(c => /\d\s*ppm/i.test(c.rem + c.org)))
+      add(h.id,'info','Des mesures PID semblent saisies en remarques. Les déplacer dans l\'onglet PID les reporterait dans la colonne PID.');
+    // Échantillons
+    const ids = h.samples.map(s => norm(s.id)); const dup = ids.filter((v,i) => ids.indexOf(v) !== i);
+    if (dup.length) add(h.id,'warn','Identifiant d\'échantillon en double.');
+    for (const s of h.samples) if (D && s.to > D + eps) add(h.id,'warn',`Échantillon ${s.id} sous le fond du forage.`);
+  }
+  if (state.lab){
+    const un = state.lab.samples.filter(s => !s.hole);
+    if (un.length) W.push({hole:'Analyses', lvl:'warn', msg:`${un.length} échantillon(s) non rattaché(s) à un forage du classeur : ${un.map(s => s.rawId).join(', ')}.`});
+  }
+  state.warnings = W;
+  renderChecks();
+}
+function renderChecks(){
+  const ul = $('#checks'); ul.innerHTML = '';
+  if (!state.warnings.length){ ul.innerHTML = '<li class="empty-checks" style="border:0;padding-left:0">Aucune incohérence détectée.</li>'; return; }
+  const order = {err:0, warn:1, info:2}, lbl = {err:'Erreur', warn:'À vérifier', info:'Information'};
+  [...state.warnings].sort((a,b) => natSort(a.hole,b.hole) || order[a.lvl]-order[b.lvl]).forEach(w => {
+    const li = document.createElement('li'); li.className = w.lvl;
+    li.innerHTML = `<b>${esc(w.hole)}</b> <span class="lvl">${lbl[w.lvl]}</span><br>${esc(w.msg)}`;
+    ul.appendChild(li);
+  });
+}
+
+/* ============================================================
+   Résultats d'analyses
+   ============================================================ */
+function parseSampleId(s){
+  const t = String(s ?? '').trim();
+  let m = t.match(/^(.+?)\s*[\(\[_\s]\s*(\d+(?:[.,]\d+)?)\s*m?\s*[-–—\/à]\s*(\d+(?:[.,]\d+)?)\s*m?\s*[\)\]]?$/i);
+  if (m) return { hole:m[1].trim().replace(/[_\-\s]+$/,''), from:num(m[2]), to:num(m[3]) };
+  m = t.match(/^(.+?)\s*[\(\[_\s]\s*(\d+(?:[.,]\d+)?)\s*m\s*[\)\]]?$/i);
+  if (m){ const d = num(m[2]); return { hole:m[1].trim(), from:Math.max(0,d-.05), to:d+.05 }; }
+  return null;
+}
+function parseVal(v){
+  if (v == null || v === '') return null;
+  if (v instanceof Date) return null;
+  if (typeof v === 'number') return { num:v, lt:false };
+  const s = String(v).trim();
+  if (/^(n\.?d\.?|<\s*lq|<\s*ld|nd|<\s*l\.q\.?)$/i.test(s)) return { num:null, lt:true };
+  const m = s.replace(/\u202f|\u00a0/g,'').match(/^(<|<=|≤|>)?\s*([-+]?\d[\d ]*(?:[.,]\d+)?(?:e[-+]?\d+)?)/i);
+  if (m){ const n = parseFloat(m[2].replace(/ /g,'').replace(',','.')); if (isFinite(n)) return { num:n, lt:m[1] === '<' || m[1] === '<=' || m[1] === '≤', gt:m[1] === '>' }; }
+  if (/^[-–—]$/.test(s)) return null;
+  return { num:null, lt:false, txt:s };
+}
+const UNIT_RE = /^(mg|µg|ug|μg|ng|g|%|ppm|ppb)\s*\/?\s*(kg|l|m3|m³|ms)?|^(mg|µg|μg|ug)\/(kg|l|m3|m³)/i;
+
+function loadLab(sheets, fileName){
+  const known = new Set();
+  for (const h of state.holes.values()) for (const s of h.samples) known.add(norm(s.id));
+  const isSample = v => typeof v === 'string' && (known.has(norm(v)) || !!parseSampleId(v));
+  let best = null;
+  for (const [name, grid] of Object.entries(sheets)){
+    const rowCount = grid.map(r => (r || []).filter(isSample).length);
+    const nCols = Math.max(0, ...grid.map(r => (r || []).length));
+    const colCount = Array.from({length:nCols}, (_,c) => grid.filter(r => r && isSample(r[c])).length);
+    const rBest = Math.max(0, ...rowCount), cBest = Math.max(0, ...colCount);
+    const score = Math.max(rBest, cBest);
+    if (!best || score > best.score) best = { name, grid, score, inCols: rBest >= cBest, line: rBest >= cBest ? rowCount.indexOf(rBest) : colCount.indexOf(cBest) };
+  }
+  if (!best || !best.score) throw new Error('Aucun échantillon reconnu. Les noms doivent contenir le forage et la profondeur, par exemple « MW6 (3,4-4 m) », ou correspondre à l\'onglet Samples.');
+  const g = best.grid; const params = []; const samples = [];
+  const isText = v => typeof v === 'string' && v.trim() && num(v) == null && !parseVal(v)?.lt && !/^[<>]/.test(v.trim());
+  if (best.inCols){
+    const r0 = best.line; const sCols = [];
+    (g[r0] || []).forEach((v,c) => { if (isSample(v)) sCols.push(c); });
+    sCols.forEach(c => samples.push({ rawId:str(g[r0][c]), col:c }));
+    const left = Math.min(...sCols);
+    let pCol = 0, pScore = -1, uCol = -1, uScore = 0;
+    for (let c = 0; c < left; c++){
+      let sc = 0, us = 0;
+      for (let r = r0+1; r < g.length; r++){ const v = g[r]?.[c]; if (isText(v)) sc++; if (typeof v === 'string' && UNIT_RE.test(v.trim())) us++; }
+      for (let r = 0; r <= r0; r++){ if (/^unit|^unite/.test(norm(g[r]?.[c]))) us += 5; }
+      if (us > uScore){ uScore = us; uCol = c; }
+      if (sc > pScore && us < sc){ pScore = sc; pCol = c; }
+    }
+    if (uCol === pCol) uCol = -1;
+    for (let r = r0+1; r < g.length; r++){
+      const row = g[r] || []; const name = str(row[pCol]);
+      if (!name) continue;
+      const vals = samples.map(s => parseVal(row[s.col]));
+      if (!vals.some(v => v && (v.num != null || v.lt))) continue;
+      params.push({ name, unit: uCol >= 0 ? str(row[uCol]) : '', vals });
+    }
+  } else {
+    const c0 = best.line; const sRows = [];
+    g.forEach((r,i) => { if (r && isSample(r[c0])) sRows.push(i); });
+    sRows.forEach(i => samples.push({ rawId:str(g[i][c0]), row:i }));
+    const top = Math.min(...sRows);
+    let hr = 0, hs = -1;
+    for (let r = 0; r < top; r++){ const n = (g[r] || []).filter((v,c) => c !== c0 && isText(v)).length; if (n > hs){ hs = n; hr = r; } }
+    let ur = -1;
+    for (let r = hr+1; r < top; r++){ if ((g[r] || []).some(v => typeof v === 'string' && UNIT_RE.test(v.trim()))) { ur = r; break; } }
+    const nCols = Math.max(...g.map(r => (r || []).length));
+    for (let c = 0; c < nCols; c++){
+      if (c === c0) continue;
+      const name = str(g[hr]?.[c]); if (!name) continue;
+      if (/^(date|heure|time|matrice|matrix|laboratoire|lab|reference|ref|code|commentaire|profondeur|depth)/.test(norm(name))) continue;
+      const vals = samples.map(s => parseVal(g[s.row]?.[c]));
+      if (!vals.some(v => v && (v.num != null || v.lt))) continue;
+      params.push({ name, unit: ur >= 0 ? str(g[ur][c]) : '', vals });
+    }
+  }
+  if (!params.length) throw new Error('Échantillons reconnus, mais aucun résultat chiffré associé.');
+  // Clés uniques
+  const seen = {};
+  params.forEach(p => { const k = norm(p.name) + '|' + norm(p.unit); seen[k] = (seen[k] || 0) + 1; p.key = seen[k] > 1 ? `${k}#${seen[k]}` : k; p.computed = false; });
+  addFamilySums(params, samples.length);
+  state.lab = { fileName, sheet:best.name, samples, params };
+  state.sel = defaultSelection(params);
+  attachLab(); validate(); renderLabPanel(); renderAll();
+}
+
+const FAMILIES = [
+  { key:'btex', label:'Σ BTEX (calculée)', test:n => /^(benzene|toluene|ethylbenzene)$/.test(n) || /xylene/.test(n), already:/btex/ },
+  { key:'cohv', label:'Σ COHV (calculée)', test:n => /(chlorurede?vinyle|vinylchloride|dichloroeth|trichloroeth|tetrachloroeth|dichloromethane|chloroforme?|trichloromethane|tetrachlorure|tetrachloromethane)/.test(n), already:/cohv|organohalog|chlorinatedsolvent/ },
+  { key:'hap', label:'Σ HAP (calculée)', test:n => /(naphtal|acenaphty|acenaphte|fluorene|phenanthr|anthrac|fluoranth|pyrene|chrysene|perylene)/.test(n) && !/methyl/.test(n), already:/hap|pah/ }
+];
+function addFamilySums(params, nS){
+  const isSum = n => /somme|total|sum|^σ/.test(n);
+  for (const f of FAMILIES){
+    if (params.some(p => isSum(norm(p.name)) && f.already.test(norm(p.name)))) continue;
+    let mem = params.filter(p => !isSum(norm(p.name)) && f.test(norm(p.name)));
+    if (f.key === 'btex'){
+      const parts = mem.filter(p => /xylene/.test(norm(p.name)) && /(mp|op|^o|^m|^p|ortho|meta|para)/.test(norm(p.name).replace('xylene','')));
+      const tot = mem.filter(p => /^xylenes?$/.test(norm(p.name)));
+      if (parts.length && tot.length) mem = mem.filter(p => !tot.includes(p));
+    }
+    if (mem.length < 2) continue;
+    const units = [...new Set(mem.map(p => norm(p.unit)))];
+    if (units.length > 1) continue;
+    const vals = Array.from({length:nS}, (_,i) => {
+      const vs = mem.map(p => p.vals[i]).filter(Boolean);
+      if (!vs.length) return null;
+      const q = vs.filter(v => v.num != null && !v.lt);
+      if (q.length) return { num:q.reduce((a,v) => a + v.num, 0), lt:false };
+      return { num:null, lt:true };
+    });
+    params.unshift({ name:f.label, unit:mem[0].unit, vals, key:'sum-'+f.key, computed:true, members:mem.length });
+  }
+}
+function defaultSelection(params){
+  const pick = [];
+  const want = [/^sum-/, /c10c40|hct|hydrocarburestotaux|indicehydrocarbure/];
+  for (const re of want) for (const p of params){ if (pick.length >= 4) break; if ((re.test(p.key) || re.test(norm(p.name))) && !pick.some(s => s.key === p.key)) pick.push({ key:p.key, label:shortLabel(p.name), thr:'' }); }
+  return pick;
+}
+function shortLabel(n){
+  let s = String(n).replace(/\(calculée\)/,'').replace(/^Hydrocarbures totaux\s*/i,'HCT ').replace(/^Indice hydrocarbures?\s*/i,'HCT ').trim();
+  return s.length > 22 ? s.slice(0,21) + '…' : s;
+}
+function attachLab(){
+  const lab = state.lab; if (!lab) return;
+  for (const h of state.holes.values()){ h.samples = h.samples.filter(s => s.fromSheet); h.samples.forEach(s => s.labIdx = null); }
+  const byNorm = new Map([...state.holes.values()].map(h => [norm(h.id), h]));
+  lab.samples.forEach((ls, i) => {
+    ls.hole = null;
+    for (const h of state.holes.values()){
+      const s = h.samples.find(s => norm(s.id) === norm(ls.rawId));
+      if (s){ s.labIdx = i; ls.hole = h.id; return; }
+    }
+    const p = parseSampleId(ls.rawId); if (!p) return;
+    const h = byNorm.get(norm(p.hole)); if (!h) return;
+    const ex = h.samples.find(s => s.labIdx == null && Math.abs(s.from - p.from) < .01 && Math.abs(s.to - p.to) < .01);
+    if (ex){ ex.labIdx = i; ls.hole = h.id; return; }
+    h.samples.push({ id:ls.rawId, from:p.from, to:p.to, date:'', time:'', labIdx:i, fromSheet:false });
+    ls.hole = h.id;
+  });
+  for (const h of state.holes.values()) h.samples.sort((a,b) => a.from - b.from);
+}
+function renderLabPanel(){
+  const lab = state.lab; $('#labPanel').hidden = !lab;
+  if (!lab) return;
+  const ok = lab.samples.filter(s => s.hole).length, ko = lab.samples.length - ok;
+  $('#labSummary').innerHTML = `<b>${esc(lab.fileName)}</b> (onglet ${esc(lab.sheet)}) : ${lab.samples.length} échantillons, ${lab.params.filter(p=>!p.computed).length} paramètres. ${ok} rattachés à un forage` + (ko ? `, <span class="bad">${ko} non rattachés</span>` : '') + '.';
+  drawParamList();
+}
+function drawParamList(){
+  const lab = state.lab; const q = norm($('#paramSearch').value);
+  const box = $('#paramList'); box.innerHTML = '';
+  const nS = lab.samples.length;
+  lab.params.filter(p => !q || norm(p.name).includes(q) || state.sel.some(s => s.key === p.key)).forEach(p => {
+    const sel = state.sel.find(s => s.key === p.key);
+    const nq = p.vals.filter(v => v && v.num != null && !v.lt).length;
+    const d = document.createElement('div'); d.className = 'param';
+    d.innerHTML = `<input type="checkbox" ${sel ? 'checked' : ''} aria-label="Afficher ${esc(p.name)}">
+      <span>${esc(p.name)} ${p.unit ? `<span class="u">${esc(p.unit)}</span>` : ''}${p.computed ? ` <span class="calc">somme de ${p.members} composés</span>` : ''}</span>
+      <span class="u" title="échantillons quantifiés">${nq}/${nS}</span>`;
+    if (sel){
+      const o = document.createElement('div'); o.className = 'opts';
+      o.innerHTML = `<input type="text" value="${esc(sel.label)}" aria-label="Libellé sur le log"><input type="text" inputmode="decimal" placeholder="Seuil" value="${esc(sel.thr)}" aria-label="Seuil">`;
+      const [l, th] = o.querySelectorAll('input');
+      l.addEventListener('input', () => { sel.label = l.value; renderAllSoon(); });
+      th.addEventListener('input', () => { sel.thr = th.value; renderAllSoon(); });
+      d.appendChild(o);
+    }
+    d.querySelector('input[type=checkbox]').addEventListener('change', e => {
+      if (e.target.checked){
+        if (state.sel.length >= 8){ e.target.checked = false; alert('8 paramètres au maximum par log.'); return; }
+        state.sel.push({ key:p.key, label:shortLabel(p.name), thr:'' });
+      } else state.sel = state.sel.filter(s => s.key !== p.key);
+      drawParamList(); renderAll();
+    });
+    box.appendChild(d);
+  });
+}
+
+/* ============================================================
+   Figurés
+   ============================================================ */
+const LIT_TOKENS = [
+  ['veg',/TERRE VEGETALE|TOPSOIL/], ['asph',/ASPHALTE|ENROBE|BITUME/], ['beton',/BETON|CIMENT|DALLE/], ['remb',/REMBLAI/],
+  ['tourbe',/TOURBE/], ['granite',/GRANITE/], ['gneiss',/GNEISS/], ['schist',/SCHIST/], ['gypse',/GYPSE/], ['conglo',/CONGLOMERAT/],
+  ['craie',/CRAIE|CRAYEU/], ['calc',/CALCAIRE/], ['marne',/MARNE|MARNEU/], ['gres',/GRES\b/], ['argile',/ARGILE|ARGILEU/],
+  ['silt',/SILT|LIMON/], ['sable',/SABLE(?!S? FILTRANT)|SABLEU/], ['grav',/GRAVIER|GRAVELEU/], ['galet',/GALET/], ['silex',/SILEX/], ['nodule',/NODULE/]
+];
+function litComponents(key){
+  const k = up(key); const found = [];
+  for (const [n,re] of LIT_TOKENS){ const m = k.match(re); if (m) found.push({ n, at:m.index }); }
+  return found.sort((a,b) => a.at - b.at).map(f => f.n);
+}
+// Dessin d'un composant dans une tuile 24×24 ; p = principal (dense), sinon secondaire (épars)
+function comp(n, p){
+  const L = (x1,y1,x2,y2,w=.6) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="${w}"/>`;
+  const C = (x,y,r,f='none',w=.6) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${f}" stroke="#000" stroke-width="${w}"/>`;
+  const D = (x,y,r=.75) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#000"/>`;
+  switch(n){
+    case 'argile': return p ? L(1,4,9,4)+L(13,4,22,4)+L(5,12,17,12)+L(0,20,5,20)+L(10,20,20,20) : L(3,7,10,7)+L(14,19,21,19);
+    case 'silt': return p ? L(1,6,7,6)+D(10,6,.6)+L(13,6,19,6)+D(22,6,.6)+L(4,18,10,18)+D(13,18,.6)+L(16,18,22,18) : L(2,10,7,10)+D(10,10,.6);
+    case 'sable': return p ? D(3,3)+D(11,6)+D(19,2)+D(7,13)+D(16,15)+D(2,20)+D(11,21)+D(21,22) : D(6,9)+D(18,17);
+    case 'grav': return p ? C(5,6,1.8)+C(17,4,1.4)+C(11,15,1.8)+C(21,19,1.4)+C(3,20,1.2) : C(15,8,1.6)+C(5,18,1.3);
+    case 'galet': return p ? C(7,7,3.4)+C(18,17,3.2) : C(16,6,2.8);
+    case 'calc': return p ? L(0,0,24,0)+L(0,12,24,12)+L(0,24,24,24)+L(6,0,6,12)+L(18,12,18,24) : L(4,8,14,8)+L(14,8,14,14);
+    case 'marne': return (p ? L(0,0,24,0)+L(0,12,24,12)+L(0,24,24,24)+L(6,0,6,12)+L(18,12,18,24) : '') + L(10,6,15,6)+L(1,18,6,18)+L(12,18,15,18);
+    case 'craie': return p ? L(0,0,24,0,.5)+L(0,12,24,12,.5)+L(12,0,12,12,.5)+L(0,12,0,24,.5)+D(6,6,.5)+D(18,18,.5) : L(4,10,12,10,.5)+L(12,10,12,16,.5);
+    case 'gres': return L(0,12,24,12,.4) + D(5,5)+D(16,7)+D(9,18)+D(20,20);
+    case 'remb': return `<path d="M2 4 L8 2 L9 8 L3 9Z M13 12 L20 10 L22 16 L15 18Z M3 15 L7 13 L9 19 L4 21Z M15 2 L19 3 L18 6Z" fill="none" stroke="#000" stroke-width=".6"/>` + `<path d="M10 21 l3 -1 l0 3Z M20 6 l2 2 l-3 0Z" fill="#000"/>`;
+    case 'veg': return `<path d="M4 9 L4 4 M2 9 L4 5 M6 9 L4 5 M16 21 L16 16 M14 21 L16 17 M18 21 L16 17" stroke="#000" stroke-width=".6" fill="none"/>`+L(1,9.5,7,9.5,.4)+L(13,21.5,19,21.5,.4);
+    case 'asph': return `<rect width="24" height="24" fill="#6a6a6a"/>` + D(5,6,.8).replace('#000','#ddd') + D(17,17,.8).replace('#000','#ddd');
+    case 'beton': return `<rect width="24" height="24" fill="#c9c9c9"/><path d="M4 5 l3 5 l-6 0Z M15 14 l3 5 l-6 0Z" fill="none" stroke="#000" stroke-width=".5"/>` + D(18,5,.6)+D(7,18,.6);
+    case 'tourbe': return L(0,24,24,0,.5)+L(-6,12,6,0,.5)+L(12,24,24,12,.5) + `<rect width="24" height="24" fill="#5b4632" opacity=".18"/>`;
+    case 'granite': return `<path d="M4 4 l4 4 M8 4 l-4 4 M16 14 l4 4 M20 14 l-4 4 M14 4 l2 3 l2 -3 M3 16 l2 3 l2 -3" stroke="#000" stroke-width=".6" fill="none"/>`;
+    case 'gneiss': return `<path d="M0 6 q6 -4 12 0 t12 0 M0 18 q6 -4 12 0 t12 0" stroke="#000" stroke-width=".6" fill="none"/>`;
+    case 'schist': return L(0,8,24,4)+L(0,16,24,12)+L(0,24,24,20);
+    case 'gypse': return `<path d="M4 8 l3 -5 l3 5 M14 20 l3 -5 l3 5" stroke="#000" stroke-width=".6" fill="none"/>`;
+    case 'conglo': return C(6,6,3)+C(18,16,2.5)+D(16,5)+D(5,18)+D(11,12);
+    case 'silex': return `<ellipse cx="8" cy="8" rx="2.4" ry="1.4" fill="#000"/>` + (p ? `<ellipse cx="18" cy="18" rx="2" ry="1.2" fill="#000"/>` : '');
+    case 'nodule': return C(8,6,1.6,'#fff')+C(18,17,1.6,'#fff');
+  }
+  return '';
+}
+function litPatternBody(key){
+  const cs = litComponents(key);
+  if (!cs.length) return `<rect width="24" height="24" fill="#eee"/><path d="M0 24 L24 0" stroke="#999" stroke-width=".5"/>`;
+  return cs.map((c,i) => comp(c, i === 0)).join('');
+}
+const CONSTR_PAT = {
+  'BENTONITE': `<circle cx="2.6" cy="2.8" r="1.35" fill="none" stroke="#000" stroke-width=".5"/><circle cx="7.6" cy="7.6" r="1.35" fill="none" stroke="#000" stroke-width=".5"/>`,
+  'CIMENT': `<path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".55"/>`,
+  'BENTO/CIMENT': `<path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".4"/><circle cx="5" cy="1.6" r="1" fill="#fff" stroke="#000" stroke-width=".4"/>`,
+  'CUTTINGS': `<rect width="10" height="10" fill="#e4e4e4"/><circle cx="2" cy="3" r=".6"/><circle cx="7" cy="2" r=".6"/><circle cx="4.5" cy="7.5" r=".6"/><path d="M6 6 l2 1" stroke="#000" stroke-width=".4"/>`,
+  'BETON': `<path d="M0 10 L10 0" stroke="#000" stroke-width=".55"/>`,
+  'MASSIF FILTRANT': `<path d="M1.5 4.5 l1.6 -3 l1.6 3Z M6 9.5 l1.6 -3 l1.6 3Z" fill="none" stroke="#000" stroke-width=".45"/><circle cx="7.5" cy="2.5" r=".45"/><circle cx="2.5" cy="7.8" r=".45"/>`,
+  'SABLE': `<circle cx="2" cy="2" r=".6"/><circle cx="7" cy="4" r=".6"/><circle cx="4" cy="8" r=".6"/>`,
+  'OTHER': `<rect width="10" height="10" fill="#ddd"/>`
+};
+
+/* ============================================================
+   Construction du log (SVG)
+   ============================================================ */
+let svgSeq = 0;
+function pageDepthFor(h){
+  if (state.opt.depth !== 'auto') return +state.opt.depth;
+  const D = Math.max(h.depth || 0, ...h.litho.map(l => l.to || 0), ...h.construction.map(c => c.to || 0), 1);
+  return D <= 30 ? Math.max(5, Math.ceil((D + .3) / 5) * 5) : 20;
+}
+function selParams(){
+  if (!state.lab) return [];
+  return state.sel.map(s => ({ ...s, p: state.lab.params.find(p => p.key === s.key), t: num(s.thr) })).filter(s => s.p);
+}
+function holeHasLab(h){ return !!state.lab && selParams().length > 0 && h.samples.some(s => s.labIdx != null); }
+function isLandscape(h){ return state.opt.orient === 'landscape' || (state.opt.orient === 'auto' && holeHasLab(h)); }
+
+function buildPages(h){
+  const land = isLandscape(h);
+  const W = land ? 1123 : 794, Hh = land ? 794 : 1123, M = 22;
+  const headH = land ? 150 : 178, footH = 128;
+  const bodyTop = M + headH + 10, bodyBot = Hh - M - footH;
+  const hasSamples = h.samples.length > 0, hasLab = holeHasLab(h);
+  const isWell = h.construction.length > 0;
+  const cols = [];
+  const add = (k, t, w, color) => cols.push({ k, t, w, color });
+  add('scale','Echelle (m)',40); add('pid','Valeurs PID (ppm)',38);
+  add('constr', isWell ? 'Construction du piézomètre' : 'Forage', isWell ? (land ? 100 : 92) : 56);
+  if (hasSamples) add('sample','Echantillon de sol', 86);
+  add('scale2','Echelle (m)',36); add('litho','Lithologie',40);
+  add('desc','Description lithologique',0);
+  add('rem','Remarques', land ? 110 : 88); add('org','Observations organoleptiques', land ? 100 : 76, '#d00');
+  add('moist','Indication humidité', land ? 84 : 66, '#0033cc');
+  if (hasLab) add('lab','Résultats analytiques', land ? 196 : 150);
+  const avail = W - 2*M; let fixed = cols.reduce((a,c) => a + c.w, 0);
+  const minDesc = 130;
+  if (avail - fixed < minDesc){
+    const shrink = ['rem','org','moist','lab'].map(k => cols.find(c => c.k === k)).filter(Boolean);
+    const tot = shrink.reduce((a,c) => a + c.w, 0); const need = minDesc - (avail - fixed);
+    shrink.forEach(c => c.w = Math.max(48, c.w - need * c.w / tot)); fixed = cols.reduce((a,c) => a + c.w, 0);
+  }
+  cols.find(c => c.k === 'desc').w = avail - fixed;
+  let x = M; for (const c of cols){ c.x = x; x += c.w; }
+  const C = Object.fromEntries(cols.map(c => [c.k, c]));
+  const pd = pageDepthFor(h);
+  const D = Math.max(h.depth || 0, ...h.litho.map(l => l.to || 0), ...h.construction.map(c => c.to || 0), .5);
+  const nPages = Math.max(1, Math.ceil((D - 1e-6) / pd));
+  const pages = [];
+  for (let p = 0; p < nPages; p++) pages.push(drawPage(h, { land, W, Hh, M, headH, footH, bodyTop, bodyBot, cols, C, pd, p0:p*pd, p1:(p+1)*pd, pageNo:p+1, nPages, hasSamples, hasLab, isWell }));
+  return { land, pages };
+}
+
+function drawPage(h, L){
+  const id = 'lg' + (++svgSeq);
+  const { W, Hh, M, bodyTop, bodyBot, C, cols, p0, p1 } = L;
+  const ppm = (bodyBot - bodyTop) / (p1 - p0);
+  const Y = d => bodyTop + (d - p0) * ppm;
+  const inPage = (a, b) => b > p0 && a < p1;
+  const cl = v => Math.min(Math.max(v, bodyTop), bodyBot);
+  const o = [];
+  const T = (x, y, t, s = 9, extra = '') => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${s}" ${extra}>${esc(t)}</text>`;
+  const line = (x1,y1,x2,y2,w=.6,c='#000',extra='') => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${c}" stroke-width="${w}" ${extra}/>`;
+
+  // ---------- defs ----------
+  const defs = [];
+  const litKeys = [...new Set(h.litho.map(l => l.key))];
+  const litId = k => `${id}-l${litKeys.indexOf(k)}`;
+  litKeys.forEach(k => defs.push(`<pattern id="${litId(k)}" width="24" height="24" patternUnits="userSpaceOnUse">${litPatternBody(k)}</pattern>`));
+  const cItems = [...new Set(h.construction.map(c => c.item))];
+  const cId = k => `${id}-c${cItems.indexOf(k)}`;
+  cItems.forEach(k => defs.push(`<pattern id="${cId(k)}" width="10" height="10" patternUnits="userSpaceOnUse">${CONSTR_PAT[k] || CONSTR_PAT.OTHER}</pattern>`));
+  defs.push(`<clipPath id="${id}-body"><rect x="${M}" y="${bodyTop}" width="${W-2*M}" height="${bodyBot-bodyTop}"/></clipPath>`);
+
+  // ---------- en-tête ----------
+  o.push(drawHeader(h, L, T, line));
+
+  // ---------- corps ----------
+  const B = [];
+  // Lithologie : remplissage
+  for (const l of h.litho){ if (l.from == null || l.to == null || !inPage(l.from, l.to)) continue;
+    B.push(`<rect x="${C.litho.x}" y="${Y(l.from)}" width="${C.litho.w}" height="${Y(l.to)-Y(l.from)}" fill="url(#${litId(l.key)})"/>`); }
+  // Construction
+  if (L.isWell){
+    const c = C.constr, cx = c.x + c.w/2, bw = c.w * .62, cw = c.w * .22;
+    for (const it of h.construction){ if ((ITEM_DIAM[it.item] ?? 10) < 10 || !inPage(it.from, it.to)) continue;
+      B.push(`<rect x="${cx-bw/2}" y="${Y(it.from)}" width="${bw}" height="${Y(it.to)-Y(it.from)}" fill="url(#${cId(it.item)})" stroke="#000" stroke-width=".5"/>`); }
+    for (const it of h.construction){ if (!['TUBE PLEIN','CREPINE','BOUCHON'].includes(it.item) || !inPage(it.from, it.to)) continue;
+      const y0 = Y(it.from), y1 = Y(it.to);
+      B.push(`<rect x="${cx-cw/2}" y="${y0}" width="${cw}" height="${y1-y0}" fill="${it.item === 'BOUCHON' ? '#555' : '#fff'}" stroke="#000" stroke-width=".5"/>`);
+      if (it.item === 'CREPINE'){ const st = Math.max(4, ppm * .35); for (let y = y0 + st/2; y < y1; y += st) B.push(line(cx - cw*.32, y, cx + cw*.32, y, .7)); }
+    }
+    for (const it of h.construction){ if (it.item !== 'CAPOT' || !inPage(it.from, it.to)) continue;
+      const y0 = Y(Math.max(it.from, p0)); B.push(`<rect x="${cx-c.w*.27}" y="${y0}" width="${c.w*.54}" height="${Math.max(4, Y(it.to)-y0) * .55}" fill="#000"/>`); }
+  } else if (h.depth){
+    const c = C.constr, cx = c.x + c.w/2, bw = c.w * .5;
+    if (inPage(0, h.depth)) B.push(`<rect x="${cx-bw/2}" y="${Y(0)}" width="${bw}" height="${Y(h.depth)-Y(0)}" fill="none" stroke="#000" stroke-width=".6"/>`);
+  }
+  // Niveau d'eau
+  const wl = h.water[0];
+  if (wl && wl.depth >= p0 && wl.depth <= p1){
+    const c = C.constr, cx = c.x + c.w/2, y = Y(wl.depth), hw = c.w * .16;
+    B.push(line(cx - hw*1.5, y, cx + hw*1.5, y, 1.4, '#1a3fd1'));
+    B.push(`<path d="M${cx-4} ${y+1.5} L${cx+4} ${y+1.5} L${cx} ${y+6}Z" fill="#1a3fd1"/>`);
+    B.push(`<rect x="${cx-15}" y="${y-12}" width="30" height="10" fill="#fff" opacity=".85"/>` + T(cx, y - 3.5, fmtD(wl.depth).replace(/\.?0+$/,''), 8.5, 'text-anchor="middle" font-weight="bold" fill="#1a3fd1"'));
+  }
+  // PID
+  { const c = C.pid; const items = [];
+    for (const r of h.pid){ if (r.from == null || r.to == null || !inPage(r.from, r.to)) continue;
+      B.push(line(c.x, Y(r.from), c.x + c.w, Y(r.from), .5)); B.push(line(c.x, Y(r.to), c.x + c.w, Y(r.to), .5));
+      const v = num(r.value); const t = v != null ? fmtNum(v) : str(r.value);
+      const lines = wrap(t, c.w - 6, 8.5);
+      const hh = lines.length * 9.5;
+      items.push({ y: (cl(Y(r.from)) + cl(Y(r.to))) / 2 - hh/2, h: hh, lines }); }
+    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((l,i) => B.push(T(c.x + c.w/2, it.ty + 8 + i*9.5, l, 8.5, 'text-anchor="middle" font-weight="bold" fill="#d00"'))));
+  }
+  // Description lithologique
+  { const c = C.desc, items = [];
+    for (const l of h.litho){ if (l.from == null || l.to == null || !inPage(l.from, l.to)) continue;
+      const lines = wrap(l.desc || l.key, c.w - 10, 9); const yb = Y(l.from);
+      items.push({ y: Math.max(yb, bodyTop) + 2, h: lines.length * 10.4 + 3, lines, yb, top: l.from >= p0 }); }
+    stack(items, bodyTop + 1, bodyBot - 1);
+    for (const it of items){
+      if (it.top){
+        const shifted = it.ty - (it.yb + 2) > 1.5;
+        B.push(line(C.litho.x, it.yb, C.litho.x + C.litho.w, it.yb, .7));
+        if (!shifted) B.push(line(c.x, it.yb, c.x + c.w, it.yb, .6));
+        else B.push(`<polyline points="${c.x},${it.yb} ${c.x+16},${it.ty} ${c.x+c.w},${it.ty}" fill="none" stroke="#000" stroke-width=".6"/>`);
+      }
+      it.lines.forEach((t,i) => B.push(T(c.x + 6, it.ty + 9.5 + i*10.4, t, 9)));
+    }
+    const last = Math.max(...h.litho.map(l => l.to ?? 0), 0);
+    if (last > p0 && last <= p1) B.push(line(C.litho.x, Y(last), c.x + c.w, Y(last), .7));
+  }
+  // Remarques, observations, humidité
+  for (const [k, field, color] of [['rem','rem','#000'],['org','org','#d00'],['moist','moist','#0033cc']]){
+    const c = C[k], items = [];
+    for (const r of h.comments){ if (!r[field] || r.from == null || !inPage(r.from, r.to ?? r.from + .01)) continue;
+      const lines = wrap(r[field], c.w - 12, 8);
+      const y0 = cl(Y(r.from)), y1 = cl(Y(r.to ?? r.from));
+      if (y1 - y0 > 2) B.push(`<path d="M${c.x+5} ${y0} h-2.5 V${y1} h2.5" fill="none" stroke="#9a9a9a" stroke-width=".6"/>`);
+      items.push({ y: y0 + 1, h: lines.length * 9 + 3, lines }); }
+    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((t,i) => B.push(T(c.x + c.w/2 + 2, it.ty + 8 + i*9, t, 8, `text-anchor="middle" fill="${color}"`))));
+  }
+  // Échantillons
+  if (L.hasSamples){
+    const c = C.sample, items = [];
+    for (const s of h.samples){ if (s.from == null || s.to == null || !inPage(s.from, s.to)) continue;
+      B.push(`<rect x="${c.x+1}" y="${Y(s.from)}" width="${c.w-2}" height="${Math.max(1.5, Y(s.to)-Y(s.from))}" fill="${s.labIdx != null ? '#bfe3bf' : '#dff0df'}" stroke="#6aa86a" stroke-width=".6"/>`);
+      const lines = [s.id]; const dt = [s.date, s.time].filter(Boolean).join(' ');
+      if (dt) lines.push(dt);
+      const sz = fit(s.id, c.w - 6, 7.5, 5.5);
+      items.push({ y: (cl(Y(s.from)) + cl(Y(s.to))) / 2 - lines.length * 4.5, h: lines.length * 8.6 + 1, lines, sz }); }
+    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((t,i) => B.push(T(c.x + c.w/2, it.ty + 7.5 + i*8.6, t, i ? 6.5 : it.sz, `text-anchor="middle" ${i ? 'fill="#333"' : ''}`))));
+  }
+  // Résultats analytiques
+  if (L.hasLab){
+    const c = C.lab, sp = selParams(), items = [];
+    for (const s of h.samples){ if (s.labIdx == null || !inPage(s.from, s.to)) continue;
+      const rows = [];
+      for (const q of sp){
+        const v = q.p.vals[s.labIdx]; if (!v) continue;
+        if (state.hideLQ && v.lt) continue;
+        const txt = v.lt ? (v.num != null ? '<' + fmtNum(v.num) : '<LQ') : v.num != null ? (v.gt ? '>' : '') + fmtNum(v.num) : v.txt;
+        const over = q.t != null && !v.lt && v.num != null && v.num > q.t;
+        rows.push({ label:q.label, txt, over, lt:v.lt });
+      }
+      if (!rows.length) continue;
+      const y0 = cl(Y(s.from)), y1 = cl(Y(s.to));
+      B.push(`<path d="M${c.x+4} ${y0} h-2.5 V${y1} h2.5" fill="none" stroke="#6aa86a" stroke-width=".7"/>`);
+      items.push({ y: y0, h: 9 + rows.length * 9 + 4, rows, id:s.id, mid:(y0+y1)/2 }); }
+    stack(items, bodyTop + 1, bodyBot - 1).forEach((it, n) => {
+      if (n) B.push(line(c.x + 8, it.ty - 1.5, c.x + c.w - 4, it.ty - 1.5, .35, '#bbb'));
+      B.push(T(c.x + 8, it.ty + 7, it.id, 6.5, 'fill="#4c7d4c" font-style="italic"'));
+      it.rows.forEach((r,i) => {
+        const yy = it.ty + 16 + i*9;
+        B.push(T(c.x + 8, yy, r.label, 7.5, r.lt ? 'fill="#777"' : ''));
+        B.push(T(c.x + c.w - 4, yy, r.txt, 7.5, `text-anchor="end" ${r.over ? 'fill="#d00" font-weight="bold"' : r.lt ? 'fill="#777"' : ''}`));
+      });
+    });
+  }
+  // Échelles
+  for (const k of ['scale','scale2']){
+    const c = C[k];
+    for (let i = Math.round(p0*10); i <= Math.round(p1*10); i++){
+      const d = i/10, y = Y(d), r = c.x + c.w;
+      const major = i % 10 === 0, half = i % 5 === 0;
+      if (ppm < 22 && !half) continue;
+      B.push(line(r - (major ? 7 : half ? 4.5 : 2.5), y, r, y, major ? .7 : .45));
+      if (major) B.push(T(c.x + 3, Math.min(Math.max(y + 3, bodyTop + 8), bodyBot - 2), fmtD(d), 7.5));
+    }
+    B.push(line(c.x + c.w, bodyTop, c.x + c.w, bodyBot, .6));
+  }
+  o.push(`<g clip-path="url(#${id}-body)">${B.join('')}</g>`);
+  // Cadre et colonnes
+  o.push(`<rect x="${M}" y="${bodyTop}" width="${W-2*M}" height="${bodyBot-bodyTop}" fill="none" stroke="#000" stroke-width=".8"/>`);
+  for (const c of cols.slice(1)) o.push(line(c.x, bodyTop, c.x, bodyBot, .6));
+
+  // ---------- pied ----------
+  o.push(drawFooter(h, L, T, line, cId, cItems, id));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${Hh}" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Log ${esc(h.id)}, page ${L.pageNo}"><rect width="${W}" height="${Hh}" fill="#fff"/><defs>${defs.join('')}</defs>${o.join('')}</svg>`;
+}
+
+function drawHeader(h, L, T, line){
+  const { W, M, headH } = L; const o = [];
+  const x0 = M, y0 = M, w = W - 2*M, hh = headH;
+  const w1 = w * .36, w2 = w * .3, w3 = w - w1 - w2;
+  o.push(`<rect x="${x0}" y="${y0}" width="${w}" height="${hh}" fill="none" stroke="#000" stroke-width=".8"/>`);
+  o.push(line(x0 + w1, y0, x0 + w1, y0 + hh, .8), line(x0 + w1 + w2, y0, x0 + w1 + w2, y0 + hh, .8));
+  const lab = (x, y, t, s = 9.5) => T(x, y, t, s, 'text-decoration="underline"');
+  const val = (xL, xR, y, t, s = 10, extra = 'text-anchor="middle"') => T((xL + xR)/2, y, t, fit(t, xR - xL - 4, s), extra);
+  // Bloc gauche
+  const rh = Math.min(26, (hh * .5) / 3);
+  [['Projet :', h.project], ['Client :', h.client], ['Lieu :', h.location]].forEach(([l,v], i) => {
+    const y = y0 + 18 + i * rh; o.push(lab(x0 + 8, y, l)); o.push(val(x0 + 70, x0 + w1 - 6, y, v));
+  });
+  const yc = y0 + 18 + 3 * rh - 8;
+  o.push(line(x0, yc, x0 + w1, yc, .8));
+  const comp = (state.opt.company || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const availH = y0 + hh - yc - 8;
+  let tx = x0 + 10;
+  if (state.opt.logo){
+    const lw = Math.min(70, w1 * .3);
+    o.push(`<image href="${state.opt.logo}" x="${x0 + 8}" y="${yc + 6}" width="${lw}" height="${availH}" preserveAspectRatio="xMidYMid meet"/>`);
+    tx = x0 + 14 + lw;
+  }
+  const cs = Math.min(9, availH / Math.max(comp.length, 1) - 1.5);
+  comp.forEach((t, i) => o.push(T(tx, yc + 6 + cs + i * (cs + 1.6), t, cs, i === 0 ? 'font-weight="bold"' : '')));
+  // Bloc central
+  const I = h.info || {};
+  const mid = [['Méthode :', I.method], ['Diamètre forage :', I.ddiam], ['Type crépine :', I.stype], ['Diamètre crépine :', I.sdiam], ['Taille fentes :', I.slot]];
+  if (!L.isWell) mid.splice(2, 3);
+  if (I.lab) mid.push(['Laboratoire :', I.lab]);
+  if (I.ship) mid.push(['Date d\'envoi :', I.ship]);
+  const mh = Math.min(25, (hh - 14) / mid.length), ms = mh < 18 ? 8.5 : 9.5;
+  const xm = x0 + w1;
+  mid.forEach(([l,v], i) => { const y = y0 + 12 + mh * .6 + i * mh; o.push(lab(xm + 8, y, l, ms)); o.push(val(xm + w2 * .5, xm + w2 - 6, y, v || '', ms + .5)); });
+  // Bloc droit
+  const xr = x0 + w1 + w2;
+  const right = [['Sous-traitant :', I.sub], ['Suivi par :', I.logged], ['Date - Heure début :', I.start], ['Date - Heure fin :', I.end]];
+  if (I.analyses) right.push(['Analyses :', I.analyses]);
+  if (I.bottle) right.push(['Type de flaconnage :', I.bottle]);
+  if (I.shipping) right.push(['Envoi en glacières :', I.shipping]);
+  if (state.opt.coords){
+    const cc = h.collar || {};
+    if (cc.x != null) right.push(['X / Y :', `${cc.x} / ${cc.y}`]);
+    if (cc.z != null) right.push(['Cote TN :', `${fmtM(cc.z)} m NGF`]);
+    if (cc.z != null && h.water[0]) right.push(['Niveau d\'eau :', `${fmtM(h.water[0].depth)} m/TN – ${fmtM(Math.round((cc.z - h.water[0].depth)*100)/100)} m NGF`]);
+  }
+  const title = L.isWell ? 'Piézomètre n° :' : 'Sondage n° :';
+  o.push(lab(xr + 8, y0 + 20, title, 9.5)); o.push(T(xr + w3 * .72, y0 + 21, h.id, 13, 'text-anchor="middle" font-weight="bold"'));
+  const rh2 = Math.min(25, (hh - 40) / right.length), rs = rh2 < 17 ? 8.2 : 9.5;
+  right.forEach(([l,v], i) => { const y = y0 + 38 + rh2 * .5 + i * rh2; o.push(lab(xr + 8, y, l, rs)); o.push(val(xr + w3 * .46, xr + w3 - 6, y, v || '', rs + .3)); });
+  return o.join('');
+}
+
+function drawFooter(h, L, T, line, cId, cItems, id){
+  const { W, Hh, M, bodyBot, cols, C } = L; const o = [];
+  const hdrH = 50, y0 = bodyBot, y1 = bodyBot + hdrH, yEnd = Hh - M;
+  o.push(`<rect x="${M}" y="${y0}" width="${W-2*M}" height="${hdrH}" fill="none" stroke="#000" stroke-width=".8"/>`);
+  for (const c of cols){
+    if (c !== cols[0]) o.push(line(c.x, y0, c.x, y1, .6));
+    let title = c.t;
+    if (c.k === 'lab'){ const units = [...new Set(selParams().map(s => s.p.unit).filter(Boolean))]; if (units.length === 1) title += ` (${units[0]})`; }
+    const color = c.color ? `fill="${c.color}"` : '';
+    if (c.w < 46){
+      const lines = wrap(title, hdrH - 8, 7.5).slice(0, 2);
+      const cx = c.x + c.w/2 - (lines.length - 1) * 4.5 + 3, cy = y0 + hdrH/2;
+      lines.forEach((t,i) => o.push(`<text transform="translate(${(cx + i*9).toFixed(1)} ${cy}) rotate(-90)" font-size="7.5" text-anchor="middle" ${color}>${esc(t)}</text>`));
+    } else {
+      const fs = c.k === 'desc' ? 9.5 : 8.5;
+      const lines = wrap(title, c.w - 8, fs).slice(0, 3);
+      lines.forEach((t,i) => o.push(T(c.x + c.w/2, y0 + hdrH/2 - (lines.length - 1) * (fs + 1)/2 + fs/3 + i * (fs + 1), t, fs, `text-anchor="middle" ${color}`)));
+    }
+  }
+  // Légende + note
+  o.push(`<rect x="${M}" y="${y1}" width="${W-2*M}" height="${yEnd-y1}" fill="none" stroke="#000" stroke-width=".8"/>`);
+  const xs = C.desc.x; o.push(line(xs, y1, xs, yEnd, .6));
+  const legW = xs - M;
+  if (L.isWell && cItems.length){
+    o.push(T(M + 6, y1 + 13, 'Légende (construction du piézomètre) :', 8.5, 'text-decoration="underline"'));
+    const per = legW > 300 ? 4 : 3, cw = (legW - 10) / per;
+    const order = ['BENTONITE','CIMENT','CUTTINGS','BENTO/CIMENT','BETON','SABLE','MASSIF FILTRANT','TUBE PLEIN','CREPINE','BOUCHON','CAPOT'];
+    const used = order.filter(k => cItems.includes(k)).concat(cItems.filter(k => !order.includes(k)));
+    used.forEach((k, i) => {
+      const x = M + 6 + (i % per) * cw, y = y1 + 22 + Math.floor(i / per) * 15;
+      let sw;
+      if (k === 'CAPOT') sw = `<rect x="${x}" y="${y}" width="14" height="5" y-off="0" fill="#000" transform="translate(0 2.5)"/>`;
+      else if (k === 'CREPINE') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#fff" stroke="#000" stroke-width=".6"/>` + line(x+3, y+3.5, x+11, y+3.5, .6) + line(x+3, y+6.5, x+11, y+6.5, .6);
+      else if (k === 'TUBE PLEIN') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#fff" stroke="#000" stroke-width=".6"/>`;
+      else if (k === 'BOUCHON') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#555" stroke="#000" stroke-width=".6"/>`;
+      else sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="url(#${cId(k)})" stroke="#000" stroke-width=".6"/>`;
+      o.push(sw + T(x + 17, y + 8, ITEM_LABEL[k] || k, fit(ITEM_LABEL[k] || k, cw - 20, 7.5, 5.5)));
+    });
+  }
+  // Note
+  const notes = [];
+  if (h.info?.note) notes.push(h.info.note);
+  if (L.hasLab){
+    const sp = selParams();
+    const thr = sp.filter(s => s.t != null).map(s => `${s.label} : ${fmtNum(s.t)}${s.p.unit ? ' ' + s.p.unit : ''}`);
+    if (thr.length) notes.push(`Résultats analytiques : valeurs en rouge gras supérieures au seuil retenu (${thr.join(' ; ')})${state.thrSource ? ', référence : ' + state.thrSource : ''}.`);
+    const units = [...new Set(sp.map(s => s.p.unit).filter(Boolean))];
+    if (units.length > 1) notes.push('Unités : ' + sp.map(s => `${s.label} en ${s.p.unit || '?'}`).join(' ; ') + '.');
+    if (sp.some(s => s.p.computed)) notes.push('Sommes calculées sur les composés quantifiés ; <LQ si aucun composé quantifié.');
+  }
+  const nx = xs + 8, nw = W - M - nx - 70;
+  o.push(T(nx, y1 + 14, 'NOTE :', 9, 'font-weight="bold" text-decoration="underline"'));
+  let ny = y1 + 28; const maxY = yEnd - 6;
+  for (const n of notes){
+    for (const t of wrap(n, nw, 8.5)){ if (ny > maxY) break; o.push(T(nx, ny, t, 8.5)); ny += 10.5; }
+    ny += 2;
+  }
+  // Pagination
+  o.push(`<rect x="${W - M - 66}" y="${yEnd - 22}" width="66" height="22" fill="#fff" stroke="#000" stroke-width=".6"/>`);
+  o.push(T(W - M - 33, yEnd - 7.5, `Page ${L.pageNo} de ${L.nPages}`, 9, 'text-anchor="middle"'));
+  return o.join('');
+}
+
+/* ============================================================
+   Affichage
+   ============================================================ */
+let renderTimer = null;
+function renderAllSoon(){ clearTimeout(renderTimer); renderTimer = setTimeout(renderAll, 250); }
+const rendered = [];
+function renderAll(){
+  const has = state.holes.size > 0;
+  ['#step2','#step3','#step4','#step5'].forEach(s => $(s).classList.toggle('off', !has));
+  $('#toolbar').hidden = !has; $('#welcome').hidden = has;
+  const box = $('#pages'); box.querySelectorAll('.page,.page-cap').forEach(n => n.remove());
+  if (!has) return;
+  // Puces forages
+  const chips = $('#chips'); chips.innerHTML = '';
+  const ids = [...state.holes.keys()].sort(natSort);
+  ids.forEach(k => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = k;
+    const nw = state.warnings.filter(w => w.hole === k && w.lvl !== 'info').length;
+    if (nw) b.title = `${nw} alerte(s)`;
+    b.setAttribute('aria-pressed', state.include.has(k));
+    b.onclick = () => { state.include.has(k) ? state.include.delete(k) : state.include.add(k); renderAll(); };
+    chips.appendChild(b);
+  });
+  rendered.length = 0; svgSeq = 0; let n = 0;
+  for (const k of ids){
+    if (!state.include.has(k)) continue;
+    const h = state.holes.get(k); const { land, pages } = buildPages(h);
+    pages.forEach((svg, i) => {
+      const d = document.createElement('div'); d.className = 'page' + (land ? ' land' : ''); d.innerHTML = svg; box.appendChild(d);
+      const cap = document.createElement('p'); cap.className = 'page-cap'; cap.textContent = `${k}${pages.length > 1 ? ` – page ${i+1}/${pages.length}` : ''}`; box.appendChild(cap);
+      rendered.push({ name: `Log_${k}${pages.length > 1 ? '_p' + (i+1) : ''}.svg`, svg }); n++;
+    });
+  }
+  $('#pageCount').textContent = `${n} page${n > 1 ? 's' : ''}`;
+}
+
+/* ============================================================
+   Fichiers et actions
+   ============================================================ */
+function readWorkbook(file){
+  return new Promise((res, rej) => {
+    if (typeof XLSX === 'undefined') return rej(new Error('La bibliothèque de lecture Excel n\'a pas pu être chargée (vendor/xlsx.full.min.js).'));
+    const r = new FileReader();
+    r.onerror = () => rej(new Error('Lecture du fichier impossible.'));
+    r.onload = () => {
+      try {
+        const wb = /\.csv$/i.test(file.name) ? XLSX.read(r.result, { type:'string', cellDates:true }) : XLSX.read(new Uint8Array(r.result), { type:'array', cellDates:true });
+        const sheets = {};
+        for (const n of wb.SheetNames) sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, raw:true, defval:null, blankrows:false });
+        res(sheets);
+      } catch(e){ rej(new Error('Fichier illisible : ' + e.message)); }
+    };
+    /\.csv$/i.test(file.name) ? r.readAsText(file) : r.readAsArrayBuffer(file);
+  });
+}
+function wireDrop(labelSel, inputSel, handler){
+  const lab = $(labelSel), inp = $(inputSel);
+  inp.addEventListener('change', () => inp.files[0] && handler(inp.files[0]));
+  lab.addEventListener('dragover', e => { e.preventDefault(); lab.classList.add('over'); });
+  lab.addEventListener('dragleave', () => lab.classList.remove('over'));
+  lab.addEventListener('drop', e => { e.preventDefault(); lab.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) handler(f); });
+}
+wireDrop('#dropLogs', '#fileLogs', async f => {
+  try {
+    const sheets = await readWorkbook(f); loadSheets(sheets, f.name);
+    if (!state.holes.size) throw new Error('Aucun forage trouvé : vérifiez la colonne Hole ID des onglets.');
+    $('#logsOk').hidden = false; $('#logsOk').textContent = `${f.name} : ${state.holes.size} forage(s) lu(s).`;
+  } catch(e){ alert(e.message); }
+});
+wireDrop('#dropLab', '#fileLab', async f => {
+  try { const sheets = await readWorkbook(f); loadLab(sheets, f.name); }
+  catch(e){ alert(e.message); }
+});
+$('#paramSearch').addEventListener('input', drawParamList);
+$('#hideLQ').addEventListener('change', e => { state.hideLQ = e.target.checked; renderAll(); });
+$('#thrSource').addEventListener('input', e => { state.thrSource = e.target.value.trim(); renderAllSoon(); });
+$('#btnClearLab').addEventListener('click', () => { state.lab = null; state.sel = []; for (const h of state.holes.values()) h.samples = h.samples.filter(s => s.fromSheet).map(s => ({...s, labIdx:null})); $('#fileLab').value = ''; renderLabPanel(); validate(); renderAll(); });
+$('#optOrient').addEventListener('change', e => { state.opt.orient = e.target.value; renderAll(); });
+$('#optDepth').addEventListener('change', e => { state.opt.depth = e.target.value; renderAll(); });
+$('#optCoords').addEventListener('change', e => { state.opt.coords = e.target.checked; renderAll(); });
+$('#optCompany').addEventListener('input', e => { state.opt.company = e.target.value; renderAllSoon(); });
+$('#optLogo').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) { state.opt.logo = null; renderAll(); return; }
+  const r = new FileReader(); r.onload = () => { state.opt.logo = r.result; renderAll(); }; r.readAsDataURL(f);
+});
+state.opt.company = $('#optCompany').value;
+$('#btnPrint').addEventListener('click', () => window.print());
+$('#btnSvg').addEventListener('click', async () => {
+  for (const r of rendered){
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([r.svg], { type:'image/svg+xml' })); a.download = r.name;
+    document.body.appendChild(a); a.click(); a.remove(); await new Promise(z => setTimeout(z, 250));
+  }
+});
+$('#btnTemplate').addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') return alert('La bibliothèque Excel n\'a pas pu être chargée.');
+  const wb = XLSX.utils.book_new();
+  const S = (name, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), name);
+  S('Project Settings', [['Hole ID','Project Name','Client','Location'],['PZ1','0000000','Client','Commune']]);
+  S('Collars', [['Hole ID','Easting','Northing','Elevation','Starting Depth','Ending Depth'],['PZ1',null,null,null,0,12]]);
+  S('Log Info', [['Hole ID','Depth','Method','Drilling Diameter','Screen Type','Screen Diameter','Slots Size','Logged by','Subcontractor','Starting Date - Time','Ending Date - Time','Note','Laboratory','Shipping Date','Analyses','Bottle Type','Shipping'],
+    ['PZ1',12,'Tarière','150 mm','PEHD','52/63 mm','1 mm','','','01/01/2026 - 09h00','01/01/2026 - 12h00','','','','','','']]);
+  S('Well Construction', [['Hole ID','From','To','Item'],['PZ1',0,0.3,'CIMENT'],['PZ1',0.3,3,'BENTONITE'],['PZ1',3,12,'MASSIF FILTRANT'],['PZ1',0,0.2,'CAPOT'],['PZ1',0.1,4,'TUBE PLEIN'],['PZ1',4,12,'CREPINE']]);
+  S('PID', [['Hole ID','From','To','PID (ppm)'],['PZ1',0,1,0.4]]);
+  S('Water Level', [['Hole ID','Depth'],['PZ1',5.2]]);
+  S('Lithology', [['Hole ID','From','To','Lithology Keyword','Lithology Description'],['PZ1',0,0.5,'TERRE VEGETALE','Terre végétale limoneuse marron'],['PZ1',0.5,12,'SABLE ARGILEUX','Sable argileux beige']]);
+  S('Comments', [['Hole ID','From','To','Remarks','Organoleptic Observations','Moisture Indication'],['PZ1',0,0.5,'','','terrain sec']]);
+  S('Samples', [['Hole ID','From','To','Sample ID','Date','Time'],['PZ1',0,0.5,'PZ1 (0-0,5 m)','01/01/2026','09h30']]);
+  const keys = ['ARGILE','ARGILE SABLEUSE','ARGILE SABLEUSE GRAVELEUSE','ASPHALTE','CALCAIRE','CALCAIRE ET SABLE','CRAIE','DALLE BETON','GRAVIERS','MARNE','MARNE SABLEUSE','REMBLAIS','SABLE','SABLE ARGILEUX','SILT','SILT ARGILEUX','TERRE VEGETALE','TOURBE'];
+  const items = ['BENTO/CIMENT','BENTONITE','BETON','BOUCHON','CAPOT','CIMENT','CREPINE','CUTTINGS','MASSIF FILTRANT','TUBE PLEIN','SABLE'];
+  S('Lists', [['LITHOLOGY','WELL CONSTRUCTION'], ...Array.from({length:Math.max(keys.length, items.length)}, (_,i) => [keys[i] ?? null, items[i] ?? null])]);
+  XLSX.writeFile(wb, 'Modele_saisie_logs.xlsx');
+});
+// Point d'entrée pour tests ou intégration (sheets = {nom: tableau de lignes})
+window.LogTool = { loadSheets, loadLab, state, renderAll };
+renderAll();
+</script>
+</body>
+</html>

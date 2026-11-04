@@ -36,6 +36,14 @@ const OUTILS: Outil[] = [
     route: '/conformite-rejets',
   },
   {
+    titre: 'Logs de forage',
+    accroche: 'Sondages et piézomètres',
+    description:
+      "Générez les logs de sondages et de piézomètres au format ERM depuis le classeur de saisie : lithologie, équipement, PID, niveau d'eau, échantillons et résultats d'analyses.",
+    points: ['Contrôles de cohérence avant diffusion', 'Impression PDF et export SVG'],
+    page: 'logs-forage.html',
+  },
+  {
     titre: 'Données environnementales publiques',
     accroche: 'Carte interactive',
     description:
@@ -88,7 +96,7 @@ export default function Accueil() {
         <p className="eyebrow">ERM — boîte à outils</p>
         <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
         <p className="lede">
-          Cinq outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
+          Six outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
           d'analyses et au contrôle des rejets.
         </p>
         <div className="grid grid--2" style={{ marginTop: '2.5rem', gap: '1.25rem' }}>

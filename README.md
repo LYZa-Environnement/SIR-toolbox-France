@@ -19,6 +19,13 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   d'investigation sur parcelles : taille et orientation de maille, zones
   multiples, exclusions, types de points, exports terrain (GPX, tableaux).
 
+- **Logs de forage** (`frontend/public/logs-forage.html`) — logs de
+  sondages et de piézomètres au format ERM depuis le classeur de saisie
+  (Collars, Log Info, Lithology, Well Construction, PID, Water Level,
+  Comments, Samples ; modèle vierge téléchargeable), avec en option les
+  résultats d'analyses rattachés aux échantillons, contrôles de cohérence,
+  impression PDF et export SVG.
+
 - **Résultats labo** (`frontend/src/pages/ResultatsLabo.tsx`) — mise en
   forme des résultats d'analyses : choix de la matrice (eaux souterraines,
   sols, gaz du sol / air), chargement du fichier du laboratoire (ALS /
