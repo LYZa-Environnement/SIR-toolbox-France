@@ -185,7 +185,7 @@ Tel: 01.53.24.10.30</textarea>
         <tr><td>PID</td><td>Hole ID, From, To, PID (ppm)</td></tr>
         <tr><td>Water Level</td><td>Hole ID, Depth</td></tr>
         <tr><td>Comments</td><td>Hole ID, From, To, Remarks, Organoleptic Observations, Moisture Indication</td></tr>
-        <tr><td>Samples</td><td>Hole ID, From, To, Sample ID, Date, Time (facultatif)</td></tr>
+        <tr><td>Samples</td><td>Hole ID, From, To, Sample ID, Date, Time (facultatif), Analysed (facultatif : Oui / Non ; à défaut, d'après le fichier de résultats)</td></tr>
       </table>
     </div>
   </div>
@@ -285,8 +285,26 @@ const SYN = {
   rem:['remarks','remarques','remarque'], org:['organolepticobservations','observationsorganoleptiques','organoleptique'],
   moist:['moistureindication','indicationhumidite','humidite','moisture'],
   sid:['sampleid','echantillon','sample','idechantillon','nomechantillon'], sdate:['date','datedeprelevement','dateprelevement','samplingdate'],
-  stime:['time','heure','heuredeprelevement','heureprelevement','samplingtime'], wdate:['date','datemesure']
+  stime:['time','heure','heuredeprelevement','heureprelevement','samplingtime'], wdate:['date','datemesure'],
+  analysed:['analysed','analyzed','analyse','analysee','analyses','analysis','aanalyser','statut','status']
 };
+// "Oui", "x", "HCT + BTEX" → analysed; "Non", "-", "conservé" → kept only; empty → unknown.
+function yesNo(v){
+  if (v == null || v === '') return null;
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  const n = norm(v);
+  if (!n) return /^[-–—]$/.test(String(v).trim()) ? false : null;
+  if (/^(non|no|n|false|faux|0|conserve|conservee|reserve|enreserve|nonanalyse|nonanalysee|aconserver)$/.test(n)) return false;
+  return true;
+}
+/** Analysed (true), sampled only (false), unknown (null): the Samples
+ *  column when filled, else the lab file when one is loaded. */
+function sampleStatus(s){
+  if (s.analysed != null) return s.analysed;
+  if (state.lab) return s.labIdx != null;
+  return null;
+}
 function findSheet(sheets, names){
   const want = names.map(norm);
   const k = Object.keys(sheets).find(n => want.includes(norm(n)));
@@ -372,7 +390,8 @@ function loadSheets(sheets, fileName){
   if (t) for (const r of t.data){ const h = H(t.get(r,'hole')); if (!h) continue;
     const d = t.get(r,'sdate');
     h.samples.push({ id:str(t.get(r,'sid')) || `${h.id} (${fmtM(num(t.get(r,'from')))}-${fmtM(num(t.get(r,'to')))} m)`,
-      from:num(t.get(r,'from')), to:num(t.get(r,'to')), date: d instanceof Date ? fmtDate(d) : str(d), time:fmtTime(t.get(r,'stime')), labIdx:null, fromSheet:true }); }
+      from:num(t.get(r,'from')), to:num(t.get(r,'to')), date: d instanceof Date ? fmtDate(d) : str(d), time:fmtTime(t.get(r,'stime')), labIdx:null, fromSheet:true,
+      analysed: yesNo(t.get(r,'analysed')) }); }
 
   const lists = findSheet(sheets, ['Lists','Listes']);
   state.listLitho = null;
@@ -447,6 +466,10 @@ function validate(){
     const ids = h.samples.map(s => norm(s.id)); const dup = ids.filter((v,i) => ids.indexOf(v) !== i);
     if (dup.length) add(h.id,'warn','Identifiant d\'échantillon en double.');
     for (const s of h.samples) if (D && s.to > D + eps) add(h.id,'warn',`Échantillon ${s.id} sous le fond du forage.`);
+    const kept = h.samples.filter(s => sampleStatus(s) === false);
+    if (kept.length) add(h.id,'info',`${kept.length} échantillon(s) prélevé(s) non analysé(s) : ${kept.map(s => s.id).join(', ')}.`);
+    for (const s of h.samples) if (s.analysed === true && state.lab && s.labIdx == null) add(h.id,'warn',`Échantillon ${s.id} indiqué analysé, mais absent du fichier de résultats.`);
+    for (const s of h.samples) if (s.analysed === false && s.labIdx != null) add(h.id,'warn',`Échantillon ${s.id} indiqué non analysé, mais présent dans le fichier de résultats.`);
   }
   if (state.lab){
     const un = state.lab.samples.filter(s => !s.hole);
@@ -608,7 +631,7 @@ function attachLab(){
     const h = byNorm.get(norm(p.hole)); if (!h) return;
     const ex = h.samples.find(s => s.labIdx == null && Math.abs(s.from - p.from) < .01 && Math.abs(s.to - p.to) < .01);
     if (ex){ ex.labIdx = i; ls.hole = h.id; return; }
-    h.samples.push({ id:ls.rawId, from:p.from, to:p.to, date:'', time:'', labIdx:i, fromSheet:false });
+    h.samples.push({ id:ls.rawId, from:p.from, to:p.to, date:'', time:'', labIdx:i, fromSheet:false, analysed:null });
     ls.hole = h.id;
   });
   for (const h of state.holes.values()) h.samples.sort((a,b) => a.from - b.from);
@@ -694,19 +717,24 @@ function comp(n, p){
   }
   return '';
 }
+// Pale tint of the main component, under its pattern: reads at a glance, prints well.
+const LIT_TINT = { veg:'#dcebc9', asph:null, beton:null, remb:'#e2ddd6', tourbe:'#cdbba5', granite:'#f0d9d6', gneiss:'#eadbe6', schist:'#d9dde6',
+  gypse:'#f4eef6', conglo:'#efdcc0', craie:'#f7f6ef', calc:'#dde8ef', marne:'#e3e8d5', gres:'#f1e2bf', argile:'#ead7c3', silt:'#f1e6cf',
+  sable:'#fbefc4', grav:'#f3dcb0', galet:'#eed6ad', silex:'#e7e7e7', nodule:'#efefef' };
 function litPatternBody(key){
   const cs = litComponents(key);
   if (!cs.length) return `<rect width="24" height="24" fill="#eee"/><path d="M0 24 L24 0" stroke="#999" stroke-width=".5"/>`;
-  return cs.map((c,i) => comp(c, i === 0)).join('');
+  const tint = LIT_TINT[cs[0]];
+  return (tint ? `<rect width="24" height="24" fill="${tint}"/>` : '') + cs.map((c,i) => comp(c, i === 0)).join('');
 }
 const CONSTR_PAT = {
-  'BENTONITE': `<circle cx="2.6" cy="2.8" r="1.35" fill="none" stroke="#000" stroke-width=".5"/><circle cx="7.6" cy="7.6" r="1.35" fill="none" stroke="#000" stroke-width=".5"/>`,
-  'CIMENT': `<path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".55"/>`,
-  'BENTO/CIMENT': `<path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".4"/><circle cx="5" cy="1.6" r="1" fill="#fff" stroke="#000" stroke-width=".4"/>`,
+  'BENTONITE': `<rect width="10" height="10" fill="#e3ecdc"/><circle cx="2.6" cy="2.8" r="1.35" fill="none" stroke="#000" stroke-width=".5"/><circle cx="7.6" cy="7.6" r="1.35" fill="none" stroke="#000" stroke-width=".5"/>`,
+  'CIMENT': `<rect width="10" height="10" fill="#e4e4e4"/><path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".55"/>`,
+  'BENTO/CIMENT': `<rect width="10" height="10" fill="#e4e8df"/><path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".4"/><circle cx="5" cy="1.6" r="1" fill="#fff" stroke="#000" stroke-width=".4"/>`,
   'CUTTINGS': `<rect width="10" height="10" fill="#e4e4e4"/><circle cx="2" cy="3" r=".6"/><circle cx="7" cy="2" r=".6"/><circle cx="4.5" cy="7.5" r=".6"/><path d="M6 6 l2 1" stroke="#000" stroke-width=".4"/>`,
-  'BETON': `<path d="M0 10 L10 0" stroke="#000" stroke-width=".55"/>`,
-  'MASSIF FILTRANT': `<path d="M1.5 4.5 l1.6 -3 l1.6 3Z M6 9.5 l1.6 -3 l1.6 3Z" fill="none" stroke="#000" stroke-width=".45"/><circle cx="7.5" cy="2.5" r=".45"/><circle cx="2.5" cy="7.8" r=".45"/>`,
-  'SABLE': `<circle cx="2" cy="2" r=".6"/><circle cx="7" cy="4" r=".6"/><circle cx="4" cy="8" r=".6"/>`,
+  'BETON': `<rect width="10" height="10" fill="#dadada"/><path d="M0 10 L10 0" stroke="#000" stroke-width=".55"/>`,
+  'MASSIF FILTRANT': `<rect width="10" height="10" fill="#f8edc6"/><path d="M1.5 4.5 l1.6 -3 l1.6 3Z M6 9.5 l1.6 -3 l1.6 3Z" fill="none" stroke="#000" stroke-width=".45"/><circle cx="7.5" cy="2.5" r=".45"/><circle cx="2.5" cy="7.8" r=".45"/>`,
+  'SABLE': `<rect width="10" height="10" fill="#fbf1cf"/><circle cx="2" cy="2" r=".6"/><circle cx="7" cy="4" r=".6"/><circle cx="4" cy="8" r=".6"/>`,
   'OTHER': `<rect width="10" height="10" fill="#ddd"/>`
 };
 
@@ -780,6 +808,7 @@ function drawPage(h, L){
   const cItems = [...new Set(h.construction.map(c => c.item))];
   const cId = k => `${id}-c${cItems.indexOf(k)}`;
   cItems.forEach(k => defs.push(`<pattern id="${cId(k)}" width="10" height="10" patternUnits="userSpaceOnUse">${CONSTR_PAT[k] || CONSTR_PAT.OTHER}</pattern>`));
+  defs.push(`<pattern id="${id}-kept" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#fff"/><line x1="0" y1="0" x2="0" y2="6" stroke="#c9c9c9" stroke-width="1.4"/></pattern>`);
   defs.push(`<clipPath id="${id}-body"><rect x="${M}" y="${bodyTop}" width="${W-2*M}" height="${bodyBot-bodyTop}"/></clipPath>`);
 
   // ---------- en-tête ----------
@@ -810,13 +839,22 @@ function drawPage(h, L){
   const wl = h.water[0];
   if (wl && wl.depth >= p0 && wl.depth <= p1){
     const c = C.constr, cx = c.x + c.w/2, y = Y(wl.depth), hw = c.w * .16;
+    // A light dashed line across the log, so the level reads against the lithology.
+    B.push(line(C.scale2.x, y, C.desc.x + C.desc.w, y, .7, '#1a3fd1', 'stroke-dasharray="4 3" opacity=".7"'));
     B.push(line(cx - hw*1.5, y, cx + hw*1.5, y, 1.4, '#1a3fd1'));
     B.push(`<path d="M${cx-4} ${y+1.5} L${cx+4} ${y+1.5} L${cx} ${y+6}Z" fill="#1a3fd1"/>`);
     B.push(`<rect x="${cx-15}" y="${y-12}" width="30" height="10" fill="#fff" opacity=".85"/>` + T(cx, y - 3.5, fmtD(wl.depth).replace(/\.?0+$/,''), 8.5, 'text-anchor="middle" font-weight="bold" fill="#1a3fd1"'));
   }
   // PID
   { const c = C.pid; const items = [];
-    for (const r of h.pid){ if (r.from == null || r.to == null || !inPage(r.from, r.to)) continue;
+    const pmax = Math.max(0, ...h.pid.map(r => num(r.value) ?? 0));
+    for (const r of h.pid){
+      const pv = num(r.value);
+      // Bar length on a log scale: 0,1 ppm and 1 000 ppm both readable.
+      if (pv != null && pv > 0 && pmax > 0 && r.from != null && r.to != null && inPage(r.from, r.to)){
+        const f = Math.log10(1 + pv) / Math.log10(1 + pmax), y0 = cl(Y(r.from)), y1 = cl(Y(r.to));
+        B.push(`<rect x="${c.x + 1}" y="${(y0 + .8).toFixed(1)}" width="${((c.w - 2) * f).toFixed(1)}" height="${Math.max(1, y1 - y0 - 1.6).toFixed(1)}" fill="#f6cdc8"/>`);
+      } if (r.from == null || r.to == null || !inPage(r.from, r.to)) continue;
       B.push(line(c.x, Y(r.from), c.x + c.w, Y(r.from), .5)); B.push(line(c.x, Y(r.to), c.x + c.w, Y(r.to), .5));
       const v = num(r.value); const t = v != null ? fmtNum(v) : str(r.value);
       const lines = wrap(t, c.w - 6, 8.5);
@@ -856,17 +894,31 @@ function drawPage(h, L){
   if (L.hasSamples){
     const c = C.sample, items = [];
     for (const s of h.samples){ if (s.from == null || s.to == null || !inPage(s.from, s.to)) continue;
-      B.push(`<rect x="${c.x+1}" y="${Y(s.from)}" width="${c.w-2}" height="${Math.max(1.5, Y(s.to)-Y(s.from))}" fill="${s.labIdx != null ? '#bfe3bf' : '#dff0df'}" stroke="#6aa86a" stroke-width=".6"/>`);
+      const st = sampleStatus(s);
+      const look = st === true ? 'fill="#a9d8a9" stroke="#3f8a3f" stroke-width=".8"'
+        : st === false ? `fill="url(#${id}-kept)" stroke="#8a8a8a" stroke-width=".7" stroke-dasharray="2.5 1.5"`
+        : 'fill="#dff0df" stroke="#6aa86a" stroke-width=".6"';
+      B.push(`<rect x="${c.x+1}" y="${Y(s.from)}" width="${c.w-2}" height="${Math.max(1.5, Y(s.to)-Y(s.from))}" ${look}/>`);
       const lines = [s.id]; const dt = [s.date, s.time].filter(Boolean).join(' ');
       if (dt) lines.push(dt);
+      if (st === false) lines.push('non analysé');
       const sz = fit(s.id, c.w - 6, 7.5, 5.5);
       items.push({ y: (cl(Y(s.from)) + cl(Y(s.to))) / 2 - lines.length * 4.5, h: lines.length * 8.6 + 1, lines, sz }); }
-    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((t,i) => B.push(T(c.x + c.w/2, it.ty + 7.5 + i*8.6, t, i ? 6.5 : it.sz, `text-anchor="middle" ${i ? 'fill="#333"' : ''}`))));
+    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((t,i) => {
+      const kept = t === 'non analysé' && i === it.lines.length - 1;
+      B.push(T(c.x + c.w/2, it.ty + 7.5 + i*8.6, t, i ? 6.5 : it.sz, `text-anchor="middle" ${kept ? 'fill="#777" font-style="italic"' : i ? 'fill="#333"' : ''}`));
+    }));
   }
   // Résultats analytiques
   if (L.hasLab){
     const c = C.lab, sp = selParams(), items = [];
-    for (const s of h.samples){ if (s.labIdx == null || !inPage(s.from, s.to)) continue;
+    for (const s of h.samples){ if (!inPage(s.from, s.to)) continue;
+      if (s.labIdx == null){
+        if (sampleStatus(s) !== false) continue;
+        const y0 = cl(Y(s.from)), y1 = cl(Y(s.to));
+        items.push({ y: y0, h: 18, rows: [], kept: true, id: s.id, mid: (y0 + y1) / 2 });
+        continue;
+      }
       const rows = [];
       for (const q of sp){
         const v = q.p.vals[s.labIdx]; if (!v) continue;
@@ -881,7 +933,8 @@ function drawPage(h, L){
       items.push({ y: y0, h: 9 + rows.length * 9 + 4, rows, id:s.id, mid:(y0+y1)/2 }); }
     stack(items, bodyTop + 1, bodyBot - 1).forEach((it, n) => {
       if (n) B.push(line(c.x + 8, it.ty - 1.5, c.x + c.w - 4, it.ty - 1.5, .35, '#bbb'));
-      B.push(T(c.x + 8, it.ty + 7, it.id, 6.5, 'fill="#4c7d4c" font-style="italic"'));
+      B.push(T(c.x + 8, it.ty + 7, it.id, 6.5, `fill="${it.kept ? '#888' : '#4c7d4c'}" font-style="italic"`));
+      if (it.kept) B.push(T(c.x + 8, it.ty + 15.5, 'Prélevé, non analysé', 7.5, 'fill="#888" font-style="italic"'));
       it.rows.forEach((r,i) => {
         const yy = it.ty + 16 + i*9;
         B.push(T(c.x + 8, yy, r.label, 7.5, r.lt ? 'fill="#777"' : ''));
@@ -958,6 +1011,7 @@ function drawHeader(h, L, T, line){
     if (cc.z != null && h.water[0]) right.push(['Niveau d\'eau :', `${fmtM(h.water[0].depth)} m/TN – ${fmtM(Math.round((cc.z - h.water[0].depth)*100)/100)} m NGF`]);
   }
   const title = L.isWell ? 'Piézomètre n° :' : 'Sondage n° :';
+  o.push(`<rect x="${xr + .4}" y="${y0 + .4}" width="${w3 - .8}" height="30" fill="#e3efe6"/>`, line(xr, y0 + 30, xr + w3, y0 + 30, .5, '#9bbfa3'));
   o.push(lab(xr + 8, y0 + 20, title, 9.5)); o.push(T(xr + w3 * .72, y0 + 21, h.id, 13, 'text-anchor="middle" font-weight="bold"'));
   const rh2 = Math.min(25, (hh - 40) / right.length), rs = rh2 < 17 ? 8.2 : 9.5;
   right.forEach(([l,v], i) => { const y = y0 + 38 + rh2 * .5 + i * rh2; o.push(lab(xr + 8, y, l, rs)); o.push(val(xr + w3 * .46, xr + w3 - 6, y, v || '', rs + .3)); });
@@ -967,7 +1021,7 @@ function drawHeader(h, L, T, line){
 function drawFooter(h, L, T, line, cId, cItems, id){
   const { W, Hh, M, bodyBot, cols, C } = L; const o = [];
   const hdrH = 50, y0 = bodyBot, y1 = bodyBot + hdrH, yEnd = Hh - M;
-  o.push(`<rect x="${M}" y="${y0}" width="${W-2*M}" height="${hdrH}" fill="none" stroke="#000" stroke-width=".8"/>`);
+  o.push(`<rect x="${M}" y="${y0}" width="${W-2*M}" height="${hdrH}" fill="#eef4ef" stroke="#000" stroke-width=".8"/>`);
   for (const c of cols){
     if (c !== cols[0]) o.push(line(c.x, y0, c.x, y1, .6));
     let title = c.t;
@@ -987,20 +1041,29 @@ function drawFooter(h, L, T, line, cId, cItems, id){
   o.push(`<rect x="${M}" y="${y1}" width="${W-2*M}" height="${yEnd-y1}" fill="none" stroke="#000" stroke-width=".8"/>`);
   const xs = C.desc.x; o.push(line(xs, y1, xs, yEnd, .6));
   const legW = xs - M;
-  if (L.isWell && cItems.length){
-    o.push(T(M + 6, y1 + 13, 'Légende (construction du piézomètre) :', 8.5, 'text-decoration="underline"'));
+  const sts = new Set(h.samples.map(sampleStatus));
+  const sampleKeys = [...(sts.has(true) ? ['ECH_A'] : []), ...(sts.has(false) ? ['ECH_N'] : [])];
+  const SAMPLE_LABEL = { ECH_A:'Échantillon analysé', ECH_N:'Échantillon prélevé, non analysé' };
+  if ((L.isWell && cItems.length) || sampleKeys.length){
+    o.push(T(M + 6, y1 + 13, L.isWell && cItems.length ? 'Légende (construction du piézomètre, échantillons) :' : 'Légende (échantillons) :', 8.5, 'text-decoration="underline"'));
     const per = legW > 300 ? 4 : 3, cw = (legW - 10) / per;
     const order = ['BENTONITE','CIMENT','CUTTINGS','BENTO/CIMENT','BETON','SABLE','MASSIF FILTRANT','TUBE PLEIN','CREPINE','BOUCHON','CAPOT'];
-    const used = order.filter(k => cItems.includes(k)).concat(cItems.filter(k => !order.includes(k)));
+    const used = (L.isWell ? order.filter(k => cItems.includes(k)).concat(cItems.filter(k => !order.includes(k))) : []).concat(sampleKeys);
+    // Sample entries on a row of their own, two cells each (longer labels).
+    const nC = used.filter(k => !k.startsWith('ECH_')).length, rowS = Math.ceil(nC / per);
     used.forEach((k, i) => {
-      const x = M + 6 + (i % per) * cw, y = y1 + 22 + Math.floor(i / per) * 15;
+      const j = k.startsWith('ECH_') ? (i - nC) * 2 : i;
+      const x = M + 6 + (j % per) * cw, y = y1 + 22 + (k.startsWith('ECH_') ? rowS + Math.floor(j / per) : Math.floor(j / per)) * 15;
       let sw;
       if (k === 'CAPOT') sw = `<rect x="${x}" y="${y}" width="14" height="5" y-off="0" fill="#000" transform="translate(0 2.5)"/>`;
       else if (k === 'CREPINE') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#fff" stroke="#000" stroke-width=".6"/>` + line(x+3, y+3.5, x+11, y+3.5, .6) + line(x+3, y+6.5, x+11, y+6.5, .6);
       else if (k === 'TUBE PLEIN') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#fff" stroke="#000" stroke-width=".6"/>`;
       else if (k === 'BOUCHON') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#555" stroke="#000" stroke-width=".6"/>`;
+      else if (k === 'ECH_A') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#a9d8a9" stroke="#3f8a3f" stroke-width=".8"/>`;
+      else if (k === 'ECH_N') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="url(#${id}-kept)" stroke="#8a8a8a" stroke-width=".7" stroke-dasharray="2.5 1.5"/>`;
       else sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="url(#${cId(k)})" stroke="#000" stroke-width=".6"/>`;
-      o.push(sw + T(x + 17, y + 8, ITEM_LABEL[k] || k, fit(ITEM_LABEL[k] || k, cw - 20, 7.5, 5.5)));
+      const lb = SAMPLE_LABEL[k] || ITEM_LABEL[k] || k;
+      o.push(sw + T(x + 17, y + 8, lb, fit(lb, (k.startsWith('ECH_') ? 2 : 1) * cw - 20, 7.5, 5.5)));
     });
   }
   // Note
@@ -1133,7 +1196,7 @@ $('#btnTemplate').addEventListener('click', () => {
   S('Water Level', [['Hole ID','Depth'],['PZ1',5.2]]);
   S('Lithology', [['Hole ID','From','To','Lithology Keyword','Lithology Description'],['PZ1',0,0.5,'TERRE VEGETALE','Terre végétale limoneuse marron'],['PZ1',0.5,12,'SABLE ARGILEUX','Sable argileux beige']]);
   S('Comments', [['Hole ID','From','To','Remarks','Organoleptic Observations','Moisture Indication'],['PZ1',0,0.5,'','','terrain sec']]);
-  S('Samples', [['Hole ID','From','To','Sample ID','Date','Time'],['PZ1',0,0.5,'PZ1 (0-0,5 m)','01/01/2026','09h30']]);
+  S('Samples', [['Hole ID','From','To','Sample ID','Date','Time','Analysed'],['PZ1',0,0.5,'PZ1 (0-0,5 m)','01/01/2026','09h30','Oui'],['PZ1',2,2.5,'PZ1 (2-2,5 m)','01/01/2026','10h15','Non']]);
   const keys = ['ARGILE','ARGILE SABLEUSE','ARGILE SABLEUSE GRAVELEUSE','ASPHALTE','CALCAIRE','CALCAIRE ET SABLE','CRAIE','DALLE BETON','GRAVIERS','MARNE','MARNE SABLEUSE','REMBLAIS','SABLE','SABLE ARGILEUX','SILT','SILT ARGILEUX','TERRE VEGETALE','TOURBE'];
   const items = ['BENTO/CIMENT','BENTONITE','BETON','BOUCHON','CAPOT','CIMENT','CREPINE','CUTTINGS','MASSIF FILTRANT','TUBE PLEIN','SABLE'];
   S('Lists', [['LITHOLOGY','WELL CONSTRUCTION'], ...Array.from({length:Math.max(keys.length, items.length)}, (_,i) => [keys[i] ?? null, items[i] ?? null])]);
