@@ -36,6 +36,14 @@ const OUTILS: Outil[] = [
     route: '/conformite-rejets',
   },
   {
+    titre: 'Déclaration IOTA',
+    accroche: 'Loi sur l’eau',
+    description:
+      'Classez le projet dans la nomenclature IOTA, lisez le contexte du site (SDAGE, SAGE, ZRE, Natura 2000, cours d’eau, nappes) et produisez les trois rapports Word du dossier de déclaration.',
+    points: ['Étude d’incidence, Natura 2000, résumé non technique', 'Contrôle de complétude (article R. 214-32)'],
+    route: '/declaration-iota',
+  },
+  {
     titre: 'Logs de forage',
     accroche: 'Sondages et piézomètres',
     description:
@@ -96,7 +104,7 @@ export default function Accueil() {
         <p className="eyebrow">ERM — boîte à outils</p>
         <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
         <p className="lede">
-          Six outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
+          Sept outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
           d'analyses et au contrôle des rejets.
         </p>
         <div className="grid grid--2" style={{ marginTop: '2.5rem', gap: '1.25rem' }}>
