@@ -843,3 +843,69 @@ a.card:hover {
     transform: none;
   }
 }
+
+/* ---- Déclaration IOTA ---- */
+.champ textarea {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.5;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.7rem;
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.champ textarea:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 0;
+  border-color: var(--color-accent);
+}
+
+.champ textarea.iota-proposition {
+  color: var(--color-muted);
+  border-style: dashed;
+}
+
+.iota-rubrique {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.iota-rubrique--active {
+  border-color: var(--color-accent);
+}
+
+.iota-rubrique > label {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  cursor: pointer;
+}
+
+.iota-section {
+  margin-bottom: 1.25rem;
+}
+
+.iota-section__entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.iota-note {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  margin: 0.35rem 0 0;
+}

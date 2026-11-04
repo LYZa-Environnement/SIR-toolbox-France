@@ -56,6 +56,26 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   par échantillon (entrée, intermédiaire, rejet), résultats <LQ en bornes basse et haute, tolérance de 10 % de
   l'autosurveillance permanente (article 21), rapport Excel.
 
+- **Déclaration IOTA** (`frontend/src/pages/DeclarationIota.tsx`) — dossier
+  de déclaration « loi sur l'eau » (articles L. 214-1 à L. 214-6) :
+  classement du projet dans la nomenclature de l'article R. 214-1 (version
+  consolidée du 28 août 2025, seuils D / A, cumul des ouvrages, niveaux R1 de
+  la rubrique 2.2.3.0, prescriptions générales applicables,
+  `src/lib/iota/nomenclature.ts`), lecture du contexte du site dans les bases
+  publiques (`src/lib/iota/contexte.ts` : bassin et SDAGE, SAGE, zone de
+  répartition des eaux, zones sensibles et vulnérables, masses d'eau
+  souterraines du Sandre ; cours d'eau BD TOPO ; ADES et BNPE ; Natura 2000 et
+  ZNIEFF avec distance et direction vers le point le plus proche du
+  périmètre ; altimétrie ; atlas des zones inondables ; feuille géologique),
+  tableau des ouvrages et volumes de purge, propositions de rédaction section
+  par section (`src/lib/iota/redaction.ts`), contrôle de complétude point par
+  point de l'article R. 214-32 (`src/lib/iota/completude.ts`) et export des
+  trois rapports Word au gabarit ERM (`src/lib/iota/docx.ts`) : étude
+  d'incidence, évaluation des incidences Natura 2000, résumé non technique.
+  Le mandat de dépôt sur Service-public.fr (ERM mandataire) se télécharge
+  pré-rempli depuis le dossier, ou en modèle vierge (`src/lib/iota/mandat.ts`).
+  Le dossier s'enregistre et se rouvre en fichier JSON.
+
 ### Valeurs guides ERM
 
 Les valeurs guides sont extraites des trois classeurs ERM de référence vers
