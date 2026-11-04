@@ -17,6 +17,7 @@ import {
   type Dossier,
   type GestionEaux,
   type Maitrise,
+  type Mandat,
   type Ouvrage,
   type SectionId,
   type StatutOuvrage,
@@ -157,6 +158,7 @@ export default function DeclarationIota() {
       else textes[id] = v
       return { ...x, textes }
     })
+  const majMandat = (p: Partial<Mandat>) => setD((x) => ({ ...x, mandat: { ...x.mandat, ...p } }))
   const majOuvrage = (id: string, p: Partial<Ouvrage>) => setD((x) => ({ ...x, ouvrages: x.ouvrages.map((o) => (o.id === id ? { ...o, ...p } : o)) }))
   const basculer = (code: string) =>
     setD((x) => {
@@ -213,6 +215,19 @@ export default function DeclarationIota() {
       setErreur(null)
     } catch (e) {
       setErreur((e as Error).message)
+    }
+  }
+
+  async function mandat(vierge: boolean) {
+    setExport(vierge ? 'mandat-vierge' : 'mandat')
+    setErreur(null)
+    try {
+      const m = await import('../lib/iota/mandat')
+      await m.telechargerMandat(vierge ? null : d)
+    } catch (e) {
+      setErreur(`Export impossible : ${(e as Error).message}`)
+    } finally {
+      setExport(null)
     }
   }
 
@@ -721,6 +736,81 @@ export default function DeclarationIota() {
           <p className="iota-note" style={{ maxWidth: '48rem' }}>
             À l’ouverture, Word propose de mettre à jour les champs : acceptez pour numéroter la table des matières. Les cartes sont à insérer dans
             les pages de figures réservées.
+          </p>
+        </div>
+      </section>
+
+      {/* ---- 7 ---- */}
+      <section className="section section--muted">
+        <div className="container">
+          <h2 className="etape">
+            <span>7</span> Mandat de dépôt
+          </h2>
+          <p className="lede" style={{ marginBottom: '1rem' }}>
+            Lorsque ERM dépose la déclaration sur Service-public.fr pour le compte du déclarant, joignez un mandat signé par les deux parties.
+            Le mandant reprend le déclarant de l’étape 1 ; complétez son représentant. Les champs laissés vides restent en pointillés à remplir
+            à la main.
+          </p>
+          <div className="grid grid--3" style={{ alignItems: 'end' }}>
+            <Champ label="Projet cité dans le mandat">
+              <input value={d.mandat.projet} onChange={(e) => majMandat({ projet: e.target.value })} placeholder={[d.declarant.nom, d.site.commune.toUpperCase()].filter(Boolean).join(' ') || 'ex. Bosch DRANCY'} />
+            </Champ>
+            {d.declarant.morale && (
+              <>
+                <Champ label="Représentant : nom">
+                  <input value={d.mandat.representantNom} onChange={(e) => majMandat({ representantNom: e.target.value })} />
+                </Champ>
+                <Champ label="Représentant : prénom">
+                  <input value={d.mandat.representantPrenom} onChange={(e) => majMandat({ representantPrenom: e.target.value })} />
+                </Champ>
+                <Champ label="Représentant : né(e) le">
+                  <input type="date" value={d.mandat.representantNaissance} onChange={(e) => majMandat({ representantNaissance: e.target.value })} />
+                </Champ>
+              </>
+            )}
+            <Champ label="Lieu de naissance">
+              <input value={d.mandat.representantLieuNaissance} onChange={(e) => majMandat({ representantLieuNaissance: e.target.value })} placeholder="ex. Ville (département)" />
+            </Champ>
+            <Champ label="Code postal et ville du siège">
+              <input value={d.mandat.mandantCodePostalVille} onChange={(e) => majMandat({ mandantCodePostalVille: e.target.value })} placeholder="repris de l’adresse du déclarant" />
+            </Champ>
+          </div>
+          <div className="grid grid--3" style={{ alignItems: 'end', marginTop: '1rem' }}>
+            <Champ label="Mandataire : nom de la personne en charge">
+              <input value={d.mandat.mandataireNom} onChange={(e) => majMandat({ mandataireNom: e.target.value })} placeholder="par défaut : chef de projet" />
+            </Champ>
+            <Champ label="Mandataire : prénom">
+              <input value={d.mandat.mandatairePrenom} onChange={(e) => majMandat({ mandatairePrenom: e.target.value })} />
+            </Champ>
+            <Champ label="Organisme">
+              <input value={d.mandat.mandataireOrganisme} onChange={(e) => majMandat({ mandataireOrganisme: e.target.value })} />
+            </Champ>
+            <Champ label="SIRET du mandataire">
+              <input value={d.mandat.mandataireSiret} onChange={(e) => majMandat({ mandataireSiret: e.target.value })} />
+            </Champ>
+            <Champ label="Adresse du siège social">
+              <input value={d.mandat.mandataireAdresse} onChange={(e) => majMandat({ mandataireAdresse: e.target.value })} />
+            </Champ>
+            <Champ label="Code postal et ville">
+              <input value={d.mandat.mandataireCodePostalVille} onChange={(e) => majMandat({ mandataireCodePostalVille: e.target.value })} />
+            </Champ>
+            <Champ label="Fait à">
+              <input value={d.mandat.faitA} onChange={(e) => majMandat({ faitA: e.target.value })} />
+            </Champ>
+            <Champ label="Le">
+              <input type="date" value={d.mandat.date} onChange={(e) => majMandat({ date: e.target.value })} />
+            </Champ>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+            <button type="button" className="btn" disabled={!!export_} onClick={() => void mandat(false)}>
+              {export_ === 'mandat' ? 'Préparation…' : 'Télécharger le mandat pré-rempli (.docx)'}
+            </button>
+            <button type="button" className="btn btn--ghost" disabled={!!export_} onClick={() => void mandat(true)}>
+              {export_ === 'mandat-vierge' ? 'Préparation…' : 'Télécharger le modèle vierge'}
+            </button>
+          </div>
+          <p className="iota-note" style={{ maxWidth: '48rem' }}>
+            Le mandat ne s’enregistre que dans votre dossier : la date et le lieu de naissance du représentant ne quittent pas votre navigateur.
           </p>
         </div>
       </section>

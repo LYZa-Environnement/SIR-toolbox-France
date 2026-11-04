@@ -72,6 +72,8 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   point de l'article R. 214-32 (`src/lib/iota/completude.ts`) et export des
   trois rapports Word au gabarit ERM (`src/lib/iota/docx.ts`) : étude
   d'incidence, évaluation des incidences Natura 2000, résumé non technique.
+  Le mandat de dépôt sur Service-public.fr (ERM mandataire) se télécharge
+  pré-rempli depuis le dossier, ou en modèle vierge (`src/lib/iota/mandat.ts`).
   Le dossier s'enregistre et se rouvre en fichier JSON.
 
 ### Valeurs guides ERM

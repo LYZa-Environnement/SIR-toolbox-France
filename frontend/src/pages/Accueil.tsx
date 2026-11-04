@@ -40,7 +40,7 @@ const OUTILS: Outil[] = [
     accroche: 'Loi sur l’eau',
     description:
       'Classez le projet dans la nomenclature IOTA, lisez le contexte du site (SDAGE, SAGE, ZRE, Natura 2000, cours d’eau, nappes) et produisez les trois rapports Word du dossier de déclaration.',
-    points: ['Étude d’incidence, Natura 2000, résumé non technique', 'Contrôle de complétude (article R. 214-32)'],
+    points: ['Étude d’incidence, Natura 2000, résumé non technique', 'Complétude R. 214-32, mandat de dépôt'],
     route: '/declaration-iota',
   },
   {

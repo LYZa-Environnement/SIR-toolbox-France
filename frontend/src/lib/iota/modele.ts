@@ -152,6 +152,9 @@ export interface Dossier {
   textes: Partial<Record<SectionId, string>>
   /** Last reading of the public services, saved with the dossier. */
   contexte: Contexte | null
+  /** Mandate for ERM to file the declaration on Service-public.fr on the
+   * declarant's behalf. */
+  mandat: Mandat
   figures: Figure[]
   annexes: string[]
 }
@@ -164,6 +167,49 @@ export const FIGURES_DEFAUT: Figure[] = [
   { id: 'nature', titre: 'Localisation des sites naturels protégés dans le voisinage du site', prevue: true },
   { id: 'n2000', titre: 'Localisation des zones Natura 2000 dans le voisinage du site', prevue: true },
 ]
+
+export interface Mandat {
+  /** Project name as the mandate quotes it, e.g. « Bosch DRANCY ». */
+  projet: string
+  /** Signatory for the declarant (legal representative). */
+  representantNom: string
+  representantPrenom: string
+  representantNaissance: string
+  representantLieuNaissance: string
+  mandantCodePostalVille: string
+  mandataireNom: string
+  mandatairePrenom: string
+  mandataireOrganisme: string
+  mandataireSiret: string
+  mandataireAdresse: string
+  mandataireCodePostalVille: string
+  faitA: string
+  date: string
+}
+
+/** ERM France as registered (siège social), the usual mandataire. */
+export const MANDATAIRE_ERM = {
+  mandataireOrganisme: 'ERM France',
+  mandataireSiret: '393 898 325 00062',
+  mandataireAdresse: '40 avenue des terroirs de France',
+  mandataireCodePostalVille: '75012 Paris',
+}
+
+export function mandatVide(): Mandat {
+  return {
+    projet: '',
+    representantNom: '',
+    representantPrenom: '',
+    representantNaissance: '',
+    representantLieuNaissance: '',
+    mandantCodePostalVille: '',
+    mandataireNom: '',
+    mandatairePrenom: '',
+    ...MANDATAIRE_ERM,
+    faitA: '',
+    date: '',
+  }
+}
 
 export function dossierVide(): Dossier {
   return {
@@ -202,6 +248,7 @@ export function dossierVide(): Dossier {
     naturaIncidence: 'absence',
     textes: {},
     contexte: null,
+    mandat: mandatVide(),
     figures: FIGURES_DEFAUT.map((f) => ({ ...f })),
     annexes: ['Logs géologiques et techniques des ouvrages'],
   }
@@ -222,6 +269,7 @@ export function normaliser(x: unknown): Dossier {
     purge: { ...v.purge, ...d.purge },
     textes: { ...d.textes },
     contexte: d.contexte ?? null,
+    mandat: { ...v.mandat, ...d.mandat },
     figures: d.figures ?? v.figures,
     annexes: d.annexes ?? v.annexes,
     ouvrages: d.ouvrages ?? [],

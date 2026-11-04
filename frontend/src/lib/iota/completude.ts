@@ -146,6 +146,15 @@ export function completude(d: Dossier): Piece[] {
     detail: detailTexte(d, ['autresProcedures']),
     ou: 'Étude d’incidence, § 11',
   })
+  const m = d.mandat
+  const mandatRempli = d.declarant.morale ? !!(m.representantNom && m.representantPrenom) : !!d.declarant.nom
+  p.push({
+    ref: 'Dépôt',
+    libelle: 'Mandat de dépôt signé par le déclarant, si ERM dépose la déclaration sur Service-public.fr pour son compte',
+    etat: mandatRempli ? 'a-verifier' : 'manquant',
+    detail: mandatRempli ? 'Mandat à faire signer par le mandant et le mandataire' : 'Représentant du déclarant à renseigner (étape 7)',
+    ou: 'Pièce du dépôt',
+  })
   if (d.evalEnv === 'etude-impact')
     p.push({
       ref: 'R. 214-32 II 5°',
