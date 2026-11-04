@@ -7,7 +7,7 @@
 import type { Workbook, Worksheet } from 'exceljs'
 import { BANDEAU, ETAT } from '../resultats/couleurs.ts'
 import { ecrire, VERT_ENTETE } from '../resultats/export.ts'
-import { LIBELLES_STATUT, type Borne, type Controle, type Donnees, type Statut } from './conformite.ts'
+import { bilanParEchantillon, LIBELLES_STATUT, type Borne, type Controle, type Donnees, type Statut } from './conformite.ts'
 import type { Colonne, Ligne } from './grille.ts'
 import { PAR_ID } from './substances.ts'
 
@@ -80,7 +80,33 @@ function feuilleSynthese(wb: Workbook, rp: Rapport) {
     ecrire(ws, r++, 2, comptes.get(s) ?? 0, { h: 'center', gras: true })
   }
   r++
-  r = bandeau(ws, r, 'Contrôles', 8)
+  r = bandeau(ws, r, 'Bilan par échantillon', 8)
+  const enTetes: [number, string][] = [
+    [1, 'Échantillon'],
+    [2, 'Conformité'],
+    [3, 'Contrôles'],
+    [5, 'Valeurs limites dépassées (rapport à la valeur limite)'],
+  ]
+  for (const [c, t] of enTetes) ecrire(ws, r, c, t, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true })
+  ws.mergeCells(r, 3, r, 4)
+  ws.mergeCells(r, 5, r, 8)
+  r++
+  bilanParEchantillon(rp.controles, rp.colonnes.length).forEach((b, j) => {
+    const col = COULEURS[b.statut]
+    const c = rp.colonnes[j]
+    ecrire(ws, r, 1, [c?.nom || `Mesure ${j + 1}`, c?.date].filter(Boolean).join(' — '), { gras: true, taille: 9 })
+    ecrire(ws, r, 2, LIBELLES_STATUT[b.statut], { gras: true, taille: 9, h: 'center', wrap: true, fond: col.fond, couleur: col.texte })
+    ws.mergeCells(r, 3, r, 4)
+    ecrire(ws, r, 3, (['depassement', 'indetermine', 'conforme', 'ap', 'non-soumis'] as Statut[]).filter((s) => b.comptes[s]).map((s) => `${b.comptes[s]} ${LIBELLES_STATUT[s].toLowerCase()}`).join(' · '), { taille: 8, wrap: true })
+    ws.mergeCells(r, 5, r, 8)
+    const dep = b.depassements.map((d) => `${d.libelle}${d.ratio ? ` (× ${String(nb(d.ratio)).replace('.', ',')})` : ''}`).join(' ; ')
+    const ind = b.indetermines.length ? `LQ trop élevée pour conclure : ${b.indetermines.join(', ')}` : ''
+    ecrire(ws, r, 5, [dep || '-', ind].filter(Boolean).join(' — '), { taille: 8, wrap: true })
+    ws.getRow(r).height = Math.max(15, Math.ceil(((dep + ind).length || 1) / 110) * 12)
+    r++
+  })
+  r++
+  r = bandeau(ws, r, 'Contrôles (synthèse sur l’ensemble des échantillons)', 8)
   r = entetes(ws, r, [
     ['Paramètre', 46],
     ['Référence', 20],

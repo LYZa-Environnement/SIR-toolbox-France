@@ -44,8 +44,9 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   cancérigènes de l'annexe IV, oxydation, conditions normales et oxygène de
   référence), articles 31, 32 et 34 pour l'eau (pH, température, MES, DBO5,
   DCO, azote et phosphore, substances des 3° et 4°, raccordement à une
-  station d'épuration). Résultats lus dans le fichier du laboratoire ou
-  saisis, résultats <LQ en bornes basse et haute, tolérance de 10 % de
+  station d'épuration). Résultats lus dans le fichier du laboratoire (tous
+  les onglets, un échantillon par onglet admis) ou saisis, bilan échantillon
+  par échantillon (entrée, intermédiaire, rejet), résultats <LQ en bornes basse et haute, tolérance de 10 % de
   l'autosurveillance permanente (article 21), rapport Excel.
 
 ### Valeurs guides ERM

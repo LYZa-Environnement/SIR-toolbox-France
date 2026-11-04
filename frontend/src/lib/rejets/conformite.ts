@@ -625,3 +625,47 @@ export function bilan(controles: Controle[]): Record<Statut, number> {
   for (const c of controles) r[c.synthese.statut]++
   return r
 }
+
+export interface BilanEchantillon {
+  comptes: Record<Statut, number>
+  /** Limits exceeded: check and ratio to the limit. */
+  depassements: { libelle: string; reference: string; ratio: number | null }[]
+  indetermines: string[]
+  /** The prefect's to set: over the flux threshold of annexe IV, N2O, CO. */
+  ap: string[]
+  statut: Statut
+}
+
+/** Sample by sample (column by column), every check together. */
+export function bilanParEchantillon(controles: Controle[], n: number): BilanEchantillon[] {
+  return Array.from({ length: n }, (_, j) => {
+    const comptes: Record<Statut, number> = { conforme: 0, depassement: 0, indetermine: 0, 'non-soumis': 0, ap: 0, 'sans-donnee': 0 }
+    const depassements: BilanEchantillon['depassements'] = []
+    const indetermines: string[] = []
+    const ap: string[] = []
+    for (const c of controles) {
+      const m = c.mesures[j]
+      if (!m) continue
+      comptes[m.statut]++
+      if (m.statut === 'depassement') {
+        const ratio = m.vle && m.concentration && m.vleMin === undefined ? m.concentration.bas / m.vle : null
+        depassements.push({ libelle: c.libelle, reference: c.reference, ratio })
+      }
+      if (m.statut === 'indetermine') indetermines.push(c.libelle)
+      if (m.statut === 'ap') ap.push(c.libelle)
+    }
+    depassements.sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))
+    const statut: Statut = comptes.depassement
+      ? 'depassement'
+      : comptes.indetermine
+        ? 'indetermine'
+        : comptes.conforme
+          ? 'conforme'
+          : comptes.ap
+            ? 'ap'
+            : comptes['non-soumis']
+              ? 'non-soumis'
+              : 'sans-donnee'
+    return { comptes, depassements, indetermines, ap, statut }
+  })
+}

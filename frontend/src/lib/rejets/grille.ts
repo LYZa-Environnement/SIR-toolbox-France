@@ -5,7 +5,8 @@
  * units for the conformity checks.
  */
 
-import { lireMesure, type Lecture } from '../resultats/parse.ts'
+import { normaliser } from '../resultats/guides.ts'
+import { LectureImpossible, lireClasseur, lireGrille, lireMesure, type Cell, type Couche, type Lecture, type Mode, type Parametre } from '../resultats/parse.ts'
 import { lireNombre } from '../resultats/calc.ts'
 import type { Controle, LigneEvaluee, Resultat } from './conformite.ts'
 import { PAR_ID, reconnaitre, type ClasseCov } from './substances.ts'
@@ -36,6 +37,70 @@ export const nouvelId = () => `l${++compteur}`
 
 export function ligneVide(milieu: Milieu, n: number): Ligne {
   return { id: nouvelId(), libelle: '', cas: '', unite: milieu === 'air' ? 'mg/m³' : 'mg/l', substance: null, classe: '', fraction: '', valeurs: Array(n).fill('') }
+}
+
+/** Every sheet of the workbook that reads as results of this medium, their
+ *  samples side by side: lab reports often give one sample per sheet
+ *  (inlet, between the carbon beds, outlet). A sheet with no parameter of
+ *  the arrêté (methods, LQ table) is left out. */
+export function lireOnglets(feuilles: { nom: string; grille: Cell[][] }[], mode: Mode, milieu: Milieu): { lecture: Lecture; onglets: string[] } {
+  const lus: Lecture[] = []
+  for (const f of feuilles) {
+    try {
+      lus.push(lireGrille(f.grille, mode, f.nom))
+    } catch (e) {
+      if (!(e instanceof LectureImpossible)) throw e
+    }
+  }
+  const utiles = lus.filter((l) => [...l.parametres.CM, ...l.parametres.CC].some((p) => reconnaitre(p.nom, p.cas, milieu)))
+  if (!utiles.length) {
+    const l = lireClasseur(feuilles, mode)
+    return { lecture: l, onglets: l.feuille ? [l.feuille] : [] }
+  }
+  return { lecture: utiles.length === 1 ? utiles[0] : fusionner(utiles), onglets: utiles.map((l) => l.feuille ?? '') }
+}
+
+/** Sheets merged: one row per parameter (same name and unit), one column per sample. */
+function fusionner(lectures: Lecture[]): Lecture {
+  const points: Lecture['points'] = []
+  const parametres: Record<Couche, Parametre[]> = { CM: [], CC: [] }
+  const valeurs: Lecture['valeurs'] = { CM: {}, CC: {} }
+  const cles: Record<Couche, Map<string, string>> = { CM: new Map(), CC: new Map() }
+  for (const l of lectures) {
+    const noms = new Map<string, string>()
+    for (const p of l.points) {
+      // The same sample name on two sheets: told apart by the sheet.
+      let nom = points.some((x) => x.nom === p.nom) ? `${p.nom} (${l.feuille})` : p.nom
+      for (let k = 2; points.some((x) => x.nom === nom); k++) nom = `${p.nom} (${l.feuille} ${k})`
+      noms.set(p.nom, nom)
+      points.push({ ...p, nom })
+    }
+    for (const c of ['CM', 'CC'] as Couche[]) {
+      for (const pa of l.parametres[c]) {
+        const k = `${normaliser(pa.nom)}|${pa.unite.toLowerCase().replace(/\s+/g, '')}`
+        let cle = cles[c].get(k)
+        if (!cle) {
+          cle = parametres[c].some((x) => x.cle === pa.cle) ? `${pa.cle}|${pa.unite}` : pa.cle
+          cles[c].set(k, cle)
+          parametres[c].push({ ...pa, cle })
+        }
+        for (const [ancien, nouveau] of noms) {
+          const m = l.valeurs[c][ancien]?.[pa.cle]
+          if (m) (valeurs[c][nouveau] ??= {})[cle] = m
+        }
+      }
+    }
+  }
+  return {
+    points,
+    parametres,
+    valeurs,
+    coucheControle: lectures.some((l) => l.coucheControle),
+    lignesIgnorees: [...new Set(lectures.flatMap((l) => l.lignesIgnorees))],
+    unites: [...new Set(lectures.flatMap((l) => l.unites))],
+    mode: lectures[0].mode,
+    feuille: lectures.map((l) => l.feuille).join(', '),
+  }
 }
 
 /** Rows of the lab file, the substances recognised. Air tubes: the control

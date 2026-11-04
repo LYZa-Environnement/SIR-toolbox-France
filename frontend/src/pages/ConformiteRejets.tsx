@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from 'react'
 import { lireNombre } from '../lib/resultats/calc'
-import { LectureImpossible, lireClasseur, type Cell, type Lecture } from '../lib/resultats/parse'
+import { LectureImpossible, type Cell, type Lecture } from '../lib/resultats/parse'
 import {
   bilan,
+  bilanParEchantillon,
   evaluerConformite,
   LIBELLES_STATUT,
   type Borne,
@@ -11,7 +12,7 @@ import {
   type Donnees,
   type Statut,
 } from '../lib/rejets/conformite'
-import { collage, grilleDepuisLecture, ligneVide, lireGrilleSaisie, nonVisees as lignesNonVisees, type Colonne, type Ligne } from '../lib/rejets/grille'
+import { collage, grilleDepuisLecture, ligneVide, lireGrilleSaisie, lireOnglets, nonVisees as lignesNonVisees, type Colonne, type Ligne } from '../lib/rejets/grille'
 import { LIBELLES_CLASSE, PAR_ID, SUBSTANCES, type ClasseCov } from '../lib/rejets/substances'
 import { conversionAir, type Milieu } from '../lib/rejets/unites'
 
@@ -52,26 +53,27 @@ function borne(b: Borne | null): string {
   return b.bas === 0 ? `<${fr(b.haut)}` : `${fr(b.bas)} à ${fr(b.haut)}`
 }
 
-async function lireFichier(f: File, milieu: Milieu): Promise<Lecture> {
+async function lireFichier(f: File, milieu: Milieu): Promise<{ lecture: Lecture; onglets: string[] }> {
   const XLSX = await import('xlsx')
   const classeur = XLSX.read(await f.arrayBuffer(), { type: 'array' })
   const feuilles = classeur.SheetNames.map((nom) => ({
     nom,
     grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
   }))
-  if (milieu === 'eau') return lireClasseur(feuilles, 'tout')
+  if (milieu === 'eau') return lireOnglets(feuilles, 'tout', 'eau')
   // Air: concentrations given by the lab, else masses per tube.
   const essais = (['concentration', 'support', 'tout'] as const).map((mode) => {
     try {
-      return lireClasseur(feuilles, mode)
+      return lireOnglets(feuilles, mode, 'air')
     } catch (e) {
       if (!(e instanceof LectureImpossible)) throw e
       return null
     }
   })
-  const lu = essais.filter((l): l is Lecture => !!l)
-  if (!lu.length) return lireClasseur(feuilles, 'tout')
-  return lu.reduce((a, b) => (b.parametres.CM.length > a.parametres.CM.length ? b : a))
+  const lu = essais.filter((x): x is { lecture: Lecture; onglets: string[] } => !!x)
+  if (!lu.length) return lireOnglets(feuilles, 'tout', 'air')
+  const taille = (x: { lecture: Lecture }) => x.lecture.points.length * x.lecture.parametres.CM.length
+  return lu.reduce((a, b) => (taille(b) > taille(a) ? b : a))
 }
 
 const SUBSTANCES_TRIEES = (m: Milieu) => SUBSTANCES.filter((s) => s.milieu.includes(m)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
@@ -124,12 +126,16 @@ export default function ConformiteRejets() {
     setChargement(true)
     setErreur(null)
     try {
-      const l = await lireFichier(f, milieu)
+      const { lecture: l, onglets } = await lireFichier(f, milieu)
       const g = grilleDepuisLecture(l, milieu)
       if (!g.lignes.length) throw new LectureImpossible('Aucun résultat lisible dans ce fichier.')
       setColonnes(g.colonnes)
       setLignes(g.lignes)
-      setNotesLecture([`Feuille « ${l.feuille ?? '?'} » : ${g.colonnes.length} mesure${g.colonnes.length > 1 ? 's' : ''}, ${g.lignes.length} paramètres.`, ...g.notes])
+      const n = g.colonnes.length
+      setNotesLecture([
+        `${onglets.length > 1 ? `${onglets.length} onglets lus (${onglets.map((o) => `« ${o} »`).join(', ')})` : `Onglet « ${onglets[0] ?? '?'} »`} : ${n} échantillon${n > 1 ? 's' : ''} (${g.colonnes.map((c) => c.nom).join(', ')}), ${g.lignes.length} paramètres. Chaque échantillon est évalué.`,
+        ...g.notes,
+      ])
       setFichier(f.name)
       setFluxAutorises({})
     } catch (e) {
@@ -211,6 +217,7 @@ export default function ConformiteRejets() {
     [donnees],
   )
   const comptes = bilan(controles)
+  const parEchantillon = bilanParEchantillon(controles, colonnes.length)
   const nonVisees = lignesNonVisees(lignes, controles)
 
   const contexte: [string, string][] = !milieu
@@ -650,6 +657,53 @@ export default function ConformiteRejets() {
             <h2 className="etape">
               <span>5</span> Conformité
             </h2>
+            {controles.length > 0 && (
+              <>
+                <h3 style={{ margin: '0 0 0.5rem' }}>Par échantillon</h3>
+                <div className="tableau-defile" style={{ marginBottom: '1.75rem' }}>
+                  <table className="tableau">
+                    <thead>
+                      <tr>
+                        <th>Échantillon</th>
+                        <th>Conformité</th>
+                        <th>Contrôles</th>
+                        <th>Valeurs limites dépassées</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parEchantillon.map((b, j) => (
+                        <tr key={j}>
+                          <th scope="row">
+                            {colonnes[j]?.nom || `Mesure ${j + 1}`}
+                            {colonnes[j]?.date && <div style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--color-muted)' }}>{colonnes[j].date}</div>}
+                          </th>
+                          <td>
+                            <span className={CLASSE_STATUT[b.statut]} style={{ fontSize: '0.72rem' }}>
+                              {LIBELLES_STATUT[b.statut]}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '0.82rem', whiteSpace: 'normal', minWidth: '14rem' }}>
+                            {(['depassement', 'indetermine', 'conforme', 'ap', 'non-soumis'] as Statut[])
+                              .filter((s) => b.comptes[s])
+                              .map((s) => `${b.comptes[s]} ${LIBELLES_STATUT[s].toLowerCase()}`)
+                              .join(' · ')}
+                          </td>
+                          <td style={{ fontSize: '0.82rem', whiteSpace: 'normal', minWidth: '20rem' }}>
+                            {b.depassements.length
+                              ? b.depassements.map((d) => `${d.libelle}${d.ratio ? ` (× ${fr(d.ratio)})` : ''}`).join(' ; ')
+                              : '-'}
+                            {b.indetermines.length > 0 && (
+                              <div style={{ color: 'var(--color-muted)' }}>LQ trop élevée pour conclure : {b.indetermines.join(', ')}</div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <h3 style={{ margin: '0 0 0.5rem' }}>Par paramètre</h3>
+              </>
+            )}
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               {(['depassement', 'indetermine', 'conforme', 'ap', 'non-soumis'] as Statut[]).map((s) =>
                 comptes[s] ? (
@@ -674,7 +728,7 @@ export default function ConformiteRejets() {
                       {colonnes.map((c, j) => (
                         <th key={j}>{c.nom || `Mesure ${j + 1}`}</th>
                       ))}
-                      <th>Synthèse</th>
+                      <th>Synthèse (tous les échantillons)</th>
                     </tr>
                   </thead>
                   <tbody>
