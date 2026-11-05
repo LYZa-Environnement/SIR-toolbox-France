@@ -18,5 +18,11 @@ export const PAR_ID = new Map(REFERENTIELS.map((r) => [r.id, r]))
 export function categories(): [string, Referentiel[]][] {
   const m = new Map<string, Referentiel[]>()
   for (const r of REFERENTIELS) if (!r.masque) m.set(r.categorie ?? 'Autres', [...(m.get(r.categorie ?? 'Autres') ?? []), r])
-  return [...m]
+  const ordre = (c: string) => {
+    const i = ORDRE.findIndex((x) => c.startsWith(x))
+    return i < 0 ? ORDRE.length : i
+  }
+  return [...m].sort(([a], [b]) => ordre(a) - ordre(b))
 }
+
+const ORDRE = ['Attestations', 'Dossiers réglementaires', 'Rapports d’études', 'Ingénierie des travaux', 'Exécution des travaux', 'Exigences communes']

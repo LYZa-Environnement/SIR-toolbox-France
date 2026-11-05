@@ -37,10 +37,10 @@ const OUTILS: Outil[] = [
   },
   {
     titre: 'Vérification de livrables SSP',
-    accroche: 'ATTES et déclarations IOTA',
+    accroche: 'ATTES, IOTA, NF X31-620, LNE',
     description:
-      'Déposez une attestation ATTES (ALUR, SECUR, MEMOIRE, TRAVAUX) ou un dossier de déclaration IOTA : chaque exigence des textes est recherchée dans le document, avec sa source officielle.',
-    points: ['Modèles de l’arrêté du 9 février 2022, article R. 214-32', 'Où trouver l’information, comment corriger'],
+      'Déposez un livrable — attestation ATTES, déclaration IOTA, rapport d’étude ou de travaux, offre : chaque exigence des textes, de la norme NF X31-620 et du référentiel LNE SSP est recherchée dans le document, avec sa source.',
+    points: ['Arrêté du 9 février 2022, R. 214-32, NF X31-620-1 à 5', 'Où trouver l’information, comment corriger'],
     route: '/verification-livrables',
   },
   {

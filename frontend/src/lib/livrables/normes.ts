@@ -7,6 +7,7 @@
  */
 
 import nf1 from '../../data/livrables/nf1-lne.json' with { type: 'json' }
+import nf2 from '../../data/livrables/nf2.json' with { type: 'json' }
 import nf345 from '../../data/livrables/nf345.json' with { type: 'json' }
 import type { Point, Referentiel, Source } from './controles.ts'
 
@@ -94,4 +95,4 @@ function referentiel(r: ReferentielBrut): Referentiel {
   }
 }
 
-export const REFERENTIELS_NORMES: Referentiel[] = [...(nf1.referentiels as ReferentielBrut[]), ...(nf345.referentiels as ReferentielBrut[])].map(referentiel)
+export const REFERENTIELS_NORMES: Referentiel[] = [...(nf1.referentiels as ReferentielBrut[]), ...(nf2.referentiels as ReferentielBrut[]), ...(nf345.referentiels as ReferentielBrut[])].map(referentiel)

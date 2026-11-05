@@ -67,7 +67,11 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   ATTES-SECUR, ATTES-MEMOIRE, ATTES-TRAVAUX (modèles de l'arrêté du
   9 février 2022, `src/lib/livrables/attes.ts`) et déclaration IOTA
   (article R. 214-32, nomenclature R. 214-1, prescriptions générales des
-  rubriques SSP, `src/lib/livrables/iota.ts`). Chaque point de contrôle est
+  rubriques SSP, `src/lib/livrables/iota.ts`), rapports d'études, de
+  travaux et offres au regard de la norme NF X31-620 (décembre 2021, parties
+  1 à 5) et du référentiel de certification LNE SSP (rév. 8) — points
+  paraphrasés avec leur clause, sans texte de la norme
+  (`src/data/livrables/*.json`, `src/lib/livrables/normes.ts`). Chaque point de contrôle est
   recherché dans le texte (trouvé avec le passage et la page, absent,
   invalide, à vérifier), cite ses sources officielles
   (`src/lib/livrables/sources.ts`) et indique où trouver l'information ou

@@ -1,0 +1,3249 @@
+{
+ "referentiels": [
+  {
+   "id": "nf2-amo",
+   "titre": "AMO Etudes — Assistance à maîtrise d'ouvrage en phase Etudes",
+   "description": "Livrables sans format imposé (rapport de mission, notes, comptes rendus, cahier des charges…) ; points indicatifs selon le contrat.",
+   "points": [
+    {
+     "id": "amo-mission",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Objet et périmètre de la mission d'AMO rappelés",
+     "exigence": "La prestation comporte une mission de conseil au maître d'ouvrage, complétée selon le contrat ; le livrable est lié à son contenu.",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description et livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "assistance\\s+a\\s+(la\\s+)?maitrise\\s+d.ouvrage|\\bamo\\b",
+      "missions?|objet|perimetre|contrat"
+     ],
+     "tous": true,
+     "aide": "Rappeler la mission d'AMO contractuelle (objet, missions complémentaires retenues)."
+    },
+    {
+     "id": "amo-conseil",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Avis et conseil formulés au maître d'ouvrage",
+     "exigence": "Le livrable restitue le conseil apporté au donneur d'ordre (avis, recommandations).",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "avis|conseils?|preconis|recommand|suites?\\s+a\\s+donner"
+     ],
+     "tous": false,
+     "aide": "Formuler clairement l'avis/les recommandations au maître d'ouvrage."
+    },
+    {
+     "id": "amo-revue",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Revue technique des documents produits",
+     "exigence": "La revue technique des documents produits par les prestataires peut faire partie de la mission.",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "revues?\\s+(techniques?|critiques?)|analyses?\\s+critiques?|relectures?|avis\\s+techniques?|observations?\\s+sur\\s+(le|les)\\s+(rapports?|documents?)"
+     ],
+     "tous": false,
+     "aide": "Identifier les documents revus (référence, version) et lister les observations."
+    },
+    {
+     "id": "amo-cdc",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Rédaction de cahiers des charges",
+     "exigence": "La rédaction de cahiers des charges peut faire partie de la mission.",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "cahiers?\\s+des\\s+charges|\\bcctp\\b|dossiers?\\s+de\\s+consultation|\\bdce\\b|specifications?\\s+techniques?"
+     ],
+     "tous": false,
+     "aide": "Joindre ou référencer le cahier des charges rédigé."
+    },
+    {
+     "id": "amo-offres",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Analyse des offres : forces et faiblesses des prestataires",
+     "exigence": "L'assistance au dépouillement des offres précise forces et faiblesses des prestataires, y compris celui proposé par l'AMO.",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "(analyses?|depouillements?|comparaisons?)\\s+des\\s+offres|forces?\\s+et\\s+faiblesses?|grilles?\\s+(d.analyse|de\\s+notation)"
+     ],
+     "tous": false,
+     "aide": "Présenter une analyse comparative des offres (forces/faiblesses par prestataire)."
+    },
+    {
+     "id": "amo-cr",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Comptes rendus de réunions",
+     "exigence": "Des comptes rendus sont élaborés à la suite des réunions auxquelles l'AMO participe.",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "comptes?[- ]rendus?|reunions?"
+     ],
+     "tous": false,
+     "aide": "Diffuser un compte rendu daté pour chaque réunion (participants, décisions, actions)."
+    },
+    {
+     "id": "amo-veille",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Veille réglementaire et technique",
+     "exigence": "La veille réglementaire et technique peut faire partie de la mission.",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "veilles?\\s+(reglementaires?|techniques?|juridiques?)|evolutions?\\s+(reglementaires?|normatives?)"
+     ],
+     "tous": false,
+     "aide": "Signaler les évolutions réglementaires/techniques pertinentes pour le dossier."
+    },
+    {
+     "id": "amo-communication",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Accompagnement à la communication avec les parties prenantes",
+     "exigence": "L'accompagnement à la communication auprès des parties prenantes du projet peut faire partie de la mission.",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "communication|parties\\s+prenantes|concertation"
+     ],
+     "tous": false,
+     "aide": "Décrire les actions de communication préparées ou accompagnées."
+    },
+    {
+     "id": "amo-conflit",
+     "groupe": "AMO Etudes — Mission d'assistance",
+     "intitule": "Information sur le risque de conflit d'intérêts (E12)",
+     "exigence": "Réaliser d'autres prestations du domaine A suppose l'accord préalable du donneur d'ordre, informé des risques de conflit d'intérêts.",
+     "clause": "NF X31-620-2, § 6.3 (AMO Etudes — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "conflits?\\s+d.interets?|independan|\\be12\\b"
+     ],
+     "tous": false,
+     "aide": "Tracer l'information et l'accord du donneur d'ordre si l'AMO réalise d'autres prestations A."
+    }
+   ]
+  },
+  {
+   "id": "nf2-leve",
+   "titre": "LEVE — Levée de doute (relève ou non de la méthodologie nationale SSP)",
+   "description": "Visite du site (A100) et études historique, documentaire et mémorielle (A110), conclusion sur l'appartenance à la méthodologie nationale.",
+   "points": [
+    {
+     "id": "a100-visite",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Visite du site et de ses abords réalisée et rapportée",
+     "exigence": "Au moins une visite du site est réalisée au plus tôt et ses constats sont rapportés de façon factuelle et argumentée.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — objectif et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "visite\\s+(du\\s+|de\\s+|sur\\s+)?(site|terrain|des\\s+lieux)"
+     ],
+     "tous": false,
+     "aide": "Indiquer la date, les intervenants et les constats de la visite du site et de ses abords."
+    },
+    {
+     "id": "a100-questionnaire",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Questionnaire du guide de visite renseigné (ou équivalent)",
+     "exigence": "Le livrable joint le questionnaire type du guide « visite du site » renseigné, ou un document reprenant toutes ses rubriques.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "questionnaire|guide\\s+(de\\s+|de\\s+la\\s+)?visite|fiche\\s+de\\s+visite|compte[- ]rendu\\s+de\\s+(la\\s+)?visite"
+     ],
+     "tous": false,
+     "aide": "Annexer le questionnaire du guide de visite renseigné ou un compte rendu reprenant toutes ses rubriques."
+    },
+    {
+     "id": "a100-rayon",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Rayon de visite des abords et contraintes de visibilité",
+     "exigence": "Le rayon de visite autour du site est précisé, avec les contraintes rencontrées (mur d'enceinte, habitat dense…).",
+     "clause": "NF X31-620-2, § 6.4 (A100 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "rayon\\s+(de\\s+|d.)?(la\\s+)?(visite|observation)|abords\\s+(du\\s+site|immediats)|alentours\\s+du\\s+site|environnement\\s+(immediat|proche)\\s+du\\s+site"
+     ],
+     "tous": false,
+     "aide": "Préciser le rayon visité autour du site et les zones non visibles ou non accessibles."
+    },
+    {
+     "id": "a100-usages",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Milieux, usages et populations sur et autour du site",
+     "exigence": "La visite renseigne milieux et usages sur et près du site : populations, puits privés, potagers, occupation des sols.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "puits",
+      "potagers?|jardins?",
+      "occupation\\s+(des\\s+sols|du\\s+sol)|riverains?|habitations?|voisinage"
+     ],
+     "tous": false,
+     "aide": "Décrire les usages observés : habitations, ERP, puits privés, jardins potagers, occupation des sols."
+    },
+    {
+     "id": "a100-pollution-visible",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Pollutions visibles et indices observés",
+     "exigence": "Les pollutions visibles et éléments de vulnérabilité des milieux (eaux, sol, air) observés lors de la visite sont décrits.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "pollutions?\\s+visibles?|indices?\\s+(de\\s+pollution|organoleptiques?)|taches?|odeurs?|traces?\\s+de\\s+(pollution|fuite|deversement)"
+     ],
+     "tous": false,
+     "aide": "Décrire les indices observés (taches, odeurs, cuves, stockages dégradés) ou indiquer leur absence."
+    },
+    {
+     "id": "a100-carte",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Carte localisant les principales observations de visite",
+     "exigence": "Une carte localise les principales observations faites sur le site et ses abords.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:cartes?|plans?|figures?)[\\s\\S]{0,80}(?:observations?)|(?:observations?)[\\s\\S]{0,80}(?:cartes?|plans?|figures?)"
+     ],
+     "tous": false,
+     "aide": "Ajouter un plan du site reportant les observations de visite (stockages, cuves, zones suspectes, ouvrages)."
+    },
+    {
+     "id": "a100-photos",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Reportage photographique (si autorisé)",
+     "exigence": "Si le donneur d'ordre l'autorise, un reportage photographique illustre le site, activités, stockages, zones à risque, ouvrages.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "reportage\\s+photo|planches?\\s+photo|photo(graphie)?s?|cliches?"
+     ],
+     "tous": false,
+     "aide": "Joindre un reportage photographique commenté, ou indiquer que le donneur d'ordre ne l'a pas autorisé."
+    },
+    {
+     "id": "a100-securite",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Premières mesures de protection sanitaire / mise en sécurité",
+     "exigence": "Les suites proposées traitent les premières mesures de protection sanitaire (et l'information des autorités) et la mise en sécurité.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "mise\\s+en\\s+securite|mesures?\\s+(de\\s+protection|de\\s+precaution|d.urgence|conservatoires?)|protection\\s+sanitaire|restrictions?\\s+d.acces|evacuation\\s+des\\s+(dechets|produits)"
+     ],
+     "tous": false,
+     "aide": "Se prononcer sur la mise en sécurité (déchets, produits, accès, incendie) et les mesures sanitaires, même si aucune n'est requise."
+    },
+    {
+     "id": "a110-sources",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Liste de toutes les sources d'information consultées",
+     "exigence": "Le livrable liste toutes les sources d'information consultées, internes et externes au site.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "sources?\\s+(d.information|documentaires?|consultees)|documents?\\s+consultes|bibliographie|references?\\s+documentaires?|organismes?\\s+consultes"
+     ],
+     "tous": false,
+     "aide": "Ajouter un tableau des sources consultées (organisme, date, résultat obtenu)."
+    },
+    {
+     "id": "a110-georisques",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Consultation de Géorisques (BASOL, BASIAS/CASIAS, SIS)",
+     "exigence": "La consultation des bases publiques est justifiée, notamment Géorisques pour BASOL, BASIAS et SIS.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "georisques",
+      "basol|basias|casias|\\bsis\\b|secteurs?\\s+d.information\\s+sur\\s+les\\s+sols"
+     ],
+     "tous": true,
+     "aide": "Citer la consultation de Géorisques et le résultat pour BASOL, BASIAS/CASIAS et SIS (y compris absence de fiche)."
+    },
+    {
+     "id": "a110-barpi",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Consultation de la base BARPI / ARIA (accidents)",
+     "exigence": "La consultation de la base des accidents BARPI (ARIA) est justifiée.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "barpi|\\baria\\b|accidentologie|base\\s+de\\s+donnees\\s+des\\s+accidents"
+     ],
+     "tous": false,
+     "aide": "Indiquer la consultation de la base ARIA (BARPI) et les accidents recensés ou leur absence."
+    },
+    {
+     "id": "a110-archives",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Consultation des archives municipales et départementales",
+     "exigence": "La consultation des archives municipales et départementales est justifiée.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "archives?\\s+(municipales?|communales?|departementales?|de\\s+la\\s+(mairie|prefecture|ville|commune))|services?\\s+des\\s+archives"
+     ],
+     "tous": false,
+     "aide": "Préciser les archives consultées (mairie, archives départementales, préfecture) et les dossiers obtenus."
+    },
+    {
+     "id": "a110-photos-aeriennes",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Analyse de photographies aériennes anciennes ou anciens plans",
+     "exigence": "Des photographies aériennes anciennes (IGN) ou d'anciens plans sont analysés.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "photo(graphie)?s?\\s+aeriennes?|vues?\\s+aeriennes?|remonter\\s+?le\\s+?temps|\\bign\\b|anciens?\\s+plans?|cartes?\\s+(anciennes?|d.etat[- ]major|historiques?)"
+     ],
+     "tous": false,
+     "aide": "Analyser une série de photographies aériennes IGN (dates, constats) et/ou des plans anciens."
+    },
+    {
+     "id": "a110-activites",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Recensement des activités, pratiques et événements potentiellement polluants",
+     "exigence": "Activités, installations, pratiques (déchets, rejets) et événements (accident, incendie…) potentiellement polluants sont recensés.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "activites?\\s+(potentiellement\\s+)?polluantes?|installations?\\s+(potentiellement\\s+)?polluantes?|zones?\\s+(a\\s+risque|potentiellement\\s+(polluees?|impactees?)|suspectes?)|sources?\\s+potentielles?"
+     ],
+     "tous": false,
+     "aide": "Dresser la liste des activités et installations passées/actuelles, pratiques et incidents à risque."
+    },
+    {
+     "id": "a110-carte-sources",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Carte de localisation des sources potentielles de pollution",
+     "exigence": "Les résultats sont illustrés par une carte localisant les sources potentielles de pollution, à échelle adaptée au site.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:cartes?|plans?|figures?)[\\s\\S]{0,100}(?:(sources?|zones?)\\s+(potentielles?|suspectes?|a\\s+risque|de\\s+pollution))|(?:(sources?|zones?)\\s+(potentielles?|suspectes?|a\\s+risque|de\\s+pollution))[\\s\\S]{0,100}(?:cartes?|plans?|figures?)"
+     ],
+     "tous": false,
+     "aide": "Ajouter un plan à échelle adaptée localisant chaque source ou zone potentiellement polluante."
+    },
+    {
+     "id": "a110-produits",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Produits utilisés et polluants à rechercher (y compris métabolites)",
+     "exigence": "Les produits utilisés sont inventoriés et les polluants à rechercher identifiés (métabolites, comportement) pour cibler les milieux.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "produits?\\s+(utilises?|stockes?|manipules?|employes?)|polluants?\\s+(a\\s+rechercher|potentiels?|traceurs?|susceptibles)|substances?\\s+(a\\s+rechercher|potentielles?|susceptibles)|familles?\\s+de\\s+(polluants|substances)"
+     ],
+     "tous": false,
+     "aide": "Associer à chaque source les produits et substances à rechercher, y compris produits de dégradation."
+    },
+    {
+     "id": "a110-administratif",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Historique des situations administratives du site",
+     "exigence": "L'historique des situations administratives (ICPE, arrêtés, récépissés…) au cours de la vie du site est présenté.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "situations?\\s+administratives?|historique\\s+administratif|installations?\\s+classees?|\\bicpe\\b|arretes?\\s+prefectora(l|ux)|recepisse|autorisation\\s+d.exploiter"
+     ],
+     "tous": false,
+     "aide": "Retracer le statut ICPE et les actes administratifs successifs (dates, rubriques, exploitants)."
+    },
+    {
+     "id": "a110-temoignages",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Recueil de témoignages (ou justification de leur absence)",
+     "exigence": "Des témoignages (riverains, anciens employés) sont recueillis selon la demande ; leur absence est justifiée.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "temoignages?|entretiens?|anciens?\\s+(salaries?|employes?|exploitants?|personnels?)|enquetes?\\s+(de\\s+voisinage|aupres)"
+     ],
+     "tous": false,
+     "aide": "Résumer les témoignages recueillis ou expliquer pourquoi aucun n'a pu l'être."
+    },
+    {
+     "id": "a110-etudes-existantes",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Analyse des données collectées dont études environnementales existantes",
+     "exigence": "Les données de chaque source consultée sont analysées, notamment les études environnementales existantes.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "etudes?\\s+(environnementales?\\s+)?(anterieures?|existantes?|precedentes?|disponibles?)|diagnostics?\\s+(anterieurs?|precedents?)|rapports?\\s+(anterieurs?|precedents?)"
+     ],
+     "tous": false,
+     "aide": "Synthétiser les études antérieures (auteur, date, conclusions) et en tirer les enseignements."
+    },
+    {
+     "id": "leve-conclusion",
+     "groupe": "LEVE — Livrable",
+     "intitule": "Conclusion : le site (ou une partie) relève ou non de la méthodologie nationale",
+     "exigence": "Le livrable conclut si le site, ou une partie du site, relève ou non de la méthodologie nationale de gestion des SSP.",
+     "clause": "NF X31-620-2, § 6.3 (LEVE — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "methodologie\\s+nationale|levee\\s+de\\s+doute",
+      "releve|ne\\s+releve\\s+pas|conclu|potentiellement\\s+pollue"
+     ],
+     "tous": true,
+     "aide": "Conclure explicitement, zone par zone si besoin, sur l'appartenance ou non à la méthodologie nationale."
+    },
+    {
+     "id": "leve-perimetre",
+     "groupe": "LEVE — Livrable",
+     "intitule": "Zones ou parties de site concernées par la conclusion",
+     "exigence": "La conclusion peut porter sur le site ou une partie du site ; les zones concernées doivent être identifiables.",
+     "clause": "NF X31-620-2, § 6.3 (LEVE — objectifs et livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "parties?\\s+du\\s+site|zones?\\s+(d.etude|concernees?)|parcelles?|secteurs?|emprise"
+     ],
+     "tous": false,
+     "aide": "Délimiter sur plan les parties du site relevant ou non de la méthodologie nationale."
+    },
+    {
+     "id": "preconisations",
+     "groupe": "LEVE — Livrable",
+     "intitule": "Préconisations sur les suites à donner",
+     "exigence": "Si le site ou une partie relève de la méthodologie nationale, le livrable préconise les suites à donner.",
+     "clause": "NF X31-620-2, § 6.3 (LEVE — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "preconis|recommand|suites?\\s+a\\s+donner"
+     ],
+     "tous": false,
+     "aide": "Préciser les suites (INFOS, DIAG, valorisation des terres) pour les zones relevant de la méthodologie."
+    }
+   ]
+  },
+  {
+   "id": "nf2-infos",
+   "titre": "INFOS — Études historiques, documentaires et de vulnérabilité, schéma conceptuel",
+   "description": "Visite (A100), études historique/documentaire/mémorielle (A110), vulnérabilité (A120), schéma conceptuel et, le cas échéant, programme d'investigations (A130).",
+   "points": [
+    {
+     "id": "resumes",
+     "groupe": "INFOS — Livrable",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-2, § 6.3 (INFOS — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(resumes?|syntheses?)\\s+(technique|non[- ]?technique)",
+      "non[- ]?technique"
+     ],
+     "tous": true,
+     "aide": "Ajouter en tête un résumé technique et un résumé non technique lisible par un non-spécialiste."
+    },
+    {
+     "id": "a100-visite",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Visite du site et de ses abords réalisée et rapportée",
+     "exigence": "Au moins une visite du site est réalisée au plus tôt et ses constats sont rapportés de façon factuelle et argumentée.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — objectif et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "visite\\s+(du\\s+|de\\s+|sur\\s+)?(site|terrain|des\\s+lieux)"
+     ],
+     "tous": false,
+     "aide": "Indiquer la date, les intervenants et les constats de la visite du site et de ses abords."
+    },
+    {
+     "id": "a100-questionnaire",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Questionnaire du guide de visite renseigné (ou équivalent)",
+     "exigence": "Le livrable joint le questionnaire type du guide « visite du site » renseigné, ou un document reprenant toutes ses rubriques.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "questionnaire|guide\\s+(de\\s+|de\\s+la\\s+)?visite|fiche\\s+de\\s+visite|compte[- ]rendu\\s+de\\s+(la\\s+)?visite"
+     ],
+     "tous": false,
+     "aide": "Annexer le questionnaire du guide de visite renseigné ou un compte rendu reprenant toutes ses rubriques."
+    },
+    {
+     "id": "a100-usages",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Milieux, usages et populations sur et autour du site",
+     "exigence": "La visite renseigne milieux et usages sur et près du site : populations, puits privés, potagers, occupation des sols.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "puits",
+      "potagers?|jardins?",
+      "occupation\\s+(des\\s+sols|du\\s+sol)|riverains?|habitations?|voisinage"
+     ],
+     "tous": false,
+     "aide": "Décrire les usages observés : habitations, ERP, puits privés, jardins potagers, occupation des sols."
+    },
+    {
+     "id": "a100-carte",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Carte localisant les principales observations de visite",
+     "exigence": "Une carte localise les principales observations faites sur le site et ses abords.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:cartes?|plans?|figures?)[\\s\\S]{0,80}(?:observations?)|(?:observations?)[\\s\\S]{0,80}(?:cartes?|plans?|figures?)"
+     ],
+     "tous": false,
+     "aide": "Ajouter un plan du site reportant les observations de visite (stockages, cuves, zones suspectes, ouvrages)."
+    },
+    {
+     "id": "a100-securite",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Premières mesures de protection sanitaire / mise en sécurité",
+     "exigence": "Les suites proposées traitent les premières mesures de protection sanitaire (et l'information des autorités) et la mise en sécurité.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "mise\\s+en\\s+securite|mesures?\\s+(de\\s+protection|de\\s+precaution|d.urgence|conservatoires?)|protection\\s+sanitaire|restrictions?\\s+d.acces|evacuation\\s+des\\s+(dechets|produits)"
+     ],
+     "tous": false,
+     "aide": "Se prononcer sur la mise en sécurité (déchets, produits, accès, incendie) et les mesures sanitaires, même si aucune n'est requise."
+    },
+    {
+     "id": "a110-sources",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Liste de toutes les sources d'information consultées",
+     "exigence": "Le livrable liste toutes les sources d'information consultées, internes et externes au site.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "sources?\\s+(d.information|documentaires?|consultees)|documents?\\s+consultes|bibliographie|references?\\s+documentaires?|organismes?\\s+consultes"
+     ],
+     "tous": false,
+     "aide": "Ajouter un tableau des sources consultées (organisme, date, résultat obtenu)."
+    },
+    {
+     "id": "a110-georisques",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Consultation de Géorisques (BASOL, BASIAS/CASIAS, SIS)",
+     "exigence": "La consultation des bases publiques est justifiée, notamment Géorisques pour BASOL, BASIAS et SIS.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "georisques",
+      "basol|basias|casias|\\bsis\\b|secteurs?\\s+d.information\\s+sur\\s+les\\s+sols"
+     ],
+     "tous": true,
+     "aide": "Citer la consultation de Géorisques et le résultat pour BASOL, BASIAS/CASIAS et SIS (y compris absence de fiche)."
+    },
+    {
+     "id": "a110-barpi",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Consultation de la base BARPI / ARIA (accidents)",
+     "exigence": "La consultation de la base des accidents BARPI (ARIA) est justifiée.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "barpi|\\baria\\b|accidentologie|base\\s+de\\s+donnees\\s+des\\s+accidents"
+     ],
+     "tous": false,
+     "aide": "Indiquer la consultation de la base ARIA (BARPI) et les accidents recensés ou leur absence."
+    },
+    {
+     "id": "a110-archives",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Consultation des archives municipales et départementales",
+     "exigence": "La consultation des archives municipales et départementales est justifiée.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "archives?\\s+(municipales?|communales?|departementales?|de\\s+la\\s+(mairie|prefecture|ville|commune))|services?\\s+des\\s+archives"
+     ],
+     "tous": false,
+     "aide": "Préciser les archives consultées (mairie, archives départementales, préfecture) et les dossiers obtenus."
+    },
+    {
+     "id": "a110-photos-aeriennes",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Analyse de photographies aériennes anciennes ou anciens plans",
+     "exigence": "Des photographies aériennes anciennes (IGN) ou d'anciens plans sont analysés.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "photo(graphie)?s?\\s+aeriennes?|vues?\\s+aeriennes?|remonter\\s+?le\\s+?temps|\\bign\\b|anciens?\\s+plans?|cartes?\\s+(anciennes?|d.etat[- ]major|historiques?)"
+     ],
+     "tous": false,
+     "aide": "Analyser une série de photographies aériennes IGN (dates, constats) et/ou des plans anciens."
+    },
+    {
+     "id": "a110-carte-sources",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Carte de localisation des sources potentielles de pollution",
+     "exigence": "Les résultats sont illustrés par une carte localisant les sources potentielles de pollution, à échelle adaptée au site.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:cartes?|plans?|figures?)[\\s\\S]{0,100}(?:(sources?|zones?)\\s+(potentielles?|suspectes?|a\\s+risque|de\\s+pollution))|(?:(sources?|zones?)\\s+(potentielles?|suspectes?|a\\s+risque|de\\s+pollution))[\\s\\S]{0,100}(?:cartes?|plans?|figures?)"
+     ],
+     "tous": false,
+     "aide": "Ajouter un plan à échelle adaptée localisant chaque source ou zone potentiellement polluante."
+    },
+    {
+     "id": "a110-produits",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Produits utilisés et polluants à rechercher (y compris métabolites)",
+     "exigence": "Les produits utilisés sont inventoriés et les polluants à rechercher identifiés (métabolites, comportement) pour cibler les milieux.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "produits?\\s+(utilises?|stockes?|manipules?|employes?)|polluants?\\s+(a\\s+rechercher|potentiels?|traceurs?|susceptibles)|substances?\\s+(a\\s+rechercher|potentielles?|susceptibles)|familles?\\s+de\\s+(polluants|substances)"
+     ],
+     "tous": false,
+     "aide": "Associer à chaque source les produits et substances à rechercher, y compris produits de dégradation."
+    },
+    {
+     "id": "a110-administratif",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Historique des situations administratives du site",
+     "exigence": "L'historique des situations administratives (ICPE, arrêtés, récépissés…) au cours de la vie du site est présenté.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "situations?\\s+administratives?|historique\\s+administratif|installations?\\s+classees?|\\bicpe\\b|arretes?\\s+prefectora(l|ux)|recepisse|autorisation\\s+d.exploiter"
+     ],
+     "tous": false,
+     "aide": "Retracer le statut ICPE et les actes administratifs successifs (dates, rubriques, exploitants)."
+    },
+    {
+     "id": "a110-pyrotechnie",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Recherche d'indices d'engins pyrotechniques",
+     "exigence": "Les événements laissant suspecter des engins pyrotechniques sont recensés, avec étude spécifique si nécessaire.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "pyrotechni|munitions?|bombardements?|guerre|\\buxo\\b|engins?\\s+(explosifs|de\\s+guerre)"
+     ],
+     "tous": false,
+     "aide": "Se prononcer sur le risque pyrotechnique (bombardements, faits de guerre), même pour conclure à son absence."
+    },
+    {
+     "id": "a110-restrictions",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Restrictions d'usage et servitudes existantes",
+     "exigence": "Les restrictions d'usage existantes sont identifiées : SUP, PIG, autres mécanismes dont conventions de droit privé.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "servitudes?|restrictions?\\s+d.usage|\\bsup\\b|projets?\\s+d.interet\\s+general|\\bpig\\b|conventions?\\s+de\\s+droit\\s+prive|precautions?\\s+d.usage"
+     ],
+     "tous": false,
+     "aide": "Indiquer les servitudes/restrictions d'usage existantes (SUP, PIG, actes de vente) ou leur absence."
+    },
+    {
+     "id": "a110-temoignages",
+     "groupe": "A110 — Études historique, documentaire et mémorielle",
+     "intitule": "Recueil de témoignages (ou justification de leur absence)",
+     "exigence": "Des témoignages (riverains, anciens employés) sont recueillis selon la demande ; leur absence est justifiée.",
+     "clause": "NF X31-620-2, § 6.4 (A110 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "temoignages?|entretiens?|anciens?\\s+(salaries?|employes?|exploitants?|personnels?)|enquetes?\\s+(de\\s+voisinage|aupres)"
+     ],
+     "tous": false,
+     "aide": "Résumer les témoignages recueillis ou expliquer pourquoi aucun n'a pu l'être."
+    },
+    {
+     "id": "a120-geologie",
+     "groupe": "A120 — Étude de vulnérabilité des milieux",
+     "intitule": "Contexte géologique décrit",
+     "exigence": "Les caractéristiques intrinsèques des milieux sont décrites, dont la géologie, pour déterminer les voies de migration.",
+     "clause": "NF X31-620-2, § 6.4 (A120 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "geolog"
+     ],
+     "tous": false,
+     "aide": "Décrire les formations géologiques au droit du site (carte géologique, coupes BSS)."
+    },
+    {
+     "id": "a120-hydrogeologie",
+     "groupe": "A120 — Étude de vulnérabilité des milieux",
+     "intitule": "Hydrogéologie : aquifère, ZNS, perméabilité, sens d'écoulement",
+     "exigence": "L'hydrogéologie est décrite : zone non saturée, nature et perméabilité de l'aquifère, sens d'écoulement, battement, lien nappe-rivière.",
+     "clause": "NF X31-620-2, § 6.4 (A120 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "hydrogeolog|aquiferes?|nappes?",
+      "sens\\s+d.ecoulement|ecoulement\\s+(de\\s+la\\s+nappe|des\\s+eaux\\s+souterraines)|direction\\s+d.ecoulement"
+     ],
+     "tous": true,
+     "aide": "Préciser aquifère(s), profondeur de nappe, perméabilité, sens d'écoulement et battement saisonnier."
+    },
+    {
+     "id": "a120-usages",
+     "groupe": "A120 — Étude de vulnérabilité des milieux",
+     "intitule": "Usages et milieux d'exposition pouvant être impactés",
+     "exigence": "Les usages et milieux d'exposition susceptibles d'être impactés sont identifiés (puits, captages, potagers, ERP…).",
+     "clause": "NF X31-620-2, § 6.4 (A120 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "usages?\\s+(de\\s+l.eau|des\\s+eaux|sensibles?|des\\s+milieux|des\\s+sols)|captages?|alimentation\\s+en\\s+eau\\s+potable|\\baep\\b|puits\\s+(prives?|domestiques?)|jardins?\\s+potagers?|etablissements?\\s+(sensibles?|recevant\\s+du\\s+public)|\\berp\\b|creches?|ecoles?"
+     ],
+     "tous": false,
+     "aide": "Recenser captages AEP, puits privés, potagers, ERP sensibles et usages des eaux autour du site."
+    },
+    {
+     "id": "a120-infoterre-ades",
+     "groupe": "A120 — Étude de vulnérabilité des milieux",
+     "intitule": "Consultation d'Infoterre (BSS) et d'ADES",
+     "exigence": "Pour les eaux souterraines, la consultation de la banque du sous-sol (Infoterre) et de la base ADES est justifiée.",
+     "clause": "NF X31-620-2, § 6.4 (A120 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "infoterre|\\bbss\\b|banque\\s+(de\\s+donnees\\s+)?du\\s+sous-sol",
+      "\\bades\\b"
+     ],
+     "tous": true,
+     "aide": "Citer la consultation d'Infoterre/BSS et d'ADES et les ouvrages ou données qualité retenus."
+    },
+    {
+     "id": "a120-carte-ecoulement",
+     "groupe": "A120 — Étude de vulnérabilité des milieux",
+     "intitule": "Carte du site avec sens d'écoulement des eaux souterraines",
+     "exigence": "Une carte localise le site avec le sens d'écoulement des eaux souterraines, avéré ou supposé.",
+     "clause": "NF X31-620-2, § 6.4 (A120 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:cartes?|plans?|figures?|esquisses?)[\\s\\S]{0,100}(?:sens\\s+d.ecoulement|ecoulement|piezometr)|(?:sens\\s+d.ecoulement|ecoulement|piezometr)[\\s\\S]{0,100}(?:cartes?|plans?|figures?|esquisses?)"
+     ],
+     "tous": false,
+     "aide": "Reporter sur une carte le sens d'écoulement présumé ou mesuré de la nappe."
+    },
+    {
+     "id": "a120-vulnerabilite",
+     "groupe": "A120 — Étude de vulnérabilité des milieux",
+     "intitule": "Argumentaire vulnérabilité et sensibilité de chaque milieu",
+     "exigence": "La vulnérabilité (degré de protection) et la sensibilité (usage) de chaque milieu pertinent sont argumentées.",
+     "clause": "NF X31-620-2, § 6.4 (A120 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "vulnerabilit",
+      "sensibilit"
+     ],
+     "tous": true,
+     "aide": "Conclure milieu par milieu (sols, eaux souterraines, superficielles, air) sur vulnérabilité et sensibilité."
+    },
+    {
+     "id": "a120-non-retenus",
+     "groupe": "A120 — Étude de vulnérabilité des milieux",
+     "intitule": "Justification des milieux non retenus",
+     "exigence": "Les milieux non retenus à l'issue de l'étude de vulnérabilité font l'objet d'une justification.",
+     "clause": "NF X31-620-2, § 6.4 (A120 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(milieu|voie|compartiment)x?s?\\s+(non\\s+retenue?s?|ecartee?s?|exclue?s?)|n.(est|a)\\s+pas\\s+(ete\\s+)?retenue?|non\\s+pertinente?s?|n.est\\s+pas\\s+(jugee?\\s+)?pertinente?"
+     ],
+     "tous": false,
+     "aide": "Expliquer pourquoi chaque milieu ou voie de transfert écarté ne l'est pas."
+    },
+    {
+     "id": "infos-schema-conceptuel",
+     "groupe": "INFOS — Livrable",
+     "intitule": "Schéma conceptuel : sources, voies de transfert, enjeux",
+     "exigence": "Un schéma conceptuel présente les sources de pollution, les voies de transfert et les enjeux à protéger.",
+     "clause": "NF X31-620-2, § 6.3 (INFOS — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "schema\\s+conceptuel|modele\\s+conceptuel",
+      "sources?",
+      "transferts?|voies?\\s+(de\\s+transfert|d.exposition|de\\s+migration)",
+      "enjeux|cibles?|recepteurs?"
+     ],
+     "tous": true,
+     "aide": "Présenter un schéma conceptuel (figure + tableau) reliant sources, voies de transfert/exposition et enjeux/cibles."
+    },
+    {
+     "id": "infos-argumentaire",
+     "groupe": "INFOS — Livrable",
+     "intitule": "Argumentaire sur la nécessité ou non d'un programme d'investigations",
+     "exigence": "Le livrable argumente la nécessité, ou non, d'un programme d'investigations ; si nécessaire, il comprend le livrable A130.",
+     "clause": "NF X31-620-2, § 6.3 (INFOS — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "programmes?\\s+(previsionnels?\\s+)?d.investigations?|investigations?\\s+(complementaires?|recommandees?|proposees?|a\\s+(realiser|mener))|(pas|aucune)\\s+(de\\s+|d.)?investigations?"
+     ],
+     "tous": false,
+     "aide": "Conclure explicitement sur le besoin d'investigations et, si oui, joindre le programme A130."
+    },
+    {
+     "id": "preconisations",
+     "groupe": "INFOS — Livrable",
+     "intitule": "Préconisations sur les suites à donner",
+     "exigence": "Le livrable formule des préconisations sur les éventuelles suites à donner.",
+     "clause": "NF X31-620-2, § 6.3 (INFOS — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "preconis|recommand|suites?\\s+a\\s+donner"
+     ],
+     "tous": false,
+     "aide": "Conclure par des préconisations explicites sur les suites à donner."
+    }
+   ]
+  },
+  {
+   "id": "nf2-diag",
+   "titre": "DIAG — Mise en œuvre d'un programme d'investigations et interprétation",
+   "description": "Prélèvements/mesures/analyses sur les milieux pertinents (A200 à A260) et interprétation (A270) ; A130 préalable. Points milieu = « attendu » si le milieu est investigué.",
+   "points": [
+    {
+     "id": "resumes",
+     "groupe": "DIAG — Livrable",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-2, § 6.3 (DIAG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(resumes?|syntheses?)\\s+(technique|non[- ]?technique)",
+      "non[- ]?technique"
+     ],
+     "tous": true,
+     "aide": "Ajouter en tête un résumé technique et un résumé non technique lisible par un non-spécialiste."
+    },
+    {
+     "id": "diag-synthese-a130",
+     "groupe": "DIAG — Livrable",
+     "intitule": "Synthèse du programme prévisionnel (A130) : objectifs et stratégie",
+     "exigence": "Le livrable comprend la synthèse des éléments issus de la prestation A130 (objectifs, stratégie, programme).",
+     "clause": "NF X31-620-2, § 6.3 (DIAG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "programmes?\\s+(previsionnels?\\s+)?d.investigations?|strategie\\s+(d.investigation|d.echantillonnage)|objectifs?\\s+(des\\s+investigations|du\\s+diagnostic)"
+     ],
+     "tous": false,
+     "aide": "Rappeler objectifs, stratégie et programme prévisionnel ayant fondé les investigations."
+    },
+    {
+     "id": "prel-localisation",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Localisation précise des points de prélèvement",
+     "exigence": "Les points de prélèvement sont identifiés et localisés précisément (géolocalisation, report sur plan, photographies).",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(plans?|cartes?|figures?)\\s+(de\\s+localisation|d.implantation)\\s+des\\s+(sondages|prelevements|points|investigations|ouvrages)|localisation\\s+des\\s+(sondages|prelevements|points\\s+de\\s+prelevement|investigations|ouvrages)",
+      "coordonnees|\\bgps\\b|lambert|georeferenc|geolocalis"
+     ],
+     "tous": false,
+     "aide": "Reporter chaque point sur plan et donner ses coordonnées (Lambert 93) ; photos des points recommandées."
+    },
+    {
+     "id": "prel-methodes",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Méthodes de prélèvement, mesures et analyses décrites",
+     "exigence": "Les méthodes de prélèvement, les mesures effectuées et les analyses sont décrites de façon factuelle et détaillée.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(methode|methodologie|technique|protocole|mode)s?\\s+(de\\s+|d.)?(prelevements?|echantillonnage|sondages?|forages?|operatoires?)"
+     ],
+     "tous": false,
+     "aide": "Décrire matériel, technique de prélèvement, mode de constitution des échantillons et analyses."
+    },
+    {
+     "id": "prel-ecarts",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Difficultés, anomalies et écarts au programme prévisionnel",
+     "exigence": "Une synthèse présente les problèmes, anomalies rencontrés et les écarts par rapport au programme prévisionnel.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "ecarts?\\s+(au|par\\s+rapport\\s+au|vis-a-vis\\s+du|avec\\s+le)\\s+programme|difficultes?\\s+rencontrees?|anomalies?\\s+(rencontrees?|constatees?)|refus\\s+(de|a\\s+la)\\s+(foration|sondage)|(sondages?|points?|investigations?)\\s+(decales?|deplaces?)|programme\\s+(a\\s+ete\\s+)?(adapte|modifie|respecte)|conformement\\s+au\\s+programme|aucun\\s+ecart"
+     ],
+     "tous": false,
+     "aide": "Ajouter un tableau prévu/réalisé expliquant chaque écart (refus, réseau, accès)."
+    },
+    {
+     "id": "prel-meteo",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Conditions météorologiques et conditions de prélèvement",
+     "exigence": "Les fiches de terrain indiquent les conditions météorologiques et les conditions de prélèvement.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable, fiches de terrain)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "conditions?\\s+(meteo|meteorologiques?|climatiques?)|meteo|temps\\s+(sec|ensoleille|pluvieux|couvert)|pluie|ensoleill"
+     ],
+     "tous": false,
+     "aide": "Renseigner la météo et les conditions de prélèvement sur chaque fiche de terrain."
+    },
+    {
+     "id": "prel-conditionnement",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Conditionnement, stockage et transport des échantillons",
+     "exigence": "Les modalités convenues avec le laboratoire pour le conditionnement, le stockage et le transport des échantillons sont appliquées.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "conditionnement|flaconnages?|glacieres?|enceintes?\\s+(refrigerees?|isothermes?)|transport\\s+(des\\s+echantillons|au\\s+laboratoire|vers\\s+le\\s+laboratoire)|conservation"
+     ],
+     "tous": false,
+     "aide": "Décrire flaconnage, conservation au froid, délai d'acheminement et date de réception au laboratoire."
+    },
+    {
+     "id": "prel-bulletins",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Bulletins d'analyses du laboratoire (tous paramètres)",
+     "exigence": "Les bulletins d'analyses du laboratoire couvrant l'ensemble des paramètres recherchés sont fournis.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bulletins?\\s+(d.analyses?|analytiques?|du\\s+laboratoire)|rapports?\\s+d.analyses?|certificats?\\s+d.analyses?|proces[- ]verbaux\\s+d.analyses?"
+     ],
+     "tous": false,
+     "aide": "Annexer les bulletins d'analyses complets du laboratoire."
+    },
+    {
+     "id": "a200-coupes",
+     "groupe": "A200 — Sols",
+     "intitule": "Coupes de sondage : lithologie et profondeurs des échantillons",
+     "exigence": "Les fiches de terrain comportent les coupes de sondage, la lithologie et les profondeurs des échantillons de sol.",
+     "clause": "NF X31-620-2, § 6.4 (A200 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "coupes?\\s+(de\\s+sondages?|lithologiques?|geologiques?)|logs?\\s+(de\\s+sondages?|lithologiques?|geologiques?)|fiches?\\s+de\\s+(sondages?|forages?)",
+      "profondeurs?"
+     ],
+     "tous": true,
+     "aide": "Annexer une coupe par sondage : lithologie, profondeurs d'échantillons, observations, mesures PID/FX."
+    },
+    {
+     "id": "a200-rebouchage",
+     "groupe": "A200 — Sols",
+     "intitule": "Modalités de rebouchage des sondages",
+     "exigence": "Le livrable précise les modalités de rebouchage des sondages.",
+     "clause": "NF X31-620-2, § 6.4 (A200 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "rebouch|comblement|combles?|remblaye|bouchons?\\s+(de\\s+)?bentonite|cimentation"
+     ],
+     "tous": false,
+     "aide": "Indiquer comment chaque sondage a été rebouché (cuttings, bentonite, enrobé)."
+    },
+    {
+     "id": "a200-deblais",
+     "groupe": "A200 — Sols",
+     "intitule": "Gestion des déblais de forage et déchets générés",
+     "exigence": "Les modalités de gestion des déblais de forage et des déchets générés sont indiquées.",
+     "clause": "NF X31-620-2, § 6.4 (A200 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "deblais|cuttings|dechets?\\s+(generes|produits|issus)|terres?\\s+excedentaires|big[- ]?bags?"
+     ],
+     "tous": false,
+     "aide": "Préciser le devenir des déblais et déchets (remis en place, stockés, évacués, filière)."
+    },
+    {
+     "id": "a210-coupe-technique",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Coupe géologique et technique de chaque ouvrage",
+     "exigence": "Les fiches comportent la coupe géologique et technique de chaque ouvrage (crépines, massif, cimentation).",
+     "clause": "NF X31-620-2, § 6.4 (A210 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "coupes?\\s+(techniques?|geologiques?\\s+et\\s+techniques?|lithologiques?\\s+et\\s+techniques?)|crepines?|massif\\s+filtrant|tubes?\\s+(plein|crepine)s?|equipements?\\s+(du|des)\\s+piezometres?"
+     ],
+     "tous": false,
+     "aide": "Annexer la coupe technique de chaque piézomètre (crépine, massif, bouchon, tête)."
+    },
+    {
+     "id": "a210-niveaux",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Nivellement, niveau statique et profondeur de l'ouvrage",
+     "exigence": "Les fiches indiquent le nivellement et le repère, le niveau statique et la profondeur de l'ouvrage prélevé.",
+     "clause": "NF X31-620-2, § 6.4 (A210 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "niveaux?\\s+(statiques?|piezometriques?|d.eau)|profondeur\\s+(de\\s+la\\s+nappe|de\\s+l.eau|d.eau)",
+      "nivellement|\\bngf\\b|altitudes?|cotes?\\s+(du\\s+|de\\s+la\\s+)?(repere|tete|margelle|sol)|geometre"
+     ],
+     "tous": true,
+     "aide": "Donner pour chaque ouvrage le niveau d'eau, la cote NGF du repère et la profondeur mesurée."
+    },
+    {
+     "id": "a210-purge",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Purge : débit, volume, stabilisation des paramètres",
+     "exigence": "Les fiches indiquent la purge, le débit de pompage, les profondeurs de prélèvement et les mesures de terrain.",
+     "clause": "NF X31-620-2, § 6.4 (A210 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "purges?|vidange",
+      "debits?|volumes?"
+     ],
+     "tous": true,
+     "aide": "Renseigner volume purgé, débit, durée et stabilisation des paramètres de terrain."
+    },
+    {
+     "id": "a230-etancheite",
+     "groupe": "A230 — Gaz du sol",
+     "intitule": "Contrôle d'étanchéité des ouvrages de gaz du sol",
+     "exigence": "Les contrôles de terrain portent notamment sur l'étanchéité de l'ouvrage et la stabilité du débit durant le prélèvement.",
+     "clause": "NF X31-620-2, § 6.4 (A230 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "etancheit|tests?\\s+(a\\s+l.|d.|au\\s+)?(helium|traceur|isopropanol)|traceurs?"
+     ],
+     "tous": false,
+     "aide": "Décrire le test d'étanchéité réalisé (traceur, hélium) et son résultat pour chaque ouvrage."
+    },
+    {
+     "id": "a260-filieres",
+     "groupe": "A260 — Terres excavées",
+     "intitule": "Analyses adaptées aux filières (acceptation ISDI, lixiviation)",
+     "exigence": "Les analyses des terres suivent l'annexe C de la partie 1 et/ou les normes adaptées aux objectifs, ex. acceptation en filière.",
+     "clause": "NF X31-620-2, § 6.4 (A260 — contenu)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bisdi\\b|\\bisdnd\\b|\\bisdd\\b|dechets?\\s+inertes?|lixiviat|arrete\\s+du\\s+12\\s+decembre\\s+2014|acceptation\\s+en\\s+(filiere|installation)"
+     ],
+     "tous": false,
+     "aide": "Réaliser et comparer les analyses aux critères d'acceptation des filières visées (pack ISDI, lixiviation)."
+    },
+    {
+     "id": "a270-ecarts",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Écarts entre investigations réalisées et programme, adaptations justifiées",
+     "exigence": "Les écarts entre investigations réalisées et programme prévisionnel sont recensés et les adaptations justifiées.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "ecarts?\\s+(au|par\\s+rapport\\s+au|vis-a-vis\\s+du|avec\\s+le|entre)|adaptations?|refus\\s+(de|a\\s+la)\\s+(foration|sondage)|(sondages?|points?|investigations?)\\s+(decales?|deplaces?)|aucun\\s+ecart|conformement\\s+au\\s+programme"
+     ],
+     "tous": false,
+     "aide": "Tableau prévu/réalisé avec justification de chaque adaptation (décalage, refus, réseau)."
+    },
+    {
+     "id": "a270-coherence",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Examen de la cohérence des résultats analytiques",
+     "exigence": "La cohérence des résultats analytiques est examinée.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:coheren)[\\s\\S]{0,80}(?:resultats?|analys|donnees|laboratoire)|(?:resultats?|analys|donnees|laboratoire)[\\s\\S]{0,80}(?:coheren)"
+     ],
+     "tous": false,
+     "aide": "Commenter la cohérence des résultats (doublons, blancs, terrain/labo, LQ relevées)."
+    },
+    {
+     "id": "a270-plan-realise",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Plan de localisation des investigations réalisées (tous milieux)",
+     "exigence": "Un plan localise les investigations réalisées sur et hors site pour tous les milieux, ainsi que les zones inaccessibles justifiées.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(plans?|cartes?|figures?)\\s+(de\\s+localisation|d.implantation|de\\s+situation)\\s+des\\s+(investigations|sondages|points|ouvrages|prelevements)|localisation\\s+des\\s+(investigations|sondages|points\\s+de\\s+prelevement|ouvrages)\\s+(realises|effectues)"
+     ],
+     "tous": false,
+     "aide": "Ajouter un plan des investigations réalisées (tous milieux) indiquant les zones inaccessibles."
+    },
+    {
+     "id": "a270-referentiels",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Résultats comparés à des référentiels pertinents",
+     "exigence": "Les résultats sont interprétés au regard de référentiels pertinents : valeurs réglementaires, fonds géochimiques, études antérieures…",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "valeurs?\\s+(de\\s+reference|reglementaires?|guides?|seuils?|limites?|de\\s+gestion|de\\s+comparaison|d.analyse\\s+de\\s+la\\s+situation)|fonds?\\s+(pedo-?geochimiques?|geochimiques?)|bruits?\\s+de\\s+fond|referentiels?|\\bisdi\\b|limites?\\s+de\\s+qualite|references?\\s+de\\s+qualite|teneurs?\\s+(naturelles|habituelles|ubiquitaires)|\\brmqs\\b|\\bbdetm\\b|asp(itet)?\\b"
+     ],
+     "tous": false,
+     "aide": "Comparer chaque résultat à un référentiel adapté (fond géochimique, valeurs eau potable, ISDI, VAS…)."
+    },
+    {
+     "id": "a270-justif-referentiels",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Justification de la pertinence des référentiels",
+     "exigence": "La pertinence des référentiels utilisés au regard du contexte est justifiée.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(choix|pertinence|justification|selection)\\s+(du|des|de\\s+ces)\\s+(referentiels?|valeurs?|seuils?)|referentiels?\\s+(retenus?|utilises?|choisis?)|valeurs?\\s+(de\\s+comparaison|retenues?)"
+     ],
+     "tous": false,
+     "aide": "Expliquer pourquoi chaque référentiel est adapté (milieu, usage, contexte local)."
+    },
+    {
+     "id": "a270-tableaux",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Tableaux de synthèse des résultats analytiques",
+     "exigence": "Les résultats sont mis en perspective par des rendus graphiques : plans, tableaux, graphiques, photos.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "tableaux?\\s+(de\\s+synthese|recapitulatifs?|des\\s+resultats|de\\s+resultats)|synthese\\s+des\\s+resultats\\s+(analytiques|d.analyses)|resultats\\s+analytiques"
+     ],
+     "tous": false,
+     "aide": "Présenter les résultats en tableaux par milieu avec référentiels et dépassements mis en évidence."
+    },
+    {
+     "id": "a270-cartes",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Cartographie des résultats (carte de synthèse des concentrations)",
+     "exigence": "Des supports cartographiques facilitent la compréhension : carte de synthèse des concentrations, carte piézométrique pour A210.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(cartes?|plans?|figures?)\\s+(de\\s+synthese\\s+)?(des|de)\\s+(resultats|concentrations|teneurs|anomalies|impacts?)|cartographie\\s+des\\s+(resultats|concentrations|teneurs)|iso-?concentrations?|iso-?teneurs?"
+     ],
+     "tous": false,
+     "aide": "Ajouter une carte reportant les concentrations (ou dépassements) par point."
+    },
+    {
+     "id": "a270-piezo",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Carte piézométrique (si eaux souterraines investiguées)",
+     "exigence": "Si les eaux souterraines sont investiguées, une carte piézométrique est fournie.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "cartes?\\s+piezometriques?|esquisses?\\s+piezometriques?|courbes?\\s+isopiez|isopiezes?"
+     ],
+     "tous": false,
+     "aide": "Établir une esquisse piézométrique à partir des niveaux nivelés de la campagne."
+    },
+    {
+     "id": "a270-incertitudes",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Limites et incertitudes et leur influence sur les résultats",
+     "exigence": "Les limites et incertitudes des investigations sont présentées et leur influence sur les résultats discutée.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "incertitudes?|limites?\\s+(de\\s+l.etude|des\\s+investigations|du\\s+diagnostic)|representativite"
+     ],
+     "tous": false,
+     "aide": "Ajouter un chapitre limites/incertitudes (représentativité, densité de maillage, LQ) et leur incidence."
+    },
+    {
+     "id": "diag-schema-maj",
+     "groupe": "DIAG — Livrable",
+     "intitule": "Schéma conceptuel mis à jour au regard des résultats",
+     "exigence": "Le schéma conceptuel est mis à jour en mettant les résultats en perspective (sources, transferts, enjeux).",
+     "clause": "NF X31-620-2, § 6.3 (DIAG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "schema\\s+conceptuel|modele\\s+conceptuel",
+      "sources?",
+      "transferts?|voies?\\s+(de\\s+transfert|d.exposition|de\\s+migration)",
+      "enjeux|cibles?|recepteurs?"
+     ],
+     "tous": true,
+     "aide": "Présenter un schéma conceptuel (figure + tableau) reliant sources, voies de transfert/exposition et enjeux/cibles."
+    },
+    {
+     "id": "preconisations",
+     "groupe": "DIAG — Livrable",
+     "intitule": "Préconisations sur les suites à donner",
+     "exigence": "Le livrable préconise les suites éventuelles : DIAG complémentaire, PG, IEM, mesures simples de gestion…",
+     "clause": "NF X31-620-2, § 6.3 (DIAG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "preconis|recommand|suites?\\s+a\\s+donner"
+     ],
+     "tous": false,
+     "aide": "Préciser la suite (DIAG complémentaire, IEM, PG, mesures simples) et la justifier par les résultats."
+    }
+   ]
+  },
+  {
+   "id": "nf2-pg",
+   "titre": "PG — Plan de gestion",
+   "description": "Visite (A100), actualisations éventuelles (A110, A120, DIAG), enjeux eau/environnement (A300/A310 le cas échéant), enjeux sanitaires (A320), bilan coûts/avantages (A330) ; INFOS et DIAG préalables.",
+   "points": [
+    {
+     "id": "resumes",
+     "groupe": "PG — Livrable",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(resumes?|syntheses?)\\s+(technique|non[- ]?technique)",
+      "non[- ]?technique"
+     ],
+     "tous": true,
+     "aide": "Ajouter en tête un résumé technique et un résumé non technique lisible par un non-spécialiste."
+    },
+    {
+     "id": "pg-contexte",
+     "groupe": "PG — Livrable",
+     "intitule": "Rappel du contexte, des objectifs et du périmètre du PG",
+     "exigence": "Le livrable rappelle le contexte associé au PG : objectifs, périmètre…",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "contexte|objectifs?",
+      "perimetre|emprise|zone\\s+d.etude|superficie"
+     ],
+     "tous": true,
+     "aide": "Rappeler le contexte (cessation, projet), les objectifs et le périmètre du plan de gestion."
+    },
+    {
+     "id": "pg-synthese-etudes",
+     "groupe": "PG — Livrable",
+     "intitule": "Synthèse détaillée des études existantes (INFOS, DIAG…)",
+     "exigence": "Le livrable présente une synthèse détaillée de l'ensemble des études existantes.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "synthese\\s+(des|de\\s+l.ensemble\\s+des)\\s+(etudes|donnees|investigations|diagnostics)|etudes?\\s+(anterieures?|existantes?|precedentes?|realisees?)|rappel\\s+des\\s+(etudes|investigations)"
+     ],
+     "tous": false,
+     "aide": "Synthétiser chaque étude antérieure (auteur, date, investigations, conclusions)."
+    },
+    {
+     "id": "a100-visite",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Visite du site et de ses abords réalisée et rapportée",
+     "exigence": "Au moins une visite du site est réalisée au plus tôt et ses constats sont rapportés de façon factuelle et argumentée.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — objectif et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "visite\\s+(du\\s+|de\\s+|sur\\s+)?(site|terrain|des\\s+lieux)"
+     ],
+     "tous": false,
+     "aide": "Indiquer la date, les intervenants et les constats de la visite du site et de ses abords."
+    },
+    {
+     "id": "pg-delimitation",
+     "groupe": "PG — Livrable",
+     "intitule": "Délimitation spatiale des pollutions (observations de terrain)",
+     "exigence": "Les pollutions sont délimitées spatialement sur la base des observations de terrain ; toute absence d'élément est justifiée.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "delimit|extension\\s+(laterale|verticale|spatiale|de\\s+la\\s+pollution)|maillages?|volumes?\\s+(de\\s+terres|impactes?|a\\s+traiter|pollues?)|emprises?\\s+(des|de\\s+la)\\s+(zones?|pollutions?)"
+     ],
+     "tous": false,
+     "aide": "Délimiter latéralement et verticalement les zones polluées (plan, coupes, volumes)."
+    },
+    {
+     "id": "pg-isoconcentrations",
+     "groupe": "PG — Livrable",
+     "intitule": "Cartes d'isoconcentrations (interpolation cartographique)",
+     "exigence": "La délimitation s'appuie sur une interpolation cartographique (cartes d'isoconcentrations) ; absence justifiée en détail.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "iso-?concentrations?|iso-?teneurs?|iso-?valeurs?|interpolation|krigeage|geostatisti|courbes?\\s+d.iso"
+     ],
+     "tous": false,
+     "aide": "Produire des cartes d'isoconcentrations ou justifier en détail pourquoi elles ne sont pas pertinentes."
+    },
+    {
+     "id": "pg-bilan-massique",
+     "groupe": "PG — Livrable",
+     "intitule": "Bilan massique des polluants",
+     "exigence": "Un bilan massique des polluants est fourni ; son absence fait l'objet d'une justification détaillée.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bilans?\\s+(de\\s+)?mass(e|ique)s?|masses?\\s+de\\s+polluants?|quantites?\\s+de\\s+polluants?|tonnages?\\s+de\\s+polluants?"
+     ],
+     "tous": false,
+     "aide": "Estimer les masses de polluants par zone (volume × concentration × densité) ou justifier l'absence."
+    },
+    {
+     "id": "pg-sources-concentrees",
+     "groupe": "PG — Livrable",
+     "intitule": "Traitement prioritaire des pollutions concentrées",
+     "exigence": "Le PG étudie en priorité la suppression des pollutions concentrées, puis la maîtrise des impacts et des pollutions résiduelles.",
+     "clause": "NF X31-620-2, § 6.3 (PG — objectifs)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "pollutions?\\s+concentrees?|sources?\\s+concentrees?|zones?\\s+sources?|hot\\s+?spots?|spots?\\s+de\\s+pollution"
+     ],
+     "tous": false,
+     "aide": "Identifier les pollutions concentrées et argumenter leur suppression (ou sa disproportion)."
+    },
+    {
+     "id": "pg-sc-actuel",
+     "groupe": "PG — Livrable",
+     "intitule": "Schéma conceptuel de l'état actuel",
+     "exigence": "Le livrable présente les schémas conceptuels, dont celui de l'état actuel.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:schema\\s+conceptuel|modele\\s+conceptuel)[\\s\\S]{0,150}(?:actuel|initial|en\\s+l.etat|existant|avant)|(?:actuel|initial|en\\s+l.etat|existant|avant)[\\s\\S]{0,150}(?:schema\\s+conceptuel|modele\\s+conceptuel)"
+     ],
+     "tous": false,
+     "aide": "Présenter un schéma conceptuel de l'état actuel (avant gestion)."
+    },
+    {
+     "id": "pg-sc-futur",
+     "groupe": "PG — Livrable",
+     "intitule": "Schéma conceptuel après mise en œuvre des scénarios de gestion",
+     "exigence": "Un schéma conceptuel de l'état prévu après mise en œuvre des scénarios, intégrant l'aménagement, est fourni.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables) ; NF X31-620-2, § 6.4 (A330 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:schema\\s+conceptuel|modele\\s+conceptuel)[\\s\\S]{0,150}(?:apres|post|futur|projete|residuel|final|amenage|retenu)|(?:apres|post|futur|projete|residuel|final|amenage|retenu)[\\s\\S]{0,150}(?:schema\\s+conceptuel|modele\\s+conceptuel)"
+     ],
+     "tous": false,
+     "aide": "Ajouter un schéma conceptuel « après gestion » intégrant mesures de gestion et projet."
+    },
+    {
+     "id": "pg-objectifs",
+     "groupe": "PG — Livrable",
+     "intitule": "Objectifs de dépollution réalistes et validés sanitairement",
+     "exigence": "Des objectifs de dépollution compatibles avec les performances de traitement et valides sanitairement sont proposés.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "objectifs?\\s+de\\s+(depollution|traitement|rehabilitation|remediation)|seuils?\\s+de\\s+(depollution|coupure|traitement)|concentrations?\\s+(cibles?|objectifs?)|valeurs?\\s+seuils?"
+     ],
+     "tous": false,
+     "aide": "Fixer des objectifs de dépollution par substance/zone, justifiés techniquement et par l'ARR."
+    },
+    {
+     "id": "pg-mesures",
+     "groupe": "PG — Livrable",
+     "intitule": "Scénarios combinant dépollution, mesures constructives, restrictions, surveillance",
+     "exigence": "Chaque scénario combine, dans cet ordre d'examen : techniques de dépollution, mesures constructives, restrictions d'usage, surveillance.",
+     "clause": "NF X31-620-2, § 6.3 (PG — objectifs)",
+     "niveau": "attendu",
+     "motifs": [
+      "techniques?\\s+de\\s+(depollution|traitement)|excavations?|venting|biopiles?|traitements?",
+      "mesures?\\s+constructives?|dispositions?\\s+constructives?|recouvrements?|confinements?",
+      "restrictions?\\s+d.usage|servitudes?|surveillance"
+     ],
+     "tous": true,
+     "aide": "Examiner successivement techniques de dépollution, mesures constructives, restrictions d'usage et surveillance."
+    },
+    {
+     "id": "pg-couts",
+     "groupe": "PG — Livrable",
+     "intitule": "Estimation financière de l'ensemble des coûts par scénario",
+     "exigence": "Une estimation financière de l'ensemble des coûts associés aux scénarios proposés (au moins deux) est fournie.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "estimations?\\s+(financieres?|des\\s+couts|budgetaires?)|couts?\\s+(estimatifs?|globaux?|totaux?|des\\s+scenarios|de\\s+mise\\s+en\\s+oeuvre)|chiffrages?|budgets?|€|euros?\\s+ht|\\bk\\s+?eur"
+     ],
+     "tous": false,
+     "aide": "Chiffrer chaque scénario (travaux, contrôles, surveillance, servitudes) dans un tableau."
+    },
+    {
+     "id": "a330-scenarios",
+     "groupe": "A330 — Scénarios de gestion et bilan coûts/avantages",
+     "intitule": "Au moins deux scénarios de gestion comparés",
+     "exigence": "Le bilan coûts/avantages aboutit à au moins deux scénarios de gestion, tous valides sur le plan sanitaire.",
+     "clause": "NF X31-620-2, § 6.4 (A330 — contenu et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "scenarios?\\s+(de\\s+gestion\\s+)?(n.?\\s?)?(1|2|a|b)\\b|(deux|2|trois|3|plusieurs)\\s+scenarios|scenarios?\\s+(alternatifs?|envisages?|etudies?|proposes?|retenus?)|comparaison\\s+des\\s+scenarios"
+     ],
+     "tous": false,
+     "aide": "Présenter au moins deux scénarios de gestion complets et comparables."
+    },
+    {
+     "id": "a330-criteres",
+     "groupe": "A330 — Scénarios de gestion et bilan coûts/avantages",
+     "intitule": "Critères de comparaison identifiés et justifiés",
+     "exigence": "Les critères retenus (techniques, économiques, environnementaux, socio-politiques, réglementaires) sont identifiés et justifiés.",
+     "clause": "NF X31-620-2, § 6.4 (A330 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "criteres?",
+      "techniques?",
+      "economiques?|couts?",
+      "environnementa|sanitaires?|reglementaires?|socio"
+     ],
+     "tous": true,
+     "aide": "Lister et justifier les critères de comparaison (et leur pondération éventuelle)."
+    },
+    {
+     "id": "a330-synthese",
+     "groupe": "A330 — Scénarios de gestion et bilan coûts/avantages",
+     "intitule": "Synthèse d'évaluation des scénarios par critère (pondération éventuelle)",
+     "exigence": "Une synthèse présente l'évaluation de chaque scénario pour chaque critère, avec pondération éventuelle.",
+     "clause": "NF X31-620-2, § 6.4 (A330 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "ponderations?|ponderes?|notations?|scoring|grilles?\\s+(d.evaluation|multicriteres?)|analyses?\\s+multicriteres?|tableaux?\\s+comparatifs?|matrices?"
+     ],
+     "tous": false,
+     "aide": "Ajouter un tableau scénarios × critères (notes, pondération) servant d'aide à la décision."
+    },
+    {
+     "id": "a330-bca",
+     "groupe": "A330 — Scénarios de gestion et bilan coûts/avantages",
+     "intitule": "Bilan coûts/avantages argumenté",
+     "exigence": "Un bilan coûts/avantages constituant un outil d'aide à la décision argumente la sélection des scénarios.",
+     "clause": "NF X31-620-2, § 6.4 (A330 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "couts?[- /]+avantages?|\\bbca\\b"
+     ],
+     "tous": false,
+     "aide": "Rédiger un bilan coûts/avantages argumenté conduisant au(x) scénario(s) proposé(s)."
+    },
+    {
+     "id": "a330-projet",
+     "groupe": "A330 — Scénarios de gestion et bilan coûts/avantages",
+     "intitule": "Caractéristiques du projet d'aménagement et futurs usages",
+     "exigence": "Le bilan intègre la synthèse des caractéristiques du projet d'aménagement ou de construction et des usages futurs.",
+     "clause": "NF X31-620-2, § 6.4 (A330 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "projets?\\s+(d.amenagement|de\\s+construction|immobiliers?|de\\s+reamenagement|de\\s+rehabilitation)|usages?\\s+(futurs?|projetes?|envisages?)|futurs?\\s+usages?"
+     ],
+     "tous": false,
+     "aide": "Décrire le projet (plans, niveaux, sous-sols, espaces verts) et les usages futurs."
+    },
+    {
+     "id": "a320-exposition",
+     "groupe": "A320 — Enjeux sanitaires",
+     "intitule": "Scénarios et voies d'exposition directes et indirectes",
+     "exigence": "Les voies de contamination directes et indirectes des populations (scénarios d'exposition) sont déterminées.",
+     "clause": "NF X31-620-2, § 6.4 (A320 — contenu et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "scenarios?\\s+d.exposition|voies?\\s+d.exposition|voies?\\s+de\\s+contamination|voies?\\s+de\\s+transfert",
+      "ingestion|inhalation|contact\\s+cutane|absorption\\s+cutanee"
+     ],
+     "tous": true,
+     "aide": "Décrire usagers, durées, voies (inhalation, ingestion…) et paramètres d'exposition retenus."
+    },
+    {
+     "id": "a320-vtr",
+     "groupe": "A320 — Enjeux sanitaires",
+     "intitule": "Choix argumenté des VTR",
+     "exigence": "Lorsqu'un calcul de risque est réalisé, le choix des valeurs toxicologiques de référence est argumenté.",
+     "clause": "NF X31-620-2, § 6.4 (A320 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "\\bvtr\\b|valeurs?\\s+toxicologiques?\\s+de\\s+reference",
+      "choix|selection|retenues?|hierarchi|note\\s+(dgs|ministerielle)|anses|justifi"
+     ],
+     "tous": true,
+     "aide": "Tabuler les VTR retenues (source, date) et justifier le choix selon la note DGS en vigueur."
+    },
+    {
+     "id": "a320-calculs",
+     "groupe": "A320 — Enjeux sanitaires",
+     "intitule": "Détail des calculs de risques (QD, ERI)",
+     "exigence": "Le détail des calculs permettant de juger de l'acceptabilité sanitaire, selon le contexte de gestion, est fourni.",
+     "clause": "NF X31-620-2, § 6.4 (A320 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "quotients?\\s+de\\s+danger|\\bqd\\b|indices?\\s+de\\s+risque",
+      "exces\\s+de\\s+risque|\\beri\\b"
+     ],
+     "tous": false,
+     "aide": "Annexer les feuilles de calcul (concentrations d'exposition, QD et ERI par substance et voie)."
+    },
+    {
+     "id": "a320-acceptabilite",
+     "groupe": "A320 — Enjeux sanitaires",
+     "intitule": "Comparaison aux critères d'acceptabilité du risque",
+     "exigence": "L'acceptabilité des résultats sur le plan sanitaire est jugée au regard des valeurs de gestion et critères en vigueur.",
+     "clause": "NF X31-620-2, § 6.4 (A320 — contenu et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "10\\s+?-?\\s+?5|1\\s+?e-?5|10\\^-5|0,00001|seuils?\\s+(d.acceptabilite|de\\s+risque)|criteres?\\s+d.acceptabilite|risques?\\s+(acceptables?|inacceptables?)|acceptabilite"
+     ],
+     "tous": false,
+     "aide": "Comparer QD à 1 et ERI à 10-5 (ou valeurs de gestion réglementaires) et conclure."
+    },
+    {
+     "id": "a320-additivite",
+     "groupe": "A320 — Enjeux sanitaires",
+     "intitule": "Règle d'additivité adaptée (PG : additivité ; IEM : non-additivité)",
+     "exigence": "L'additivité des risques par substance est appliquée selon le contexte : non additivité en IEM, additivité en PG.",
+     "clause": "NF X31-620-2, § 6.4 (A320 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "additiv|sommes?\\s+des\\s+(qd|eri|risques|quotients|exces)|cumul(e|s)?\\s+des\\s+risques|risques?\\s+cumules?"
+     ],
+     "tous": false,
+     "aide": "Indiquer la règle d'additivité appliquée (somme des QD/ERI en PG ; par substance en IEM)."
+    },
+    {
+     "id": "a320-incertitudes",
+     "groupe": "A320 — Enjeux sanitaires",
+     "intitule": "Étude des incertitudes et de leur influence",
+     "exigence": "Les incertitudes sont étudiées et un argumentaire de leur influence sur les résultats est intégré.",
+     "clause": "NF X31-620-2, § 6.4 (A320 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "incertitudes?",
+      "sensibilit|influence|majorant|minorant|surestim|sous-?estim|conservat"
+     ],
+     "tous": true,
+     "aide": "Discuter qualitativement/quantitativement chaque incertitude et son sens (majorant/minorant)."
+    },
+    {
+     "id": "a320-arr",
+     "groupe": "A320 — Enjeux sanitaires",
+     "intitule": "Analyse des risques résiduels validant les scénarios",
+     "exigence": "Les scénarios de gestion sont validés sur le plan sanitaire par une analyse des risques résiduels (ARR prédictive).",
+     "clause": "NF X31-620-2, § 6.4 (A320 / A330 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "analyses?\\s+des\\s+risques\\s+residuels|\\barr\\b|risques?\\s+residuels?"
+     ],
+     "tous": false,
+     "aide": "Réaliser une ARR prédictive pour chaque scénario sur la base de l'état résiduel attendu."
+    },
+    {
+     "id": "pg-suites",
+     "groupe": "PG — Livrable",
+     "intitule": "Préconisations PCT, CONT, SUIVI, A400 et modalités de mise en œuvre",
+     "exigence": "Le livrable préconise ou non PCT, CONT, SUIVI, A400 et définit leurs modalités, voire l'organisation et la sécurité des travaux.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "plan\\s+de\\s+conception\\s+des\\s+travaux|\\bpct\\b|maitrise\\s+d.oeuvre|controles?|surveillance|servitudes?|restrictions?\\s+d.usage",
+      "preconis|recommand|suites?\\s+a\\s+donner"
+     ],
+     "tous": true,
+     "aide": "Se prononcer sur PCT, contrôles, surveillance et servitudes, avec leurs modalités."
+    },
+    {
+     "id": "pg-memoire",
+     "groupe": "PG — Livrable",
+     "intitule": "Mécanismes de conservation de la mémoire",
+     "exigence": "Le livrable présente les mécanismes de conservation de la mémoire liés aux scénarios proposés.",
+     "clause": "NF X31-620-2, § 6.3 (PG — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "conservation\\s+de\\s+la\\s+memoire|memoire\\s+(du\\s+site|de\\s+la\\s+pollution)|information\\s+des\\s+(acquereurs|futurs?|proprietaires?|usagers)|servitudes?|restrictions?\\s+d.usage|\\bsis\\b|secteurs?\\s+d.information|publicite\\s+fonciere"
+     ],
+     "tous": false,
+     "aide": "Prévoir SUP/servitudes, information des acquéreurs, SIS, inscription aux actes…"
+    }
+   ]
+  },
+  {
+   "id": "nf2-iem",
+   "titre": "IEM — Interprétation de l'état des milieux",
+   "description": "Visite (A100), actualisations (A110, A120, DIAG orienté milieux d'exposition), interprétation selon référentiels IEM ou A320 ; A300/A310 le cas échéant ; INFOS et DIAG préalables.",
+   "points": [
+    {
+     "id": "resumes",
+     "groupe": "IEM — Livrable",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-2, § 6.3 (IEM — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(resumes?|syntheses?)\\s+(technique|non[- ]?technique)",
+      "non[- ]?technique"
+     ],
+     "tous": true,
+     "aide": "Ajouter en tête un résumé technique et un résumé non technique lisible par un non-spécialiste."
+    },
+    {
+     "id": "iem-contexte",
+     "groupe": "IEM — Livrable",
+     "intitule": "Rappel du contexte, des objectifs et du périmètre de l'IEM",
+     "exigence": "Le livrable rappelle le contexte associé à l'IEM : objectifs, périmètre…",
+     "clause": "NF X31-620-2, § 6.3 (IEM — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "contexte|objectifs?",
+      "perimetre|emprise|zone\\s+d.etude|secteurs?"
+     ],
+     "tous": true,
+     "aide": "Rappeler le déclencheur (pollution hors site, signal sanitaire…), objectifs et périmètre."
+    },
+    {
+     "id": "iem-synthese-etudes",
+     "groupe": "IEM — Livrable",
+     "intitule": "Synthèse détaillée des études existantes",
+     "exigence": "Le livrable présente une synthèse détaillée des études existantes (INFOS, DIAG…).",
+     "clause": "NF X31-620-2, § 6.3 (IEM — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "synthese\\s+(des|de\\s+l.ensemble\\s+des)\\s+(etudes|donnees|investigations|diagnostics)|etudes?\\s+(anterieures?|existantes?|precedentes?|realisees?)"
+     ],
+     "tous": false,
+     "aide": "Synthétiser les études antérieures et leurs conclusions."
+    },
+    {
+     "id": "a100-visite",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Visite du site et de ses abords réalisée et rapportée",
+     "exigence": "Au moins une visite du site est réalisée au plus tôt et ses constats sont rapportés de façon factuelle et argumentée.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — objectif et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "visite\\s+(du\\s+|de\\s+|sur\\s+)?(site|terrain|des\\s+lieux)"
+     ],
+     "tous": false,
+     "aide": "Indiquer la date, les intervenants et les constats de la visite du site et de ses abords."
+    },
+    {
+     "id": "a100-usages",
+     "groupe": "A100 — Visite du site",
+     "intitule": "Milieux, usages et populations sur et autour du site",
+     "exigence": "La visite renseigne milieux et usages sur et près du site : populations, puits privés, potagers, occupation des sols.",
+     "clause": "NF X31-620-2, § 6.4 (A100 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "puits",
+      "potagers?|jardins?",
+      "occupation\\s+(des\\s+sols|du\\s+sol)|riverains?|habitations?|voisinage"
+     ],
+     "tous": false,
+     "aide": "Décrire les usages observés : habitations, ERP, puits privés, jardins potagers, occupation des sols."
+    },
+    {
+     "id": "iem-milieux-exposition",
+     "groupe": "IEM — Livrable",
+     "intitule": "Investigations orientées sur les milieux d'exposition",
+     "exigence": "Le diagnostic complémentaire éventuel est orienté en priorité sur les milieux d'exposition.",
+     "clause": "NF X31-620-2, § 6.3 (IEM — description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "milieux?\\s+d.exposition|air\\s+(interieur|ambiant)|eau\\s+du\\s+robinet|legumes?|vegetaux|potagers?|sols?\\s+de\\s+surface|poussieres?"
+     ],
+     "tous": false,
+     "aide": "Cibler les milieux auxquels les personnes sont exposées (air intérieur, sols de surface, potagers, eau)."
+    },
+    {
+     "id": "iem-usages",
+     "groupe": "IEM — Livrable",
+     "intitule": "Usages constatés des milieux",
+     "exigence": "L'IEM photographie l'état des milieux et les usages constatés et vérifie leur compatibilité.",
+     "clause": "NF X31-620-2, § 6.3 (IEM — objectifs)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "usages?\\s+(constates?|actuels?|existants?|reels?)"
+     ],
+     "tous": false,
+     "aide": "Décrire les usages réellement constatés (habitat, potager, puits, ERP) servant à l'interprétation."
+    },
+    {
+     "id": "iem-referentiels",
+     "groupe": "IEM — Livrable",
+     "intitule": "Interprétation selon les référentiels IEM (valeurs réglementaires, VAS)",
+     "exigence": "Les résultats sont interprétés avec les référentiels de la démarche IEM (valeurs réglementaires, valeurs d'analyse de la situation).",
+     "clause": "NF X31-620-2, § 6.3 (IEM — description et livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "valeurs?\\s+d.analyse\\s+de\\s+la\\s+situation|\\bvas\\b|valeurs?\\s+(reglementaires?|de\\s+gestion)|limites?\\s+de\\s+qualite|references?\\s+de\\s+qualite|teneurs?\\s+maximales?|eaux?\\s+destinees?\\s+a\\s+la\\s+consommation"
+     ],
+     "tous": false,
+     "aide": "Comparer chaque milieu d'exposition à la valeur de gestion réglementaire ou VAS applicable."
+    },
+    {
+     "id": "iem-temoin",
+     "groupe": "IEM — Livrable",
+     "intitule": "Comparaison à l'état des milieux naturels / environnement témoin",
+     "exigence": "L'interprétation s'appuie sur des référentiels pertinents, dont l'environnement local témoin hors influence du site.",
+     "clause": "NF X31-620-2, § 6.3 (DIAG — objectifs) ; NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "attendu",
+     "motifs": [
+      "environnements?\\s+(local\\s+)?temoins?|points?\\s+(de\\s+reference|temoins?)|hors\\s+(de\\s+l.)?influence|bruits?\\s+de\\s+fond|fonds?\\s+(pedo-?)?geochimiques?|etat\\s+naturel"
+     ],
+     "tous": false,
+     "aide": "Comparer les résultats à un environnement témoin ou au fond géochimique local."
+    },
+    {
+     "id": "iem-grille",
+     "groupe": "IEM — Livrable",
+     "intitule": "Grille de calcul IEM / A320 en l'absence de référentiel",
+     "exigence": "En l'absence de référentiel, une analyse des enjeux sanitaires (A320) est réalisée, notamment via la grille de calcul IEM.",
+     "clause": "NF X31-620-2, § 6.3 (IEM — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "grilles?\\s+(de\\s+calculs?\\s+)?(iem|de\\s+l.iem|d.interpretation)|grilles?\\s+de\\s+calculs?|\\beqrs\\b|evaluation\\s+quantitative\\s+des\\s+risques"
+     ],
+     "tous": false,
+     "aide": "Utiliser la grille de calcul IEM (ou une EQRS) pour les substances sans valeur de gestion."
+    },
+    {
+     "id": "iem-non-additivite",
+     "groupe": "IEM — Livrable",
+     "intitule": "Non-additivité des risques par substance (IEM)",
+     "exigence": "En IEM, les niveaux de risque calculés par substance ne sont pas additionnés.",
+     "clause": "NF X31-620-2, § 6.4 (A320 — contenu)",
+     "niveau": "attendu",
+     "motifs": [
+      "non[- ]?additiv|sans\\s+(additivite|cumul)|substance\\s+par\\s+substance|par\\s+substance"
+     ],
+     "tous": false,
+     "aide": "Présenter les niveaux de risque substance par substance, sans sommation."
+    },
+    {
+     "id": "iem-vtr",
+     "groupe": "IEM — Livrable",
+     "intitule": "Choix argumenté des VTR (si calcul de risque)",
+     "exigence": "Lorsqu'un calcul de risque est réalisé, le choix des VTR est argumenté.",
+     "clause": "NF X31-620-2, § 6.4 (A320 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bvtr\\b|valeurs?\\s+toxicologiques?\\s+de\\s+reference"
+     ],
+     "tous": false,
+     "aide": "Tabuler les VTR et justifier leur choix."
+    },
+    {
+     "id": "iem-compatibilite",
+     "groupe": "IEM — Livrable",
+     "intitule": "Conclusion sur la compatibilité milieux / usages (3 situations)",
+     "exigence": "L'analyse conclut : aucune action, actions simples de gestion pour rétablir la compatibilité, ou nécessité d'un plan de gestion.",
+     "clause": "NF X31-620-2, § 6.3 (IEM — objectifs et livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "compatib",
+      "aucune\\s+action|actions?\\s+simples?\\s+de\\s+gestion|plans?\\s+de\\s+gestion|incompatib|vigilance"
+     ],
+     "tous": true,
+     "aide": "Conclure milieu par milieu sur la compatibilité avec les usages constatés et la situation qui en découle."
+    },
+    {
+     "id": "prel-localisation",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Localisation précise des points de prélèvement",
+     "exigence": "Les points de prélèvement sont identifiés et localisés précisément (géolocalisation, report sur plan, photographies).",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A250 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(plans?|cartes?|figures?)\\s+(de\\s+localisation|d.implantation)\\s+des\\s+(sondages|prelevements|points|investigations|ouvrages)|localisation\\s+des\\s+(sondages|prelevements|points\\s+de\\s+prelevement|investigations|ouvrages)",
+      "coordonnees|\\bgps\\b|lambert|georeferenc|geolocalis"
+     ],
+     "tous": false,
+     "aide": "Reporter chaque point sur plan et donner ses coordonnées (Lambert 93) ; photos des points recommandées."
+    },
+    {
+     "id": "prel-bulletins",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Bulletins d'analyses du laboratoire (tous paramètres)",
+     "exigence": "Les bulletins d'analyses du laboratoire couvrant l'ensemble des paramètres recherchés sont fournis.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A250 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bulletins?\\s+(d.analyses?|analytiques?|du\\s+laboratoire)|rapports?\\s+d.analyses?|certificats?\\s+d.analyses?|proces[- ]verbaux\\s+d.analyses?"
+     ],
+     "tous": false,
+     "aide": "Annexer les bulletins d'analyses complets du laboratoire."
+    },
+    {
+     "id": "a270-tableaux",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Tableaux de synthèse des résultats analytiques",
+     "exigence": "Les résultats sont mis en perspective par des rendus graphiques : plans, tableaux, graphiques, photos.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "tableaux?\\s+(de\\s+synthese|recapitulatifs?|des\\s+resultats|de\\s+resultats)|synthese\\s+des\\s+resultats\\s+(analytiques|d.analyses)|resultats\\s+analytiques"
+     ],
+     "tous": false,
+     "aide": "Présenter les résultats en tableaux par milieu avec référentiels et dépassements mis en évidence."
+    },
+    {
+     "id": "a270-incertitudes",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Limites et incertitudes et leur influence sur les résultats",
+     "exigence": "Les limites et incertitudes des investigations sont présentées et leur influence sur les résultats discutée.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "incertitudes?|limites?\\s+(de\\s+l.etude|des\\s+investigations|du\\s+diagnostic)|representativite"
+     ],
+     "tous": false,
+     "aide": "Ajouter un chapitre limites/incertitudes (représentativité, densité de maillage, LQ) et leur incidence."
+    },
+    {
+     "id": "a250-relation",
+     "groupe": "A250 — Denrées alimentaires",
+     "intitule": "Mise en relation denrées / autres milieux (ex. légumes et sols)",
+     "exigence": "Les résultats sur denrées sont mis en relation avec ceux des autres milieux (ex. légumes et qualité des sols).",
+     "clause": "NF X31-620-2, § 6.4 (A270 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "(?:legumes?|vegetaux|plantes?\\s+potageres?|denrees?|fruits?)[\\s\\S]{0,150}(?:sols?|terres?)|(?:sols?|terres?)[\\s\\S]{0,150}(?:legumes?|vegetaux|plantes?\\s+potageres?|denrees?|fruits?)"
+     ],
+     "tous": false,
+     "aide": "Comparer les teneurs dans les végétaux à celles des sols de culture correspondants."
+    },
+    {
+     "id": "iem-schema-maj",
+     "groupe": "IEM — Livrable",
+     "intitule": "Schéma conceptuel mis à jour",
+     "exigence": "Le livrable comprend la mise à jour du schéma conceptuel (sources, transferts, milieux d'exposition, usages).",
+     "clause": "NF X31-620-2, § 6.3 (IEM — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "schema\\s+conceptuel|modele\\s+conceptuel",
+      "sources?",
+      "transferts?|voies?\\s+(de\\s+transfert|d.exposition|de\\s+migration)",
+      "enjeux|cibles?|recepteurs?"
+     ],
+     "tous": true,
+     "aide": "Présenter un schéma conceptuel (figure + tableau) reliant sources, voies de transfert/exposition et enjeux/cibles."
+    },
+    {
+     "id": "preconisations",
+     "groupe": "IEM — Livrable",
+     "intitule": "Préconisations sur les suites à donner",
+     "exigence": "Les suites sont préconisées : actions simples de gestion, premières mesures sanitaires, PG, DIAG, A400…",
+     "clause": "NF X31-620-2, § 6.3 (IEM — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "preconis|recommand|suites?\\s+a\\s+donner"
+     ],
+     "tous": false,
+     "aide": "Préciser actions simples, mesures sanitaires, PG, DIAG ou restrictions d'usage selon la conclusion."
+    },
+    {
+     "id": "iem-memoire",
+     "groupe": "IEM — Livrable",
+     "intitule": "Mécanismes de conservation de la mémoire",
+     "exigence": "Le livrable présente les mécanismes de conservation de la mémoire liés à la photographie de l'état des milieux et des usages.",
+     "clause": "NF X31-620-2, § 6.3 (IEM — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "conservation\\s+de\\s+la\\s+memoire|memoire|information\\s+des\\s+(acquereurs|futurs?|proprietaires?|usagers|occupants)|servitudes?|restrictions?\\s+d.usage|\\bsis\\b|porter\\s+a\\s+connaissance"
+     ],
+     "tous": false,
+     "aide": "Indiquer comment la photographie de l'état des milieux/usages sera conservée et transmise."
+    }
+   ]
+  },
+  {
+   "id": "nf2-suivi",
+   "titre": "SUIVI — Surveillance environnementale",
+   "description": "Prélèvements/analyses des milieux suivis (A200 à A250), interprétation (A270), mise à jour éventuelle des enjeux (A300, A310, A320).",
+   "points": [
+    {
+     "id": "resumes",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(resumes?|syntheses?)\\s+(technique|non[- ]?technique)",
+      "non[- ]?technique"
+     ],
+     "tous": true,
+     "aide": "Ajouter en tête un résumé technique et un résumé non technique lisible par un non-spécialiste."
+    },
+    {
+     "id": "suivi-cadre",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Cadre du suivi (préventif, post-accidentel…) et périmètre",
+     "exigence": "Le livrable rappelle le cadre du suivi (surveillance préventive, post-accidentelle…) et son périmètre.",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "surveillances?\\s+(preventive|post[- ]accidentelle|reglementaire|trimestrielle|semestrielle|annuelle|des\\s+eaux)|arretes?\\s+prefectora(l|ux)|cadre\\s+(de\\s+la|du)\\s+(surveillance|suivi)|programme\\s+de\\s+surveillance"
+     ],
+     "tous": false,
+     "aide": "Rappeler le cadre (arrêté, surveillance préventive/post-accidentelle) et le périmètre suivi."
+    },
+    {
+     "id": "suivi-description",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Description du suivi : points, substances, fréquence, référentiel",
+     "exigence": "Pour un premier rapport ou en cas de modification : nombre de points, substances, mesures de terrain, fréquence et référentiel.",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "frequences?|periodicites?|trimestriel|semestriel|annuel",
+      "substances?\\s+(recherchees?|analysees?)|parametres?\\s+(analyses?|suivis?|recherches?)|programme\\s+analytique"
+     ],
+     "tous": true,
+     "aide": "Décrire le réseau (points, substances, fréquence, référentiel) ou renvoyer au rapport qui le décrit."
+    },
+    {
+     "id": "suivi-ouvrages",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Caractéristiques des ouvrages (diamètre, crépines, géoréférencement)",
+     "exigence": "Pour un premier rapport ou en cas de modification : caractéristiques des ouvrages (diamètres, crépines, niveaux, géoréférencement).",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "crepines?|diametres?|profondeurs?\\s+(de\\s+l.ouvrage|totales?)",
+      "georeferenc|coordonnees|lambert|\\bngf\\b|nivellement"
+     ],
+     "tous": true,
+     "aide": "Tabuler diamètre, profondeur, crépines, cotes et coordonnées des ouvrages, ou renvoyer au rapport antérieur."
+    },
+    {
+     "id": "suivi-carte-piezo",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Carte piézométrique mise à jour (eaux souterraines)",
+     "exigence": "Si le suivi porte sur les eaux souterraines, une carte piézométrique mise à jour est fournie.",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "cartes?\\s+piezometriques?|esquisses?\\s+piezometriques?|courbes?\\s+isopiez|isopiezes?"
+     ],
+     "tous": false,
+     "aide": "Établir la carte piézométrique de la campagne (niveaux nivelés NGF)."
+    },
+    {
+     "id": "suivi-historique",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Interprétation au regard des suivis antérieurs (chroniques)",
+     "exigence": "Les résultats sont interprétés en tenant compte des suivis antérieurs et existants.",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "chroniques?|historiques?\\s+des\\s+(resultats|concentrations|analyses)|evolutions?\\s+(temporelles?|des\\s+concentrations)|campagnes?\\s+(precedentes?|anterieures?)|suivis?\\s+anterieurs?|graphiques?"
+     ],
+     "tous": false,
+     "aide": "Comparer aux campagnes antérieures (tableau historique, graphiques d'évolution)."
+    },
+    {
+     "id": "suivi-analyse-globale",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Analyse globale : impact ou évolution non attendue",
+     "exigence": "Une analyse globale conclut sur un éventuel impact ou une évolution non attendue d'une pollution gérée depuis la campagne précédente.",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "tendances?|stabl|hausses?|baisses?|augmentation|diminution|evolutions?\\s+(non\\s+attendue|anormale|significative)|anomalies?|impacts?"
+     ],
+     "tous": false,
+     "aide": "Conclure sur l'existence d'un impact ou d'une évolution inattendue depuis la dernière campagne."
+    },
+    {
+     "id": "suivi-amont-aval",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Positionnement amont / aval des ouvrages",
+     "exigence": "L'interprétation tient compte de l'évolution amont-aval et des caractéristiques des milieux.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "attendu",
+     "motifs": [
+      "(?:amont)[\\s\\S]{0,80}(?:aval)|(?:aval)[\\s\\S]{0,80}(?:amont)"
+     ],
+     "tous": false,
+     "aide": "Positionner chaque ouvrage en amont/aval hydraulique et comparer les résultats."
+    },
+    {
+     "id": "a270-referentiels",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Résultats comparés à des référentiels pertinents",
+     "exigence": "Les résultats sont interprétés au regard de référentiels pertinents : valeurs réglementaires, fonds géochimiques, études antérieures…",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "valeurs?\\s+(de\\s+reference|reglementaires?|guides?|seuils?|limites?|de\\s+gestion|de\\s+comparaison|d.analyse\\s+de\\s+la\\s+situation)|fonds?\\s+(pedo-?geochimiques?|geochimiques?)|bruits?\\s+de\\s+fond|referentiels?|\\bisdi\\b|limites?\\s+de\\s+qualite|references?\\s+de\\s+qualite|teneurs?\\s+(naturelles|habituelles|ubiquitaires)|\\brmqs\\b|\\bbdetm\\b|asp(itet)?\\b"
+     ],
+     "tous": false,
+     "aide": "Comparer chaque résultat à un référentiel adapté (fond géochimique, valeurs eau potable, ISDI, VAS…)."
+    },
+    {
+     "id": "a270-tableaux",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Tableaux de synthèse des résultats analytiques",
+     "exigence": "Les résultats sont mis en perspective par des rendus graphiques : plans, tableaux, graphiques, photos.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "tableaux?\\s+(de\\s+synthese|recapitulatifs?|des\\s+resultats|de\\s+resultats)|synthese\\s+des\\s+resultats\\s+(analytiques|d.analyses)|resultats\\s+analytiques"
+     ],
+     "tous": false,
+     "aide": "Présenter les résultats en tableaux par milieu avec référentiels et dépassements mis en évidence."
+    },
+    {
+     "id": "prel-ecarts",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Difficultés, anomalies et écarts au programme prévisionnel",
+     "exigence": "Une synthèse présente les problèmes, anomalies rencontrés et les écarts par rapport au programme prévisionnel.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A250 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "ecarts?\\s+(au|par\\s+rapport\\s+au|vis-a-vis\\s+du|avec\\s+le)\\s+programme|difficultes?\\s+rencontrees?|anomalies?\\s+(rencontrees?|constatees?)|refus\\s+(de|a\\s+la)\\s+(foration|sondage)|(sondages?|points?|investigations?)\\s+(decales?|deplaces?)|programme\\s+(a\\s+ete\\s+)?(adapte|modifie|respecte)|conformement\\s+au\\s+programme|aucun\\s+ecart"
+     ],
+     "tous": false,
+     "aide": "Ajouter un tableau prévu/réalisé expliquant chaque écart (refus, réseau, accès)."
+    },
+    {
+     "id": "prel-meteo",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Conditions météorologiques et conditions de prélèvement",
+     "exigence": "Les fiches de terrain indiquent les conditions météorologiques et les conditions de prélèvement.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A250 — livrable, fiches de terrain)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "conditions?\\s+(meteo|meteorologiques?|climatiques?)|meteo|temps\\s+(sec|ensoleille|pluvieux|couvert)|pluie|ensoleill"
+     ],
+     "tous": false,
+     "aide": "Renseigner la météo et les conditions de prélèvement sur chaque fiche de terrain."
+    },
+    {
+     "id": "prel-bulletins",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Bulletins d'analyses du laboratoire (tous paramètres)",
+     "exigence": "Les bulletins d'analyses du laboratoire couvrant l'ensemble des paramètres recherchés sont fournis.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A250 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bulletins?\\s+(d.analyses?|analytiques?|du\\s+laboratoire)|rapports?\\s+d.analyses?|certificats?\\s+d.analyses?|proces[- ]verbaux\\s+d.analyses?"
+     ],
+     "tous": false,
+     "aide": "Annexer les bulletins d'analyses complets du laboratoire."
+    },
+    {
+     "id": "a210-normes",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Ouvrages et prélèvements selon NF X31-614 et NF X31-615",
+     "exigence": "Les piézomètres sont réalisés selon NF X31-614 et les prélèvements d'eaux souterraines selon NF X31-615.",
+     "clause": "NF X31-620-2, § 6.4 (A210 — contenu)",
+     "niveau": "attendu",
+     "motifs": [
+      "x\\s+?31-?614|x\\s+?31-?615"
+     ],
+     "tous": false,
+     "aide": "Citer les normes NF X31-614 (ouvrages) et NF X31-615 (prélèvements) et tout écart à celles-ci."
+    },
+    {
+     "id": "a210-niveaux",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Nivellement, niveau statique et profondeur de l'ouvrage",
+     "exigence": "Les fiches indiquent le nivellement et le repère, le niveau statique et la profondeur de l'ouvrage prélevé.",
+     "clause": "NF X31-620-2, § 6.4 (A210 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "niveaux?\\s+(statiques?|piezometriques?|d.eau)|profondeur\\s+(de\\s+la\\s+nappe|de\\s+l.eau|d.eau)",
+      "nivellement|\\bngf\\b|altitudes?|cotes?\\s+(du\\s+|de\\s+la\\s+)?(repere|tete|margelle|sol)|geometre"
+     ],
+     "tous": true,
+     "aide": "Donner pour chaque ouvrage le niveau d'eau, la cote NGF du repère et la profondeur mesurée."
+    },
+    {
+     "id": "a210-purge",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Purge : débit, volume, stabilisation des paramètres",
+     "exigence": "Les fiches indiquent la purge, le débit de pompage, les profondeurs de prélèvement et les mesures de terrain.",
+     "clause": "NF X31-620-2, § 6.4 (A210 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "purges?|vidange",
+      "debits?|volumes?"
+     ],
+     "tous": true,
+     "aide": "Renseigner volume purgé, débit, durée et stabilisation des paramètres de terrain."
+    },
+    {
+     "id": "a210-parametres",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Paramètres de terrain (pH, conductivité, température, O2, redox)",
+     "exigence": "Les mesures de terrain sur les eaux (pH, conductivité, oxygène dissous, redox…) sont présentées et commentées.",
+     "clause": "NF X31-620-2, § 6.4 (A210 / A270 — livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "conductivit",
+      "\\bph\\b|temperatures?|oxygene\\s+dissous|redox|potentiels?\\s+d.oxydo"
+     ],
+     "tous": true,
+     "aide": "Tabuler pH, conductivité, température, O2 dissous, redox par ouvrage et les commenter."
+    },
+    {
+     "id": "a210-ordre-nettoyage",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Ordre de prélèvement justifié et nettoyage du matériel",
+     "exigence": "L'ordre des prélèvements est justifié ainsi que le nettoyage des équipements entre chaque point.",
+     "clause": "NF X31-620-2, § 6.4 (A210 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "ordre\\s+(de\\s+|des\\s+)?(prelevements?|passage|echantillonnage)|ordre\\s+dans\\s+lequel|du\\s+(moins|plus)\\s+(pollue|impacte|contamine)",
+      "nettoy|decontamin|rinc|(materiels?|equipements?|pompes?|tubulures?)\\s+(dedies?|a\\s+usage\\s+unique|jetables?)|usage\\s+unique"
+     ],
+     "tous": true,
+     "aide": "Justifier l'ordre de prélèvement (du moins au plus impacté) et décrire le nettoyage/le matériel dédié."
+    },
+    {
+     "id": "a210-eaux-purge",
+     "groupe": "A210 — Eaux souterraines",
+     "intitule": "Gestion des eaux de purge",
+     "exigence": "Les modalités de gestion des eaux de purge sont indiquées.",
+     "clause": "NF X31-620-2, § 6.4 (A210 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "(?:eaux?\\s+de\\s+purge)[\\s\\S]{0,150}(?:evacu|stock|gestion|cuves?|filieres?|rejet|trait|elimin)|(?:evacu|stock|gestion|cuves?|filieres?|rejet|trait|elimin)[\\s\\S]{0,150}(?:eaux?\\s+de\\s+purge)"
+     ],
+     "tous": false,
+     "aide": "Indiquer le devenir des eaux de purge (rejet, stockage, évacuation en filière)."
+    },
+    {
+     "id": "suivi-schema-maj",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Schéma conceptuel mis à jour intégrant les ouvrages",
+     "exigence": "Pour un premier rapport ou en cas de modification, le schéma conceptuel est mis à jour en intégrant les ouvrages de surveillance.",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "schema\\s+conceptuel|modele\\s+conceptuel",
+      "sources?",
+      "transferts?|voies?\\s+(de\\s+transfert|d.exposition|de\\s+migration)",
+      "enjeux|cibles?|recepteurs?"
+     ],
+     "tous": true,
+     "aide": "Présenter un schéma conceptuel (figure + tableau) reliant sources, voies de transfert/exposition et enjeux/cibles."
+    },
+    {
+     "id": "preconisations",
+     "groupe": "SUIVI — Livrable",
+     "intitule": "Préconisations sur les suites à donner",
+     "exigence": "Les suites sont préconisées : nouvelle campagne, extension du périmètre, actions simples, mesures sanitaires, A130, IEM…",
+     "clause": "NF X31-620-2, § 6.3 (SUIVI — objectifs et livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "preconis|recommand|suites?\\s+a\\s+donner"
+     ],
+     "tous": false,
+     "aide": "Préconiser la suite (poursuite, campagne de confirmation, extension, IEM) au vu des résultats."
+    }
+   ]
+  },
+  {
+   "id": "nf2-bq",
+   "titre": "BQ — Bilan quadriennal",
+   "description": "Interprétation (A270) de l'ensemble des données des quatre dernières années de suivi et mise à jour des enjeux (A300, A310, A320) ; SUIVI préalable.",
+   "points": [
+    {
+     "id": "resumes",
+     "groupe": "BQ — Livrable",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(resumes?|syntheses?)\\s+(technique|non[- ]?technique)",
+      "non[- ]?technique"
+     ],
+     "tous": true,
+     "aide": "Ajouter en tête un résumé technique et un résumé non technique lisible par un non-spécialiste."
+    },
+    {
+     "id": "bq-cadre",
+     "groupe": "BQ — Livrable",
+     "intitule": "Cadre du suivi et périmètre rappelés",
+     "exigence": "Le livrable rappelle le cadre du suivi (préventif, post-accidentel…) et le périmètre associé.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "surveillances?\\s+(preventive|post[- ]accidentelle|reglementaire|des\\s+eaux)|arretes?\\s+prefectora(l|ux)|cadre\\s+(de\\s+la|du)\\s+(surveillance|suivi)|programme\\s+de\\s+surveillance"
+     ],
+     "tous": false,
+     "aide": "Rappeler le cadre réglementaire du suivi et son périmètre."
+    },
+    {
+     "id": "bq-periode",
+     "groupe": "BQ — Livrable",
+     "intitule": "Période de quatre ans couverte par le bilan",
+     "exigence": "Le bilan porte sur l'ensemble des données des quatre dernières années de surveillance.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — objectifs et description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "quadriennal|quatre\\s+(dernieres\\s+)?annees|4\\s+(dernieres\\s+)?ans|quatre\\s+ans|periode\\s+(de\\s+surveillance\\s+)?(19|20)\\d\\d"
+     ],
+     "tous": false,
+     "aide": "Indiquer explicitement la période de 4 ans couverte et les campagnes intégrées."
+    },
+    {
+     "id": "bq-references",
+     "groupe": "BQ — Livrable",
+     "intitule": "Références documentaires et méthodologiques (étude de référence, BQ précédent)",
+     "exigence": "Les références documentaires et méthodologiques sont rappelées (étude hydrogéologique de référence, BQ précédent…).",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "etudes?\\s+(hydrogeologiques?\\s+)?de\\s+reference|bilans?\\s+quadriennal\\s+precedent|precedent\\s+bilan|references?\\s+(documentaires?|bibliographiques?)|guide\\s+(de\\s+)?surveillance"
+     ],
+     "tous": false,
+     "aide": "Citer l'étude hydrogéologique de référence, le BQ précédent et les guides suivis."
+    },
+    {
+     "id": "bq-description",
+     "groupe": "BQ — Livrable",
+     "intitule": "Description du suivi actuel : points, substances, fréquence, référentiel",
+     "exigence": "Le livrable décrit le suivi actuel : nombre de points, substances et mesures de terrain, fréquence, référentiel d'interprétation.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "frequences?|periodicites?|trimestriel|semestriel|annuel",
+      "substances?\\s+(recherchees?|analysees?)|parametres?\\s+(analyses?|suivis?|recherches?)|programme\\s+analytique"
+     ],
+     "tous": true,
+     "aide": "Décrire le réseau et le programme de surveillance actuels."
+    },
+    {
+     "id": "bq-ouvrages",
+     "groupe": "BQ — Livrable",
+     "intitule": "Caractéristiques des ouvrages (diamètres, crépines, niveaux, géoréférencement)",
+     "exigence": "Les caractéristiques des ouvrages sont présentées : diamètres, position des crépines, niveaux d'eau, géoréférencement.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "crepines?|diametres?|profondeurs?\\s+(de\\s+l.ouvrage|totales?)",
+      "georeferenc|coordonnees|lambert|\\bngf\\b|nivellement"
+     ],
+     "tous": true,
+     "aide": "Tabuler les caractéristiques de chaque ouvrage du réseau."
+    },
+    {
+     "id": "bq-tableaux",
+     "groupe": "BQ — Livrable",
+     "intitule": "Tableaux de synthèse des résultats sur la période",
+     "exigence": "Des tableaux de synthèse précisent l'évolution de la surveillance pendant la période.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "tableaux?\\s+(de\\s+synthese|recapitulatifs?|des\\s+resultats|historiques?)|synthese\\s+des\\s+resultats"
+     ],
+     "tous": false,
+     "aide": "Présenter un tableau historique par ouvrage et substance sur 4 ans (et au-delà)."
+    },
+    {
+     "id": "bq-graphiques",
+     "groupe": "BQ — Livrable",
+     "intitule": "Graphiques et cartes d'évolution spatiale et temporelle",
+     "exigence": "Des éléments graphiques et cartographiques montrent l'évolution spatiale et temporelle des concentrations.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "graphiques?|chroniques?|courbes?\\s+d.evolution|evolutions?\\s+(temporelles?|spatiales?)",
+      "cartes?|plans?|figures?"
+     ],
+     "tous": true,
+     "aide": "Ajouter chroniques de concentrations et cartes d'évolution spatiale."
+    },
+    {
+     "id": "bq-piezo",
+     "groupe": "BQ — Livrable",
+     "intitule": "Esquisses piézométriques selon les conditions hydrogéologiques",
+     "exigence": "Pour les eaux souterraines, les esquisses piézométriques selon les différentes conditions (hautes/basses eaux) sont intégrées.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "cartes?\\s+piezometriques?|esquisses?\\s+piezometriques?",
+      "hautes\\s+eaux|basses\\s+eaux|etiage|conditions?\\s+hydrogeologiques?"
+     ],
+     "tous": true,
+     "aide": "Fournir les esquisses piézométriques hautes eaux et basses eaux."
+    },
+    {
+     "id": "bq-historique",
+     "groupe": "BQ — Livrable",
+     "intitule": "Interprétation incluant les suivis antérieurs à la période",
+     "exigence": "L'interprétation tient compte des suivis antérieurs et existants, y compris antérieurs à la période de quatre ans.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "suivis?\\s+anterieurs?|historiques?\\s+des\\s+(resultats|concentrations)|depuis\\s+(19|20)\\d\\d|campagnes?\\s+anterieures?|tendances?"
+     ],
+     "tous": false,
+     "aide": "Replacer les 4 ans dans l'historique complet de la surveillance (tendances)."
+    },
+    {
+     "id": "bq-analyse-globale",
+     "groupe": "BQ — Livrable",
+     "intitule": "Analyse globale : impact ou évolution non attendue sur 4 ans",
+     "exigence": "Une analyse globale conclut sur un éventuel impact ou une évolution non attendue au cours des quatre ans.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "tendances?|stabl|hausses?|baisses?|augmentation|diminution|evolutions?\\s+(non\\s+attendue|anormale|significative)|impacts?"
+     ],
+     "tous": false,
+     "aide": "Conclure sur les tendances et toute évolution anormale sur la période."
+    },
+    {
+     "id": "bq-decision",
+     "groupe": "BQ — Livrable",
+     "intitule": "Préconisation : renforcement, maintien, allègement ou arrêt de la surveillance",
+     "exigence": "Les préconisations portent sur la suite de la surveillance : renforcement, maintien, allègement ou arrêt.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — objectifs et livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "renforc|maintien|maintenir|allege|allegement|arret\\s+(de\\s+la\\s+)?surveillance|poursuite|poursuivre|adaptation\\s+(du|de\\s+la)\\s+(programme|surveillance|reseau)"
+     ],
+     "tous": false,
+     "aide": "Se prononcer explicitement sur l'avenir de la surveillance (renforcer, maintenir, alléger, arrêter)."
+    },
+    {
+     "id": "bq-diag",
+     "groupe": "BQ — Livrable",
+     "intitule": "Nouveau DIAG envisagé en cas de dégradation",
+     "exigence": "En cas de dégradation de la qualité d'un milieu, une nouvelle prestation DIAG doit être envisagée.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bdiag\\b|diagnostic\\s+(complementaire|supplementaire)|investigations?\\s+complementaires?|degradation"
+     ],
+     "tous": false,
+     "aide": "Si une dégradation est constatée, recommander un diagnostic complémentaire."
+    },
+    {
+     "id": "bq-enjeux",
+     "groupe": "BQ — Livrable",
+     "intitule": "Mise à jour de l'analyse des enjeux sur la période",
+     "exigence": "L'analyse des enjeux concernés par le suivi est mise à jour sur la période (ressources en eau, environnement, santé).",
+     "clause": "NF X31-620-2, § 6.3 (BQ — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "enjeux|ressources?\\s+en\\s+eaux?|usages?|risques?\\s+sanitaires?|cibles?"
+     ],
+     "tous": false,
+     "aide": "Actualiser les enjeux (usages de la nappe, captages, cibles sanitaires) sur 4 ans."
+    },
+    {
+     "id": "bq-schema-maj",
+     "groupe": "BQ — Livrable",
+     "intitule": "Schéma conceptuel mis à jour intégrant les ouvrages",
+     "exigence": "Le schéma conceptuel est mis à jour en intégrant les ouvrages de surveillance.",
+     "clause": "NF X31-620-2, § 6.3 (BQ — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "schema\\s+conceptuel|modele\\s+conceptuel",
+      "sources?",
+      "transferts?|voies?\\s+(de\\s+transfert|d.exposition|de\\s+migration)",
+      "enjeux|cibles?|recepteurs?"
+     ],
+     "tous": true,
+     "aide": "Présenter un schéma conceptuel (figure + tableau) reliant sources, voies de transfert/exposition et enjeux/cibles."
+    },
+    {
+     "id": "a270-referentiels",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Résultats comparés à des référentiels pertinents",
+     "exigence": "Les résultats sont interprétés au regard de référentiels pertinents : valeurs réglementaires, fonds géochimiques, études antérieures…",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu et livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "valeurs?\\s+(de\\s+reference|reglementaires?|guides?|seuils?|limites?|de\\s+gestion|de\\s+comparaison|d.analyse\\s+de\\s+la\\s+situation)|fonds?\\s+(pedo-?geochimiques?|geochimiques?)|bruits?\\s+de\\s+fond|referentiels?|\\bisdi\\b|limites?\\s+de\\s+qualite|references?\\s+de\\s+qualite|teneurs?\\s+(naturelles|habituelles|ubiquitaires)|\\brmqs\\b|\\bbdetm\\b|asp(itet)?\\b"
+     ],
+     "tous": false,
+     "aide": "Comparer chaque résultat à un référentiel adapté (fond géochimique, valeurs eau potable, ISDI, VAS…)."
+    },
+    {
+     "id": "a270-incertitudes",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Limites et incertitudes et leur influence sur les résultats",
+     "exigence": "Les limites et incertitudes des investigations sont présentées et leur influence sur les résultats discutée.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "incertitudes?|limites?\\s+(de\\s+l.etude|des\\s+investigations|du\\s+diagnostic)|representativite"
+     ],
+     "tous": false,
+     "aide": "Ajouter un chapitre limites/incertitudes (représentativité, densité de maillage, LQ) et leur incidence."
+    }
+   ]
+  },
+  {
+   "id": "nf2-cont",
+   "titre": "CONT — Contrôle (programme d'investigation/surveillance, mesures de gestion)",
+   "description": "Prélèvements/analyses de contrôle (A200 à A260) et interprétation (A270) au regard des référentiels du contexte ; contrôles ponctuels par une entité indépendante.",
+   "points": [
+    {
+     "id": "resumes",
+     "groupe": "CONT — Livrable",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(resumes?|syntheses?)\\s+(technique|non[- ]?technique)",
+      "non[- ]?technique"
+     ],
+     "tous": true,
+     "aide": "Ajouter en tête un résumé technique et un résumé non technique lisible par un non-spécialiste."
+    },
+    {
+     "id": "cont-cadre",
+     "groupe": "CONT — Livrable",
+     "intitule": "Cadre de l'intervention : typologie et fréquence des contrôles",
+     "exigence": "Le livrable rappelle le cadre de l'intervention (typologie des contrôles, fréquence…).",
+     "clause": "NF X31-620-2, § 6.3 (CONT — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(type|typologie|nature)s?\\s+(des|de)\\s+controles?|frequences?\\s+(des|de)\\s+controles?|cadre\\s+(de\\s+l.|d.)intervention|controles?\\s+(prevus|realises|ponctuels)"
+     ],
+     "tous": false,
+     "aide": "Décrire la typologie des contrôles, leur fréquence et ce qui a été contrôlé."
+    },
+    {
+     "id": "cont-nc-modalites",
+     "groupe": "CONT — Livrable",
+     "intitule": "Modalités de gestion des non-conformités",
+     "exigence": "Le livrable rappelle les modalités de gestion des non-conformités.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:non[- ]conformites?|ecarts?)[\\s\\S]{0,120}(?:gestion|traitement|levee|lever|modalites?|procedure)|(?:gestion|traitement|levee|lever|modalites?|procedure)[\\s\\S]{0,120}(?:non[- ]conformites?|ecarts?)"
+     ],
+     "tous": false,
+     "aide": "Rappeler comment les non-conformités sont signalées, traitées et levées."
+    },
+    {
+     "id": "cont-destinataires",
+     "groupe": "CONT — Livrable",
+     "intitule": "Désignation des destinataires du livrable",
+     "exigence": "Le livrable désigne les parties destinataires.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "destinataires?|liste\\s+de\\s+diffusion|diffusion"
+     ],
+     "tous": false,
+     "aide": "Ajouter la liste des destinataires du rapport de contrôle."
+    },
+    {
+     "id": "cont-independance",
+     "groupe": "CONT — Livrable",
+     "intitule": "Indépendance du contrôleur / accord sur le conflit d'intérêts",
+     "exigence": "Les contrôles sont réalisés par une entité indépendante ; un concepteur ne peut contrôler qu'avec accord préalable du donneur d'ordre.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — objectifs)",
+     "niveau": "attendu",
+     "motifs": [
+      "independan|conflits?\\s+d.interets?|\\be12\\b"
+     ],
+     "tous": false,
+     "aide": "Mentionner l'indépendance vis-à-vis de l'entreprise contrôlée (ou l'accord du donneur d'ordre)."
+    },
+    {
+     "id": "cont-ouvrages",
+     "groupe": "CONT — Livrable",
+     "intitule": "Conformité des ouvrages d'investigation/surveillance au programme A130 et à l'art",
+     "exigence": "Les résultats du contrôle de conformité des travaux d'ouvrages (forages, piézomètres, piézairs…) au programme A130 et à l'art sont donnés.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — description et livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "conformit",
+      "programme|etat\\s+de\\s+l.art|regles\\s+de\\s+l.art|normes?|piezometres?|piezairs?|forages?|sondages?"
+     ],
+     "tous": true,
+     "aide": "Pour un contrôle d'ouvrages, comparer chaque ouvrage réalisé au programme et à l'état de l'art."
+    },
+    {
+     "id": "cont-mesures-gestion",
+     "groupe": "CONT — Livrable",
+     "intitule": "Conformité des mesures de gestion mises en œuvre",
+     "exigence": "Les résultats du contrôle de conformité des mesures de gestion (dépollution, aménagements) aux dispositions prévues sont donnés.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — objectifs et livrables)",
+     "niveau": "attendu",
+     "motifs": [
+      "conformit",
+      "mesures?\\s+de\\s+gestion|travaux|depollution|confinements?|mesures?\\s+constructives?|plan\\s+de\\s+gestion"
+     ],
+     "tous": true,
+     "aide": "Pour un contrôle de mesures de gestion, conclure sur leur conformité au PG/contrat travaux."
+    },
+    {
+     "id": "cont-liste-verifs",
+     "groupe": "CONT — Livrable",
+     "intitule": "Liste des éléments vérifiés avec planning et justificatifs",
+     "exigence": "La liste des éléments vérifiés est fournie en lien avec le planning des interventions et les justificatifs de réalisation.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "plannings?|calendriers?|dates?\\s+(d.intervention|de\\s+(visite|controle|prelevement))",
+      "justificatifs?|bordereaux?|\\bbsd\\b|proces[- ]verbaux?|\\bpv\\b|attestations?|photos?"
+     ],
+     "tous": true,
+     "aide": "Tabuler les éléments vérifiés, dates d'intervention et justificatifs (PV, BSD, photos)."
+    },
+    {
+     "id": "cont-moyens",
+     "groupe": "CONT — Livrable",
+     "intitule": "Moyens mis en œuvre pour les contrôles",
+     "exigence": "Les moyens mis en œuvre pour les contrôles sont décrits, en cohérence avec A200 à A260.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "moyens?\\s+(mis\\s+en\\s+oeuvre|humains?|techniques?|materiels?)|(methode|methodologie|technique|protocole)s?\\s+(de\\s+|d.)?(controle|prelevements?|echantillonnage|mesures?)"
+     ],
+     "tous": false,
+     "aide": "Décrire matériel, méthodes de prélèvement/mesure et intervenants des contrôles."
+    },
+    {
+     "id": "cont-referentiels",
+     "groupe": "CONT — Livrable",
+     "intitule": "Interprétation au regard des référentiels du contexte (objectifs, état initial…)",
+     "exigence": "Les résultats sont interprétés au regard de référentiels pertinents : état initial, point de référence, valeurs réglementaires, objectifs de dépollution.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "objectifs?\\s+de\\s+(depollution|traitement|rehabilitation)|etat\\s+initial|points?\\s+de\\s+reference|valeurs?\\s+(reglementaires?|seuils?|limites?|de\\s+rejet)|seuils?|criteres?\\s+(d.acceptation|de\\s+reception)"
+     ],
+     "tous": false,
+     "aide": "Comparer chaque résultat au référentiel applicable (objectif de dépollution, seuil de rejet, état initial)."
+    },
+    {
+     "id": "cont-residuels",
+     "groupe": "CONT — Livrable",
+     "intitule": "Concentrations résiduelles (fonds/bords de fouille, milieux d'exposition)",
+     "exigence": "Les contrôles peuvent porter sur les concentrations résiduelles dans les milieux pollués et les milieux d'exposition.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "concentrations?\\s+residuelles?|fonds?\\s+de\\s+fouilles?|bords?\\s+de\\s+fouilles?|parois|pollutions?\\s+residuelles?|air\\s+(interieur|ambiant)"
+     ],
+     "tous": false,
+     "aide": "Présenter les contrôles de fonds/bords de fouille ou d'air intérieur avec les objectifs associés."
+    },
+    {
+     "id": "cont-materiaux",
+     "groupe": "CONT — Livrable",
+     "intitule": "Contrôle des terres excavées, matériaux valorisés et remblais importés",
+     "exigence": "Les contrôles peuvent porter sur les matériaux valorisés sur site, les terres excavées et les remblais importés.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "remblais?\\s+(importes?|d.apport)|materiaux?\\s+(d.apport|valorises?|importes?)|terres?\\s+(d.apport|excavees?|importees?)|effluents?|rejets?"
+     ],
+     "tous": false,
+     "aide": "Présenter le contrôle des terres, remblais d'apport, matériaux réutilisés ou effluents de traitement."
+    },
+    {
+     "id": "cont-ecarts",
+     "groupe": "CONT — Livrable",
+     "intitule": "Liste des écarts / non-conformités avec préconisations pour les lever",
+     "exigence": "Le livrable liste les écarts ou non-conformités constatés avec des préconisations permettant de les lever.",
+     "clause": "NF X31-620-2, § 6.3 (CONT — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "non[- ]conformites?|ecarts?\\s+(constates?|releves?|identifies?)|aucun\\s+ecart|aucune\\s+non[- ]conformite",
+      "preconis|recommand|suites?\\s+a\\s+donner|actions?\\s+correctives?|lever"
+     ],
+     "tous": true,
+     "aide": "Tabuler chaque écart/non-conformité et l'action proposée pour le lever (ou indiquer l'absence d'écart)."
+    },
+    {
+     "id": "prel-localisation",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Localisation précise des points de prélèvement",
+     "exigence": "Les points de prélèvement sont identifiés et localisés précisément (géolocalisation, report sur plan, photographies).",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(plans?|cartes?|figures?)\\s+(de\\s+localisation|d.implantation)\\s+des\\s+(sondages|prelevements|points|investigations|ouvrages)|localisation\\s+des\\s+(sondages|prelevements|points\\s+de\\s+prelevement|investigations|ouvrages)",
+      "coordonnees|\\bgps\\b|lambert|georeferenc|geolocalis"
+     ],
+     "tous": false,
+     "aide": "Reporter chaque point sur plan et donner ses coordonnées (Lambert 93) ; photos des points recommandées."
+    },
+    {
+     "id": "prel-bulletins",
+     "groupe": "A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Bulletins d'analyses du laboratoire (tous paramètres)",
+     "exigence": "Les bulletins d'analyses du laboratoire couvrant l'ensemble des paramètres recherchés sont fournis.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bulletins?\\s+(d.analyses?|analytiques?|du\\s+laboratoire)|rapports?\\s+d.analyses?|certificats?\\s+d.analyses?|proces[- ]verbaux\\s+d.analyses?"
+     ],
+     "tous": false,
+     "aide": "Annexer les bulletins d'analyses complets du laboratoire."
+    },
+    {
+     "id": "a270-tableaux",
+     "groupe": "A270 — Interprétation des résultats",
+     "intitule": "Tableaux de synthèse des résultats analytiques",
+     "exigence": "Les résultats sont mis en perspective par des rendus graphiques : plans, tableaux, graphiques, photos.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "tableaux?\\s+(de\\s+synthese|recapitulatifs?|des\\s+resultats|de\\s+resultats)|synthese\\s+des\\s+resultats\\s+(analytiques|d.analyses)|resultats\\s+analytiques"
+     ],
+     "tous": false,
+     "aide": "Présenter les résultats en tableaux par milieu avec référentiels et dépassements mis en évidence."
+    }
+   ]
+  },
+  {
+   "id": "nf2-xper",
+   "titre": "XPER — Expertise dans le domaine des sites et sols pollués",
+   "description": "Revue critique des livrables transmis : visite (ou justification), vérification de complétude, réunions de cadrage et de clôture, analyse critique, remarques et impacts.",
+   "points": [
+    {
+     "id": "resumes",
+     "groupe": "XPER — Livrable",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(resumes?|syntheses?)\\s+(technique|non[- ]?technique)",
+      "non[- ]?technique"
+     ],
+     "tous": true,
+     "aide": "Ajouter en tête un résumé technique et un résumé non technique lisible par un non-spécialiste."
+    },
+    {
+     "id": "xper-champ",
+     "groupe": "XPER — Livrable",
+     "intitule": "Champ de l'expertise appuyé sur le compte rendu de cadrage",
+     "exigence": "Le livrable rappelle le champ de l'expertise, appuyé sur le compte rendu de la réunion de cadrage initiale.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — description et livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "reunions?\\s+de\\s+cadrage|cadrage",
+      "champ|perimetre|objet|objectifs?"
+     ],
+     "tous": true,
+     "aide": "Rappeler champ, contexte et objectifs de l'expertise et joindre le compte rendu de cadrage."
+    },
+    {
+     "id": "xper-questions",
+     "groupe": "XPER — Livrable",
+     "intitule": "Questions posées / objectifs de l'expertise",
+     "exigence": "Le cadrage définit le contexte, les questions posées et les objectifs de l'expertise.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "questions?\\s+posees?|interrogations?|questions?\\s+(du|de\\s+la)\\s+(donneur|maitre|commanditaire)|objectifs?\\s+de\\s+l.expertise"
+     ],
+     "tous": false,
+     "aide": "Lister explicitement les questions auxquelles l'expertise répond."
+    },
+    {
+     "id": "xper-documents",
+     "groupe": "XPER — Livrable",
+     "intitule": "Références des documents examinés et données d'entrée",
+     "exigence": "Le livrable donne les références des documents examinés et des données d'entrée analysées.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "documents?\\s+(examines?|analyses?|transmis|expertises?|fournis)|listes?\\s+des\\s+documents|donnees\\s+d.entree|rapports?\\s+(examines?|expertises?)"
+     ],
+     "tous": false,
+     "aide": "Tabuler les documents expertisés (auteur, titre, référence, version, date)."
+    },
+    {
+     "id": "xper-textes",
+     "groupe": "XPER — Livrable",
+     "intitule": "Rappel des textes réglementaires, normatifs et méthodologiques en vigueur",
+     "exigence": "Le livrable rappelle les textes réglementaires, normatifs et méthodologiques en vigueur à la date de réalisation de l'étude expertisée.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "en\\s+vigueur|methodologie\\s+nationale|notes?\\s+ministerielles?|circulaires?|x\\s+?31-?620|textes?\\s+(reglementaires?|normatifs?)"
+     ],
+     "tous": false,
+     "aide": "Rappeler le référentiel (méthodologie 2017, NF X31-620, textes) applicable à la date des études."
+    },
+    {
+     "id": "xper-visite",
+     "groupe": "XPER — Livrable",
+     "intitule": "Visite du site ou justification de sa non-réalisation",
+     "exigence": "L'expertise comporte une visite de site ou, à défaut, une justification de sa non-réalisation.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "visite\\s+(du\\s+|de\\s+|sur\\s+)?(site|terrain|des\\s+lieux)"
+     ],
+     "tous": false,
+     "aide": "Indiquer la date de visite du site ou justifier son absence."
+    },
+    {
+     "id": "xper-completude",
+     "groupe": "XPER — Livrable",
+     "intitule": "Vérification de la mise à disposition de tous les livrables requis",
+     "exigence": "L'expert vérifie la mise à disposition de la totalité des livrables requis pour chaque prestation (dossier complet).",
+     "clause": "NF X31-620-2, § 6.3 (XPER — objectifs et description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "completude|complet|exhaustivite|livrables?\\s+(requis|manquants?|attendus?)|elements?\\s+manquants?"
+     ],
+     "tous": false,
+     "aide": "Conclure sur la complétude des livrables transmis ; ne pas expertiser un dossier incomplet."
+    },
+    {
+     "id": "xper-analyse-critique",
+     "groupe": "XPER — Livrable",
+     "intitule": "Analyse critique : méthodologie, qualité des données, hypothèses",
+     "exigence": "L'analyse critique vérifie principes méthodologiques, qualité des données et bien-fondé des hypothèses, sans refaire les études.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — objectifs et description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "analyses?\\s+critiques?|revues?\\s+critiques?",
+      "hypotheses?|qualite\\s+des\\s+donnees|methodolog"
+     ],
+     "tous": true,
+     "aide": "Structurer l'analyse : méthode, qualité des données, hypothèses et leur utilisation."
+    },
+    {
+     "id": "xper-remarques",
+     "groupe": "XPER — Livrable",
+     "intitule": "Remarques claires et factuelles sur les documents expertisés",
+     "exigence": "Le livrable formule de manière claire et factuelle des remarques sur les documents expertisés.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "remarques?|observations?|commentaires?"
+     ],
+     "tous": false,
+     "aide": "Numéroter les remarques, chacune rattachée au document et à la page concernés."
+    },
+    {
+     "id": "xper-impact",
+     "groupe": "XPER — Livrable",
+     "intitule": "Évaluation de l'impact de chaque remarque sur les conclusions",
+     "exigence": "Chaque remarque est accompagnée d'une évaluation objective de son impact sur les conclusions des documents expertisés.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(?:impacts?|incidences?|consequences?|portee)[\\s\\S]{0,80}(?:conclusions?)|(?:conclusions?)[\\s\\S]{0,80}(?:impacts?|incidences?|consequences?|portee)"
+     ],
+     "tous": false,
+     "aide": "Qualifier pour chaque remarque l'impact sur les conclusions (majeur, mineur, sans incidence)."
+    },
+    {
+     "id": "xper-verifs-ponctuelles",
+     "groupe": "XPER — Livrable",
+     "intitule": "Vérifications ponctuelles de calculs ou paramètres",
+     "exigence": "Selon le contexte, l'expertise peut vérifier ponctuellement des calculs ou paramètres (VTR, reports de données…).",
+     "clause": "NF X31-620-2, § 6.3 (XPER — description)",
+     "niveau": "attendu",
+     "motifs": [
+      "verifications?\\s+(ponctuelles?|des\\s+calculs|des\\s+parametres)|recalcul|\\bvtr\\b|reports?\\s+(de|des)\\s+donnees|parametres?\\s+physico-?chimiques?"
+     ],
+     "tous": false,
+     "aide": "Préciser les calculs ou paramètres vérifiés et le résultat de la vérification."
+    },
+    {
+     "id": "xper-conclusions",
+     "groupe": "XPER — Livrable",
+     "intitule": "Conclusions : impacts significatifs et recommandations",
+     "exigence": "Les conclusions reprennent les impacts les plus significatifs et proposent des recommandations, appuyées sur la réunion de clôture.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "conclusions?",
+      "preconis|recommand|suites?\\s+a\\s+donner"
+     ],
+     "tous": true,
+     "aide": "Conclure sur les points majeurs et formuler des recommandations."
+    },
+    {
+     "id": "xper-cloture",
+     "groupe": "XPER — Livrable",
+     "intitule": "Réunion de clôture (présentation de l'avis)",
+     "exigence": "Une réunion de clôture est organisée pour présenter l'avis ; les conclusions s'appuient sur son compte rendu.",
+     "clause": "NF X31-620-2, § 6.3 (XPER — description et livrables)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "reunions?\\s+de\\s+cloture|cloture"
+     ],
+     "tous": false,
+     "aide": "Mentionner la réunion de clôture (date, participants) et joindre son compte rendu."
+    }
+   ]
+  },
+  {
+   "id": "nf2-verif",
+   "titre": "VERIF — Évaluation du passif environnemental (acquisition d'entreprise)",
+   "description": "Phase 1 documentaire (A100 sous réserve d'accès, A110 dans la limite des documents, A120, A130 éventuel) puis Phase 2 d'investigations (A200 à A260, A270).",
+   "points": [
+    {
+     "id": "verif-intro",
+     "groupe": "VERIF — Phase 1 (documentaire)",
+     "intitule": "Introduction : contexte, objectif et limitations de l'étude",
+     "exigence": "Le livrable de phase 1 s'ouvre sur une introduction présentant le contexte, l'objectif et les limitations de l'étude.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "contexte|objectifs?",
+      "limit(es|ations)|reserves?|restrictions?"
+     ],
+     "tous": true,
+     "aide": "Exposer contexte (transaction), objectifs et limites (délais, accès, données, confidentialité)."
+    },
+    {
+     "id": "verif-documents",
+     "groupe": "VERIF — Phase 1 (documentaire)",
+     "intitule": "Liste et synthèse des documents transmis (data room)",
+     "exigence": "Le livrable comprend la liste des documents transmis et leur synthèse.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "data\\s+?room|documents?\\s+(transmis|mis\\s+a\\s+disposition|fournis|communiques)|listes?\\s+des\\s+documents"
+     ],
+     "tous": false,
+     "aide": "Tabuler les documents de la data room (titre, date) et en faire la synthèse."
+    },
+    {
+     "id": "verif-visite",
+     "groupe": "VERIF — Phase 1 (documentaire)",
+     "intitule": "Visite du site (sous réserve d'autorisation d'accès)",
+     "exigence": "La phase 1 comporte une visite de site (A100) sous réserve d'obtention des autorisations d'accès.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — phase 1)",
+     "niveau": "attendu",
+     "motifs": [
+      "visite\\s+(du\\s+|de\\s+|sur\\s+)?(site|terrain|des\\s+lieux)"
+     ],
+     "tous": false,
+     "aide": "Rapporter la visite du site ou indiquer que l'accès n'a pas été autorisé."
+    },
+    {
+     "id": "verif-presentation",
+     "groupe": "VERIF — Phase 1 (documentaire)",
+     "intitule": "Présentation du site et de son environnement",
+     "exigence": "Le livrable présente le site et son environnement (vulnérabilité des milieux, A120).",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "geolog|hydrogeolog|nappes?",
+      "environnement|voisinage|alentours"
+     ],
+     "tous": true,
+     "aide": "Décrire le site, son voisinage et le contexte géologique/hydrogéologique."
+    },
+    {
+     "id": "verif-sources",
+     "groupe": "VERIF — Phase 1 (documentaire)",
+     "intitule": "Sources de pollution potentielles ou avérées et substances associées",
+     "exigence": "Les sources de pollution potentielles ou avérées et les substances associées sont identifiées.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "sources?\\s+(potentielles?|averees?|de\\s+pollution)|zones?\\s+(a\\s+risque|suspectes?)",
+      "substances?|polluants?|produits?"
+     ],
+     "tous": true,
+     "aide": "Tabuler chaque source (activité, localisation) avec les substances associées."
+    },
+    {
+     "id": "verif-passif",
+     "groupe": "VERIF — Phase 1 (documentaire)",
+     "intitule": "Évaluation du passif environnemental et incertitudes associées",
+     "exigence": "Le passif est évalué si possible à ce stade, avec les incertitudes associées.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — objectifs et livrables phase 1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "passif",
+      "incertitudes?"
+     ],
+     "tous": true,
+     "aide": "Qualifier (voire chiffrer) le passif et le niveau d'incertitude associé."
+    },
+    {
+     "id": "verif-argumentaire",
+     "groupe": "VERIF — Phase 1 (documentaire)",
+     "intitule": "Argumentaire sur la nécessité d'un programme d'investigations",
+     "exigence": "Le livrable argumente la nécessité ou non d'un programme d'investigations ; si nécessaire, il comprend le livrable A130.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "programmes?\\s+(previsionnels?\\s+)?d.investigations?|phase\\s+2|investigations?\\s+(complementaires?|recommandees?|proposees?)"
+     ],
+     "tous": false,
+     "aide": "Conclure sur le besoin d'une phase 2 et joindre le programme A130 le cas échéant."
+    },
+    {
+     "id": "verif-preco-acquisition",
+     "groupe": "VERIF — Phase 1 (documentaire)",
+     "intitule": "Préconisations, y compris sur la poursuite ou l'arrêt de l'acquisition",
+     "exigence": "Les préconisations couvrent les suites (phase 2, études, méthodologie nationale), y compris poursuivre ou arrêter l'acquisition.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "preconis|recommand|suites?\\s+a\\s+donner",
+      "acquisitions?|transactions?|cessions?|operations?\\s+d.acquisition"
+     ],
+     "tous": true,
+     "aide": "Formuler des recommandations explicites, y compris sur la poursuite de l'opération d'acquisition."
+    },
+    {
+     "id": "verif-p2-synthese",
+     "groupe": "VERIF — Phase 2 (investigations)",
+     "intitule": "Phase 2 : rappel du contexte et synthèse détaillée de la phase 1",
+     "exigence": "Le livrable de phase 2 rappelle contexte, objectifs et limitations, et synthétise en détail la phase 1.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 2)",
+     "niveau": "attendu",
+     "motifs": [
+      "phase\\s+1|phase\\s+i\\b|etude\\s+documentaire"
+     ],
+     "tous": false,
+     "aide": "Résumer la phase 1 (sources, substances, programme) en tête du rapport de phase 2."
+    },
+    {
+     "id": "verif-p2-ecarts-normes",
+     "groupe": "VERIF — Phase 2 (investigations)",
+     "intitule": "Phase 2 : écarts aux normes et méthodes justifiés, conséquences",
+     "exigence": "Les écarts aux normes et documents méthodologiques en vigueur sont justifiés, avec leurs conséquences sur les incertitudes.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 2)",
+     "niveau": "attendu",
+     "motifs": [
+      "(?:ecarts?|derogations?|ne\\s+respecte|non\\s+conforme)[\\s\\S]{0,120}(?:normes?|methodolog|guides?|referentiels?)|(?:normes?|methodolog|guides?|referentiels?)[\\s\\S]{0,120}(?:ecarts?|derogations?|ne\\s+respecte|non\\s+conforme)"
+     ],
+     "tous": false,
+     "aide": "Lister les écarts aux normes (délais, accès, méthodes) et leur incidence sur les incertitudes."
+    },
+    {
+     "id": "verif-p2-passif",
+     "groupe": "VERIF — Phase 2 (investigations)",
+     "intitule": "Phase 2 : mise à jour du passif et des incertitudes",
+     "exigence": "Le passif environnemental et les incertitudes associées sont évalués ou mis à jour.",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 2)",
+     "niveau": "attendu",
+     "motifs": [
+      "passif",
+      "incertitudes?"
+     ],
+     "tous": true,
+     "aide": "Actualiser l'évaluation du passif à la lumière des investigations."
+    },
+    {
+     "id": "verif-p2-methodo-nationale",
+     "groupe": "VERIF — Phase 2 (investigations)",
+     "intitule": "Phase 2 : conclusions au regard de la méthodologie nationale",
+     "exigence": "Les conclusions et recommandations sont formulées au regard de la méthodologie nationale (DIAG, PG, IEM…).",
+     "clause": "NF X31-620-2, § 6.3 (VERIF — livrables phase 2)",
+     "niveau": "attendu",
+     "motifs": [
+      "methodologie\\s+nationale|\\bdiag\\b|plans?\\s+de\\s+gestion|\\biem\\b|interpretation\\s+de\\s+l.etat\\s+des\\s+milieux"
+     ],
+     "tous": false,
+     "aide": "Indiquer les prestations de la méthodologie nationale à engager (DIAG, IEM, PG)."
+    },
+    {
+     "id": "prel-localisation",
+     "groupe": "VERIF — Phase 2 (investigations) — A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Localisation précise des points de prélèvement",
+     "exigence": "Les points de prélèvement sont identifiés et localisés précisément (géolocalisation, report sur plan, photographies).",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "(plans?|cartes?|figures?)\\s+(de\\s+localisation|d.implantation)\\s+des\\s+(sondages|prelevements|points|investigations|ouvrages)|localisation\\s+des\\s+(sondages|prelevements|points\\s+de\\s+prelevement|investigations|ouvrages)",
+      "coordonnees|\\bgps\\b|lambert|georeferenc|geolocalis"
+     ],
+     "tous": false,
+     "aide": "Reporter chaque point sur plan et donner ses coordonnées (Lambert 93) ; photos des points recommandées."
+    },
+    {
+     "id": "prel-bulletins",
+     "groupe": "VERIF — Phase 2 (investigations) — A200 à A260 — Prélèvements, mesures et analyses",
+     "intitule": "Bulletins d'analyses du laboratoire (tous paramètres)",
+     "exigence": "Les bulletins d'analyses du laboratoire couvrant l'ensemble des paramètres recherchés sont fournis.",
+     "clause": "NF X31-620-2, § 6.4 (A200 à A260 — livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "bulletins?\\s+(d.analyses?|analytiques?|du\\s+laboratoire)|rapports?\\s+d.analyses?|certificats?\\s+d.analyses?|proces[- ]verbaux\\s+d.analyses?"
+     ],
+     "tous": false,
+     "aide": "Annexer les bulletins d'analyses complets du laboratoire."
+    },
+    {
+     "id": "a270-referentiels",
+     "groupe": "VERIF — Phase 2 (investigations) — A270 — Interprétation des résultats",
+     "intitule": "Résultats comparés à des référentiels pertinents",
+     "exigence": "Les résultats sont interprétés au regard de référentiels pertinents : valeurs réglementaires, fonds géochimiques, études antérieures…",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu et livrable)",
+     "niveau": "attendu",
+     "motifs": [
+      "valeurs?\\s+(de\\s+reference|reglementaires?|guides?|seuils?|limites?|de\\s+gestion|de\\s+comparaison|d.analyse\\s+de\\s+la\\s+situation)|fonds?\\s+(pedo-?geochimiques?|geochimiques?)|bruits?\\s+de\\s+fond|referentiels?|\\bisdi\\b|limites?\\s+de\\s+qualite|references?\\s+de\\s+qualite|teneurs?\\s+(naturelles|habituelles|ubiquitaires)|\\brmqs\\b|\\bbdetm\\b|asp(itet)?\\b"
+     ],
+     "tous": false,
+     "aide": "Comparer chaque résultat à un référentiel adapté (fond géochimique, valeurs eau potable, ISDI, VAS…)."
+    },
+    {
+     "id": "a270-tableaux",
+     "groupe": "VERIF — Phase 2 (investigations) — A270 — Interprétation des résultats",
+     "intitule": "Tableaux de synthèse des résultats analytiques",
+     "exigence": "Les résultats sont mis en perspective par des rendus graphiques : plans, tableaux, graphiques, photos.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "attendu",
+     "motifs": [
+      "tableaux?\\s+(de\\s+synthese|recapitulatifs?|des\\s+resultats|de\\s+resultats)|synthese\\s+des\\s+resultats\\s+(analytiques|d.analyses)|resultats\\s+analytiques"
+     ],
+     "tous": false,
+     "aide": "Présenter les résultats en tableaux par milieu avec référentiels et dépassements mis en évidence."
+    },
+    {
+     "id": "a270-incertitudes",
+     "groupe": "VERIF — Phase 2 (investigations) — A270 — Interprétation des résultats",
+     "intitule": "Limites et incertitudes et leur influence sur les résultats",
+     "exigence": "Les limites et incertitudes des investigations sont présentées et leur influence sur les résultats discutée.",
+     "clause": "NF X31-620-2, § 6.4 (A270 — contenu)",
+     "niveau": "attendu",
+     "motifs": [
+      "incertitudes?|limites?\\s+(de\\s+l.etude|des\\s+investigations|du\\s+diagnostic)|representativite"
+     ],
+     "tous": false,
+     "aide": "Ajouter un chapitre limites/incertitudes (représentativité, densité de maillage, LQ) et leur incidence."
+    }
+   ]
+  }
+ ],
+ "codes": [
+  {
+   "code": "AMO Etudes",
+   "intitule": "Assistance à maîtrise d'ouvrage en phase Etudes",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (AMO Etudes)",
+   "composition": []
+  },
+  {
+   "code": "LEVE",
+   "intitule": "Levée de doute pour savoir si un site relève ou non de la méthodologie nationale de gestion des sites et sols pollués",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (LEVE)",
+   "composition": [
+    "A100",
+    "A110"
+   ]
+  },
+  {
+   "code": "INFOS",
+   "intitule": "Réalisation des études historiques, documentaires et de vulnérabilité afin d'élaborer un schéma conceptuel et, le cas échéant, un programme prévisionnel d'investigations",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (INFOS)",
+   "composition": [
+    "A100",
+    "A110",
+    "A120",
+    "A130?"
+   ]
+  },
+  {
+   "code": "DIAG",
+   "intitule": "Mise en œuvre d'un programme d'investigations et interprétation des résultats",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (DIAG)",
+   "composition": [
+    "A200?",
+    "A210?",
+    "A220?",
+    "A230?",
+    "A240?",
+    "A250?",
+    "A260?",
+    "A270"
+   ],
+   "prerequis": [
+    "A130"
+   ]
+  },
+  {
+   "code": "PG",
+   "intitule": "Plan de gestion dans le cadre d'un projet de réhabilitation ou d'aménagement d'un site",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (PG)",
+   "composition": [
+    "A100",
+    "A110?",
+    "A120?",
+    "DIAG?",
+    "A300?",
+    "A310?",
+    "A320",
+    "A330",
+    "PCT?"
+   ],
+   "prerequis": [
+    "INFOS",
+    "DIAG"
+   ]
+  },
+  {
+   "code": "IEM",
+   "intitule": "Interprétation de l'état des milieux",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (IEM)",
+   "composition": [
+    "A100",
+    "A110?",
+    "A120?",
+    "DIAG?",
+    "A320?",
+    "A300?",
+    "A310?"
+   ],
+   "prerequis": [
+    "INFOS",
+    "DIAG"
+   ]
+  },
+  {
+   "code": "SUIVI",
+   "intitule": "Surveillance environnementale",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (SUIVI)",
+   "composition": [
+    "A200?",
+    "A210?",
+    "A220?",
+    "A230?",
+    "A240?",
+    "A250?",
+    "A270",
+    "A300?",
+    "A310?",
+    "A320?"
+   ]
+  },
+  {
+   "code": "BQ",
+   "intitule": "Bilan quadriennal",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (BQ)",
+   "composition": [
+    "A270",
+    "A300?",
+    "A310?",
+    "A320?"
+   ],
+   "prerequis": [
+    "SUIVI"
+   ]
+  },
+  {
+   "code": "CONT",
+   "intitule": "Contrôle de la mise en œuvre du programme d'investigation ou de surveillance, et de la mise en œuvre des mesures de gestion",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (CONT)",
+   "composition": [
+    "A200?",
+    "A210?",
+    "A220?",
+    "A230?",
+    "A240?",
+    "A250?",
+    "A260?",
+    "A270"
+   ]
+  },
+  {
+   "code": "XPER",
+   "intitule": "Expertise dans le domaine des sites et sols pollués",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (XPER)",
+   "composition": []
+  },
+  {
+   "code": "VERIF",
+   "intitule": "Vérifications en vue d'évaluer le passif environnemental lors d'un projet d'acquisition d'une entreprise",
+   "type": "globale",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 1) et § 6.3 (VERIF, phases 1 et 2)",
+   "composition": [
+    "A100",
+    "A110",
+    "A120",
+    "A130?",
+    "A200?",
+    "A210?",
+    "A220?",
+    "A230?",
+    "A240?",
+    "A250?",
+    "A260?",
+    "A270?"
+   ]
+  },
+  {
+   "code": "A100",
+   "intitule": "Visite du site",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A100)"
+  },
+  {
+   "code": "A110",
+   "intitule": "Etudes historique, documentaire et mémorielle",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A110)"
+  },
+  {
+   "code": "A120",
+   "intitule": "Etude de vulnérabilité des milieux",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A120)"
+  },
+  {
+   "code": "A130",
+   "intitule": "Elaboration d'un programme prévisionnel d'investigations (et de surveillance des différents milieux)",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A130)"
+  },
+  {
+   "code": "A200",
+   "intitule": "Prélèvements, mesures, observations et/ou analyses sur les sols",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A200)"
+  },
+  {
+   "code": "A210",
+   "intitule": "Prélèvements, mesures, observations et/ou analyses sur les eaux souterraines",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A210)"
+  },
+  {
+   "code": "A220",
+   "intitule": "Prélèvements, mesures, observations et/ou analyses sur les eaux superficielles et/ou sédiments",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A220)"
+  },
+  {
+   "code": "A230",
+   "intitule": "Prélèvements, mesures, observations et/ou analyses sur les gaz du sol",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A230)"
+  },
+  {
+   "code": "A240",
+   "intitule": "Prélèvements, mesures, observations et/ou analyses sur l'air ambiant et les poussières atmosphériques",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A240)"
+  },
+  {
+   "code": "A250",
+   "intitule": "Prélèvements, mesures, observations et/ou analyses sur les denrées alimentaires (y compris l'eau du robinet)",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A250)"
+  },
+  {
+   "code": "A260",
+   "intitule": "Prélèvements, mesures, observations et/ou analyses sur les terres excavées ou à excaver",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A260)"
+  },
+  {
+   "code": "A270",
+   "intitule": "Interprétation des résultats des investigations",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A270)"
+  },
+  {
+   "code": "A300",
+   "intitule": "Analyse des enjeux sur les ressources en eaux",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A300)"
+  },
+  {
+   "code": "A310",
+   "intitule": "Analyse des enjeux sur les ressources environnementales",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A310)"
+  },
+  {
+   "code": "A320",
+   "intitule": "Analyse des enjeux sanitaires (démarche d'évaluation des risques sanitaires)",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A320)"
+  },
+  {
+   "code": "A330",
+   "intitule": "Identification des différentes options (scénarios) de gestion possibles et réalisation d'un bilan coûts/avantages",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A330)"
+  },
+  {
+   "code": "A400",
+   "intitule": "Dossiers de restriction d'usage, de servitudes",
+   "type": "elementaire",
+   "clause": "NF X31-620-2, § 6.2 (Tableau 2) et § 6.4 (A400)"
+  }
+ ]
+}
