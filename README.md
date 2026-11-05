@@ -7,7 +7,7 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
 
 ## Les outils
 
-- **Site Setting** (`frontend/src/pages/Accueil.tsx`) — saisie d'une adresse,
+- **Assistant Site Setting** (`frontend/src/pages/SiteSetting.tsx`) — saisie d'une adresse,
   délimitation du site par ses parcelles cadastrales, puis six lectures
   cartographiées : eau, air, sols, faune et flore, climat, risques.
 - **Données environnementales publiques**

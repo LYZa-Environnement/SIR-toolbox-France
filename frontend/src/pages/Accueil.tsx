@@ -12,7 +12,7 @@ interface Outil {
 
 const OUTILS: Outil[] = [
   {
-    titre: 'Site Setting',
+    titre: 'Assistant Site Setting',
     accroche: "L'environnement d'une adresse",
     description:
       'Saisissez une adresse ou des parcelles : eau, air, sol, nature et risques sont lus en direct dans les bases publiques et restitués sur carte.',

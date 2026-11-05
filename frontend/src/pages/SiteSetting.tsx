@@ -70,7 +70,7 @@ export default function SiteSetting() {
     <>
       <section className="section">
         <div className="container">
-          <p className="eyebrow">Plateforme de consultation de données</p>
+          <p className="eyebrow">Assistant Site Setting</p>
           <h1 style={{ maxWidth: '20ch' }}>Ce que les données publiques disent d'une adresse</h1>
           <p className="lede">
             Saisissez une adresse : la plateforme interroge les bases publiques françaises et européennes — Géorisques, Hub'Eau, IGN, INPN,
