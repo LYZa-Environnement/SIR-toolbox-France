@@ -81,6 +81,16 @@ function communs(p: Produit): Point[] {
       aide: 'Le certificat doit être en cours de validité à la date de l’attestation et l’établissement émetteur figurer parmi les établissements couverts : liste LNE des certificats et des retraits ; pour une entreprise étrangère, liste ministérielle des équivalences.',
     },
     {
+      id: 'mentions', groupe: 'Modèle et certification', niveau: 'obligatoire',
+      intitule: 'Mentions de certification dans le livrable (art. 50)',
+      exigence:
+        "Lorsque l'entreprise fait référence à sa certification dans ses livrables, elle reprend au minimum : les référentiels respectés (articles 2 à 6 de l'arrêté), l'organisme de certification, la révision du certificat si son numéro est cité, la marque de certification avec les prestations globales couvertes, et les établissements couverts.",
+      sources: [S.article50, S.lneCertificats],
+      chercher: [/organisme (de )?certifica|\blne\b/, /revision|indice/, /etablissements? (couverts?|certifies?)|etablissement emetteur/],
+      tous: true,
+      aide: "Reprendre ces mentions depuis le certificat (fiche LNE) : n° et révision, prestations globales, établissements couverts. Une entreprise suspendue ou retirée ne doit plus faire référence à la certification (art. 50 II).",
+    },
+    {
       id: 'siret', groupe: 'Identification', niveau: 'obligatoire',
       intitule: 'Entreprise certifiée identifiée (SIRET valide)',
       exigence: 'Identification de l’entreprise : dénomination, SIRET (obligatoire en l’absence de numéro d’identification unique), statut juridique, adresse.',
