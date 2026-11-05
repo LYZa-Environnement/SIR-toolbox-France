@@ -36,7 +36,8 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   conditionnelle, sources sous le tableau). Une campagne rendue en
   plusieurs fichiers par le laboratoire se réunit dans un même tableau
   (`src/lib/resultats/fusion.ts` : échantillons rapprochés par leur nom,
-  paramètres par n° CAS ou par nom, unités converties). Pour les eaux souterraines,
+  paramètres par n° CAS ou par nom, unités converties) ; chaque campagne
+  comparée peut elle aussi recevoir plusieurs fichiers. Pour les eaux souterraines,
   jusqu'à quatre campagnes peuvent être comparées
   (`src/lib/resultats/campagnes.ts`) : date et régime (hautes / basses eaux)
   de chaque campagne, association des échantillons par ouvrage (corrigeable,
@@ -60,7 +61,8 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   l'autosurveillance permanente (article 21), rapport Excel.
 
 - **Vérification de livrables SSP** (`frontend/src/pages/VerificationLivrables.tsx`)
-  — contrôle d'un livrable réglementé déposé en PDF, Word ou texte (lu dans
+  — contrôle d'un livrable réglementé déposé en PDF, Word ou texte, en un ou
+  plusieurs documents vérifiés ensemble (lus dans
   le navigateur, `src/lib/livrables/extraction.ts`) : ATTES-ALUR,
   ATTES-SECUR, ATTES-MEMOIRE, ATTES-TRAVAUX (modèles de l'arrêté du
   9 février 2022, `src/lib/livrables/attes.ts`) et déclaration IOTA

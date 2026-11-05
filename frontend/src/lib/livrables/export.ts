@@ -20,7 +20,7 @@ const COULEURS: Record<Statut, { fond: string; texte: string }> = {
 
 export interface RapportVerification {
   referentiel: Referentiel
-  document: Document
+  documents: Document[]
   resultats: Resultat[]
   statut: (r: Resultat) => Statut
 }
@@ -35,7 +35,7 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
   const wb = new ExcelJS.Workbook()
   wb.creator = 'ERM SIR Toolbox France'
   const ws = wb.addWorksheet('Vérification', { views: [{ showGridLines: false }] })
-  ecrire(ws, 1, 1, `Vérification ${rp.referentiel.titre} — ${rp.document.nom}`, { gras: true, taille: 12, bord: false })
+  ecrire(ws, 1, 1, `Vérification ${rp.referentiel.titre} — ${rp.documents.map((d) => d.nom).join(' + ')}`, { gras: true, taille: 12, bord: false })
   ecrire(ws, 2, 1, `${rp.referentiel.description} Vérifié le ${new Date().toLocaleDateString('fr-FR')} avec SIR Toolbox France.`, { italique: true, taille: 9, bord: false })
   let r = 4
   const comptes = new Map<Statut, number>()
@@ -76,7 +76,7 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
       LIBELLES[st],
       x.point.exigence,
       x.verdict.detail ?? '',
-      (x.verdict.extraits ?? []).map((e) => `p. ${e.page} : « ${e.texte} »`).join('\n'),
+      (x.verdict.extraits ?? []).map((e) => `${e.document ? `${e.document}, ` : ''}p. ${e.page} : « ${e.texte} »`).join('\n'),
       st === 'present' || st === 'sans-objet' ? '' : [x.point.aide, x.point.correction ? `Formulation du modèle : « ${x.point.correction} »` : ''].filter(Boolean).join('\n'),
       x.commentaire,
     ]

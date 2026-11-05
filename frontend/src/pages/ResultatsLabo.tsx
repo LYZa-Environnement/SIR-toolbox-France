@@ -108,10 +108,6 @@ function finaliser(brute: Lecture, matrice: Matrice): Lecture {
   return matrice === 'sol' ? ordonnerParProfondeur(lecture) : lecture
 }
 
-async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
-  return finaliser(await lireBrut(fichier, matrice), matrice)
-}
-
 /** A file whose units belong to another matrix is most likely a wrong pick. */
 function avertissementMatrice(matrice: Matrice, l: Lecture): string | null {
   const u = l.unites.join(' ').toLowerCase()
@@ -230,6 +226,11 @@ export default function ResultatsLabo() {
     setOuvragesManuels(null)
   }
 
+  const messageLecture = (f: File, e: unknown) =>
+    e instanceof LectureImpossible
+      ? `${f.name} : ${e.message}`
+      : `${f.name} n'a pas pu être lu. Vérifiez qu'il s'agit d'un classeur Excel (.xlsx, .xls) ou d'un CSV.`
+
   async function ajouterFichier(f: File | undefined) {
     if (!f || !matrice) return
     setChargement(true)
@@ -237,11 +238,7 @@ export default function ResultatsLabo() {
     try {
       reunir([...fichiers, { nom: f.name, lecture: await lireBrut(f, matrice) }])
     } catch (e) {
-      setErreur(
-        e instanceof LectureImpossible
-          ? `${f.name} : ${e.message}`
-          : `${f.name} n'a pas pu être lu. Vérifiez qu'il s'agit d'un classeur Excel (.xlsx, .xls) ou d'un CSV.`,
-      )
+      setErreur(messageLecture(f, e))
     } finally {
       setChargement(false)
     }
@@ -329,17 +326,29 @@ export default function ResultatsLabo() {
     return g
   }, [campagnes, guides, matrice, metaux, repere])
 
-  async function ajouterCampagne(f: File): Promise<string | null> {
+  /** A lab file for a campaign: a new one, the main one (index 0), or one
+   *  of the others, merged with that campaign's earlier files. */
+  async function ajouterCampagne(f: File, cible: number | null): Promise<string | null> {
     try {
-      const l = await lireFichier(f, 'eau')
+      if (cible === 0) {
+        reunir([...fichiers, { nom: f.name, lecture: await lireBrut(f, 'eau') }])
+        return null
+      }
+      const brute = await lireBrut(f, 'eau')
+      const actuelle = cible === null ? null : autres[cible - 1]
+      const bruts = [...(actuelle?.bruts ?? []), { nom: f.name, lecture: brute }]
+      const l = finaliser(fusionnerLectures(bruts).lecture, 'eau')
       const q = qualifierAuto(l.points)
-      setAutres((a) => [...a, { lecture: l, fichier: f.name, date: '', regime: null, controles: l.points.filter((p) => estControle(q[p.nom])).map((p) => p.nom) }])
+      // Blanks and duplicates: what was set aside stays so; the new samples by name.
+      const controles = [...new Set([...(actuelle?.controles ?? []), ...l.points.filter((p) => !actuelle?.lecture.points.some((x) => x.nom === p.nom) && estControle(q[p.nom])).map((p) => p.nom)])]
+      const campagne: AutreCampagne = { date: actuelle?.date ?? '', regime: actuelle?.regime ?? null, lecture: l, fichier: bruts.map((x) => x.nom).join(' + '), controles, bruts }
+      setAutres((a) => (cible === null ? [...a, campagne] : a.map((c, k) => (k === cible - 1 ? campagne : c))))
       setOuvragesManuels(null)
       return null
     } catch (e) {
       return e instanceof LectureImpossible
-        ? `${e.message} Si ce fichier vient bien d'un laboratoire, transmettez-le pour que son format soit pris en charge.`
-        : "Le fichier n'a pas pu être lu. Vérifiez qu'il s'agit d'un classeur Excel (.xlsx, .xls) ou d'un CSV."
+        ? `${f.name} : ${e.message} Si ce fichier vient bien d'un laboratoire, transmettez-le pour que son format soit pris en charge.`
+        : messageLecture(f, e)
     }
   }
 

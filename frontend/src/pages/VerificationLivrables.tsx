@@ -28,7 +28,8 @@ const DECISIONS: { v: Decision; l: string }[] = [
 
 export default function VerificationLivrables() {
   const [typeId, setTypeId] = useState<string | null>(null)
-  const [doc, setDoc] = useState<Document | null>(null)
+  /** The deliverable's documents: one, or several read as one dossier. */
+  const [docs, setDocs] = useState<Document[]>([])
   const [texteColle, setTexteColle] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
@@ -41,34 +42,48 @@ export default function VerificationLivrables() {
 
   const referentiel = REFERENTIELS.find((r) => r.id === typeId) ?? null
 
-  async function charger(f: File | undefined) {
-    if (!f) return
+  /** Files are added to the deliverable's documents, not in place of them. */
+  async function charger(fichiers: FileList | File[] | undefined | null) {
+    const liste = [...(fichiers ?? [])]
+    if (!liste.length) return
     setChargement(true)
     setErreur(null)
-    try {
-      setDoc(await lireDocument(f))
-      setTexteColle('')
-      setDecisions({})
-      setCommentaires({})
-    } catch (e) {
-      setDoc(null)
-      setErreur(e instanceof Error ? e.message : 'Le document n’a pas pu être lu.')
-    } finally {
-      setChargement(false)
+    const lus: Document[] = []
+    const erreurs: string[] = []
+    for (const f of liste) {
+      try {
+        lus.push(await lireDocument(f))
+      } catch (e) {
+        erreurs.push(`${f.name} : ${e instanceof Error ? e.message : 'lecture impossible.'}`)
+      }
     }
+    setDocs((d) => [...d.filter((x) => !lus.some((l) => l.nom === x.nom)), ...lus])
+    if (lus.length) setTexteColle('')
+    if (erreurs.length) setErreur(erreurs.join(' '))
+    setChargement(false)
   }
 
   function deposer(e: DragEvent) {
     e.preventDefault()
     setSurvol(false)
-    void charger(e.dataTransfer.files[0])
+    void charger(e.dataTransfer.files)
   }
 
-  const livrable: Document | null = useMemo(
-    () => doc ?? (texteColle.trim() ? { nom: 'Texte collé', pages: [texteColle], pagesSansTexte: 0 } : null),
-    [doc, texteColle],
+  const livrables: Document[] = useMemo(
+    () => (docs.length ? docs : texteColle.trim() ? [{ nom: 'Texte collé', pages: [texteColle], pagesSansTexte: 0 }] : []),
+    [docs, texteColle],
   )
-  const texte = useMemo(() => (livrable ? preparer(livrable) : null), [livrable])
+  const texte = useMemo(() => (livrables.length ? preparer(livrables) : null), [livrables])
+  /** Which expected document each file looks like, from its name and first pages. */
+  const pieces = useMemo(() => {
+    if (!referentiel?.pieces || !livrables.length) return []
+    const plier = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    return referentiel.pieces.map((p) => ({
+      ...p,
+      documents: livrables.filter((d) => p.motif.test(plier(`${d.nom} ${d.pages.slice(0, 2).join(' ')}`))).map((d) => d.nom),
+    }))
+  }, [referentiel, livrables])
+  const livrable = livrables.length ? livrables[0] : null
 
   const resultats: Resultat[] = useMemo(() => {
     if (!referentiel || !texte) return []
@@ -92,7 +107,8 @@ export default function VerificationLivrables() {
     try {
       const { telechargerVerification } = await import('../lib/livrables/export')
       const date = new Date().toISOString().slice(0, 10)
-      await telechargerVerification({ referentiel, document: livrable, resultats, statut: effectif }, `Vérification ${referentiel.titre} - ${livrable.nom.replace(/\.[^.]+$/, '')} - ${date}.xlsx`)
+      const nom = livrables.length > 1 ? `${livrables.length} documents` : livrable.nom.replace(/\.[^.]+$/, '')
+      await telechargerVerification({ referentiel, documents: livrables, resultats, statut: effectif }, `Vérification ${referentiel.titre} - ${nom} - ${date}.xlsx`)
     } finally {
       setExport(false)
     }
@@ -149,7 +165,7 @@ export default function VerificationLivrables() {
               </p>
 
               <h2 className="etape">
-                <span>2</span> Document à vérifier
+                <span>2</span> Document{referentiel.pieces ? 's' : ''} à vérifier
               </h2>
               <div
                 className={`depot${survol ? ' depot--survol' : ''}`}
@@ -164,18 +180,20 @@ export default function VerificationLivrables() {
                   ref={input}
                   type="file"
                   accept=".pdf,.docx,.txt"
+                  multiple
                   style={{ display: 'none' }}
                   onChange={(e) => {
-                    void charger(e.target.files?.[0])
+                    void charger(e.target.files)
                     e.target.value = ''
                   }}
                 />
-                <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture du document…' : 'Déposez ici le livrable'}</p>
+                <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture…' : docs.length ? 'Ajoutez un autre document du livrable' : 'Déposez ici le livrable'}</p>
                 <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  PDF (avec texte, non scanné), Word (.docx) ou texte. Vous pouvez aussi coller le texte ci-dessous.
+                  PDF (avec texte, non scanné), Word (.docx) ou texte ; un livrable en plusieurs documents se dépose en plusieurs fichiers,
+                  vérifiés ensemble{referentiel.pieces ? ` (ici : ${referentiel.pieces.map((p) => p.libelle.toLowerCase()).join(', ')})` : ''}.
                 </p>
                 <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
-                  Choisir un fichier
+                  {docs.length ? 'Ajouter un document' : 'Choisir un ou plusieurs fichiers'}
                 </button>
               </div>
               {erreur && (
@@ -183,27 +201,50 @@ export default function VerificationLivrables() {
                   {erreur}
                 </p>
               )}
-              {!doc && (
+              {!docs.length && (
                 <label className="champ" style={{ marginTop: '1rem' }}>
                   Ou collez le texte du livrable
                   <textarea value={texteColle} onChange={(e) => setTexteColle(e.target.value)} placeholder="Texte de l’attestation ou du dossier…" />
                 </label>
               )}
-              {doc && (
-                <div className="card" style={{ marginTop: '1rem', maxWidth: '40rem' }}>
-                  <strong>{doc.nom}</strong>
-                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.9rem', color: 'var(--color-muted)' }}>
-                    {doc.pages.length} page{doc.pages.length > 1 ? 's' : ''} · {doc.pages.join(' ').split(/\s+/).filter(Boolean).length} mots lus
-                  </p>
-                  {doc.pagesSansTexte > 0 && (
-                    <p className="alerte" style={{ margin: '0.6rem 0 0' }}>
-                      {doc.pagesSansTexte} page{doc.pagesSansTexte > 1 ? 's' : ''} sans texte lisible : document scanné ? Les informations qui y
-                      figurent ne peuvent pas être recherchées (passer le PDF à la reconnaissance de caractères, OCR).
+              {docs.length > 0 && (
+                <div className="card" style={{ marginTop: '1rem', maxWidth: '44rem' }}>
+                  <strong>{docs.length > 1 ? `${docs.length} documents vérifiés ensemble` : docs[0].nom}</strong>
+                  <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.1rem', fontSize: '0.9rem' }}>
+                    {docs.map((d) => (
+                      <li key={d.nom} style={{ marginBottom: '0.3rem' }}>
+                        {docs.length > 1 && <>{d.nom} </>}
+                        <span style={{ color: 'var(--color-muted)' }}>
+                          {d.pages.length} page{d.pages.length > 1 ? 's' : ''} · {d.pages.join(' ').split(/\s+/).filter(Boolean).length} mots lus
+                        </span>{' '}
+                        <button type="button" className="btn btn--ghost btn--petit" onClick={() => setDocs((x) => x.filter((y) => y.nom !== d.nom))}>
+                          Retirer
+                        </button>
+                        {d.pagesSansTexte > 0 && (
+                          <div className="alerte" style={{ margin: '0.4rem 0 0' }}>
+                            {d.pagesSansTexte} page{d.pagesSansTexte > 1 ? 's' : ''} sans texte lisible : document scanné ? Les informations qui y
+                            figurent ne peuvent pas être recherchées (passer le PDF à la reconnaissance de caractères, OCR).
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {pieces.length > 0 && (
+                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.88rem' }}>
+                      <strong>Pièces du dossier :</strong>{' '}
+                      {pieces.map((p, i) => (
+                        <span key={p.libelle}>
+                          {i > 0 && ' · '}
+                          {p.libelle} :{' '}
+                          {p.documents.length ? (
+                            <span style={{ color: 'var(--level-faible)' }}>{p.documents.join(', ')}</span>
+                          ) : (
+                            <span style={{ color: 'var(--level-elevee)' }}>non reconnue</span>
+                          )}
+                        </span>
+                      ))}
                     </p>
                   )}
-                  <button type="button" className="btn btn--ghost btn--petit" style={{ marginTop: '0.6rem' }} onClick={() => setDoc(null)}>
-                    Retirer le document
-                  </button>
                 </div>
               )}
             </>
@@ -211,7 +252,7 @@ export default function VerificationLivrables() {
         </div>
       </section>
 
-      {referentiel && livrable && (
+      {referentiel && livrables.length > 0 && (
         <section className="section section--muted">
           <div className="container">
             <h2 className="etape">
@@ -283,7 +324,7 @@ function PointControle({ r, statut, onDecision, onCommentaire }: { r: Resultat; 
         <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.1rem', fontSize: '0.82rem', color: 'var(--color-muted)' }}>
           {v.extraits.map((e, i) => (
             <li key={i}>
-              p. {e.page} : « {e.texte} »
+              {e.document ? `${e.document}, ` : ''}p. {e.page} : « {e.texte} »
             </li>
           ))}
         </ul>

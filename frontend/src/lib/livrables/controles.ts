@@ -19,7 +19,10 @@ export type Niveau = 'obligatoire' | 'attendu'
 export type Statut = 'present' | 'absent' | 'invalide' | 'a-verifier' | 'sans-objet'
 
 export interface Extrait {
+  /** Page within its document. */
   page: number
+  /** The document it comes from, when the deliverable has several. */
+  document?: string
   texte: string
 }
 
@@ -61,6 +64,12 @@ export interface Resultat {
   commentaire: string
 }
 
+/** A document a deliverable is made of, told by its title. */
+export interface Piece {
+  libelle: string
+  motif: RegExp
+}
+
 export interface Referentiel {
   id: string
   titre: string
@@ -71,6 +80,8 @@ export interface Referentiel {
   points: Point[]
   /** Said once, above the results: what the tool cannot check. */
   limites: string[]
+  /** Separate documents the deliverable usually comes as. */
+  pieces?: Piece[]
 }
 
 /** Each page in a searchable form of the same length: accents and case
@@ -79,6 +90,10 @@ export interface Referentiel {
 export interface Texte {
   pages: string[]
   plies: string[]
+  /** Where each page comes from: document and page within it. */
+  origines: { document: string; page: number }[]
+  /** More than one document: passages name theirs. */
+  plusieurs: boolean
 }
 
 function plierMemeLongueur(t: string): string {
@@ -90,8 +105,23 @@ function plierMemeLongueur(t: string): string {
   return r.length === t.length ? r : t.toLowerCase()
 }
 
-export function preparer(doc: Document): Texte {
-  return { pages: doc.pages, plies: doc.pages.map(plierMemeLongueur) }
+/** One or several documents read as one deliverable (an IOTA declaration
+ *  is three: document d'incidences, Natura 2000, résumé non technique). */
+export function preparer(docs: Document | Document[]): Texte {
+  const liste = Array.isArray(docs) ? docs : [docs]
+  const pages = liste.flatMap((d) => d.pages)
+  return {
+    pages,
+    plies: pages.map(plierMemeLongueur),
+    origines: liste.flatMap((d) => d.pages.map((_, i) => ({ document: d.nom, page: i + 1 }))),
+    plusieurs: liste.length > 1,
+  }
+}
+
+/** The page reference of a passage. */
+export function extrait(t: Texte, i: number, texte: string): Extrait {
+  const o = t.origines[i] ?? { document: '', page: i + 1 }
+  return { page: o.page, document: t.plusieurs ? o.document : undefined, texte }
 }
 
 /** Every match of a pattern, with its passage (one per page at most). */
@@ -106,7 +136,7 @@ export function trouver(t: Texte, re: RegExp, max = 3): Extrait[] {
     const a = Math.max(0, m.index - 70)
     const b = Math.min(p.length, m.index + m[0].length + 90)
     const brut = t.pages[i].slice(a, b).replace(/\s+/g, ' ').trim()
-    out.push({ page: i + 1, texte: `${a > 0 ? '… ' : ''}${brut}${b < p.length ? ' …' : ''}` })
+    out.push(extrait(t, i, `${a > 0 ? '… ' : ''}${brut}${b < p.length ? ' …' : ''}`))
   })
   return out
 }
@@ -150,7 +180,7 @@ export function validerSiret(t: Texte): Verdict {
     for (const m of p.matchAll(/siret[^0-9]{0,30}((?:\d[\s.]?){13}\d)/g)) {
       const n = m[1].replace(/\D/g, '')
       ;(siretValide(n) ? valides : invalides).push(n)
-      if (extraits.length < 3) extraits.push({ page: i + 1, texte: t.pages[i].slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ').trim() })
+      if (extraits.length < 3) extraits.push(extrait(t, i, t.pages[i].slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ').trim()))
     }
   })
   if (invalides.length) return { statut: 'invalide', detail: `N° SIRET invalide (clé de contrôle fausse) : ${[...new Set(invalides)].join(', ')}.`, extraits }
