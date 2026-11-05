@@ -16,7 +16,7 @@ export interface Source {
 
 export type Niveau = 'obligatoire' | 'attendu'
 
-export type Statut = 'present' | 'absent' | 'invalide' | 'a-verifier'
+export type Statut = 'present' | 'absent' | 'invalide' | 'a-verifier' | 'sans-objet'
 
 export interface Extrait {
   page: number
@@ -44,9 +44,21 @@ export interface Point {
   tous?: boolean
   /** A check finer than presence: a number to validate, a date to compare. */
   valider?: (doc: Texte) => Verdict
+  /** Only when the document is about it (a pumping, a discharge…). */
+  siConcerne?: { motif: RegExp; libelle: string }
   /** Where to find the information when missing; how to correct. */
   aide: string
   correction?: string
+}
+
+/** What the reader decides, over the automatic reading. */
+export type Decision = '' | 'conforme' | 'non-conforme' | 'sans-objet'
+
+export interface Resultat {
+  point: Point
+  verdict: Verdict
+  decision: Decision
+  commentaire: string
 }
 
 export interface Referentiel {
@@ -99,7 +111,10 @@ export function trouver(t: Texte, re: RegExp, max = 3): Extrait[] {
   return out
 }
 
+export const contient = (t: Texte, re: RegExp) => t.plies.some((p) => re.test(p))
+
 export function verifier(p: Point, t: Texte): Verdict {
+  if (p.siConcerne && !contient(t, p.siConcerne.motif)) return { statut: 'sans-objet', detail: `Sans objet : le document ne mentionne pas ${p.siConcerne.libelle}.` }
   if (p.valider) return p.valider(t)
   if (!p.chercher?.length) return { statut: 'a-verifier', detail: 'À vérifier à la lecture : une recherche dans le texte ne peut pas en juger.' }
   const resultats = p.chercher.map((re) => trouver(t, re))

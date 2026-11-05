@@ -36,12 +36,12 @@ const OUTILS: Outil[] = [
     route: '/conformite-rejets',
   },
   {
-    titre: 'Déclaration IOTA',
-    accroche: 'Loi sur l’eau',
+    titre: 'Vérification de livrables SSP',
+    accroche: 'ATTES et déclarations IOTA',
     description:
-      'Classez le projet dans la nomenclature IOTA, lisez le contexte du site (SDAGE, SAGE, ZRE, Natura 2000, cours d’eau, nappes) et produisez les trois rapports Word du dossier de déclaration.',
-    points: ['Étude d’incidence, Natura 2000, résumé non technique', 'Complétude R. 214-32, mandat de dépôt'],
-    route: '/declaration-iota',
+      'Déposez une attestation ATTES (ALUR, SECUR, MEMOIRE, TRAVAUX) ou un dossier de déclaration IOTA : chaque exigence des textes est recherchée dans le document, avec sa source officielle.',
+    points: ['Modèles de l’arrêté du 9 février 2022, article R. 214-32', 'Où trouver l’information, comment corriger'],
+    route: '/verification-livrables',
   },
   {
     titre: 'Logs de forage',
