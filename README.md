@@ -24,7 +24,16 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   (Collars, Log Info, Lithology, Well Construction, PID, Water Level,
   Comments, Samples ; modèle vierge téléchargeable), avec en option les
   résultats d'analyses rattachés aux échantillons, contrôles de cohérence,
-  impression PDF et export SVG.
+  impression PDF et export SVG. Chaque log tient sur une page, quelle que
+  soit la profondeur (échelle verticale adaptée, colonne de résultats
+  resserrée puis en tableau). Les noms d'échantillons du laboratoire sont
+  rapprochés de l'onglet Samples même écrits autrement (« 0.5-1.0 » /
+  « 0,5-1 », « PZ01 » / « PZ1 », « GSI-1 » / « GSI »), puis par forage et
+  profondeur ; les rapprochements approchés sont signalés et chaque
+  échantillon peut être rattaché à la main. Les résultats sont convertis
+  dans une même unité, indiquée en tête de colonne, et peuvent être comparés
+  aux valeurs guides ERM pour les sols (`public/data/valeurs-guides.json`) :
+  dépassements en rouge gras, expliqués dans la légende et la note.
 
 - **Résultats labo** (`frontend/src/pages/ResultatsLabo.tsx`) — mise en
   forme des résultats d'analyses : choix de la matrice (eaux souterraines,
@@ -74,7 +83,8 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
 ### Valeurs guides ERM
 
 Les valeurs guides sont extraites des trois classeurs ERM de référence vers
-`frontend/src/data/valeurs-guides.json`. Après une mise à jour d'un classeur :
+`frontend/src/data/valeurs-guides.json` (outil Résultats labo), avec une copie
+dans `frontend/public/data/valeurs-guides.json` lue par la page Logs de forage. Après une mise à jour d'un classeur :
 
 ```bash
 cd frontend

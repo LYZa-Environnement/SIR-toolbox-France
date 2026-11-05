@@ -40,7 +40,7 @@ const SYNONYMES: [RegExp, string][] = [
   [/\btce\b/g, 'trichloroethylene'],
   [/^(somme des |total )?xylenes( totaux| m p et o| m p o| o m p)?$/, 'xylenes'],
   [/^btex( totaux)?$/, 'btex'],
-  [/^(somme (de |des )?(16 )?hap( 15| 16)?( et naphtalene)?( volatil)?|hap totaux|hap (16 )?somme|somme hap)$/, 'somme des hap'],
+  [/^(somme (de |des )?(16 )?hap( 15| 16)?( et naphtalene)?( volatil)?( epa)?|hap totaux|hap (16 )?somme|somme hap)$/, 'somme des hap'],
   [/^(indice |indice d )?hydrocarbures?( totaux)? c10 (a )?c40$/, 'hydrocarbures c10 c40'],
   [/^chrome total$/, 'chrome'],
   [/^mercure et composes$/, 'mercure'],

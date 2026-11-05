@@ -1,5 +1,6 @@
 // Extrait les valeurs guides ERM des trois classeurs de référence vers
-// src/data/valeurs-guides.json, lu par l'onglet « Résultats labo ».
+// src/data/valeurs-guides.json, lu par l'onglet « Résultats labo », et sa copie
+// public/data/valeurs-guides.json, lue par la page « Logs de forage ».
 //
 // À relancer quand un classeur est mis à jour :
 //   node scripts/valeurs-guides.mjs <eaux souterraines.xlsx> <sol.xlsx> <air intérieur R1 R2 R3.xlsx>
@@ -118,6 +119,11 @@ const sortie = { eau: eaux(fichierEau), sol: sols(fichierSol), air: air(fichierA
 const cible = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'valeurs-guides.json')
 fs.mkdirSync(path.dirname(cible), { recursive: true })
 fs.writeFileSync(cible, JSON.stringify(sortie, null, 1) + '\n')
+// The same file for the static pages of public/ (Logs de forage), which
+// read it at run time rather than through the bundle.
+const copiePublique = path.join(path.dirname(cible), '..', '..', 'public', 'data', 'valeurs-guides.json')
+fs.mkdirSync(path.dirname(copiePublique), { recursive: true })
+fs.writeFileSync(copiePublique, JSON.stringify(sortie, null, 1) + '\n')
 console.log(
   `valeurs-guides.json : eau ${sortie.eau.valeurs.length} composés (MAJ ${sortie.eau.miseAJour}), ` +
     `sol ${sortie.sol.metaux.length} métaux + ${sortie.sol.organiques.length} organiques, ` +
