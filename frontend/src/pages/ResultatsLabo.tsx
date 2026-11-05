@@ -4,6 +4,7 @@ import { AnalyseApercu, ControleQualite, ExempleConversion } from '../components
 import { telechargerClasseur } from '../lib/resultats/export'
 import { estControle, qualifierAuto, type Qualification } from '../lib/resultats/qualite'
 import { ajouterSommesCalculees } from '../lib/resultats/sommes'
+import { fusionnerLectures } from '../lib/resultats/fusion'
 import { ordonnerCOHV } from '../lib/resultats/cohv'
 import { SignaturesApercu } from '../components/Signatures'
 import { PositionsHydrauliques } from '../components/PositionsHydrauliques'
@@ -71,17 +72,16 @@ function dansLa(libelle: string): string {
   return libelle.startsWith('air') ? `l'${libelle}` : `les ${libelle}`
 }
 
-async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
+/** A lab file as read, before the processing done on the whole campaign
+ *  (computed sums, ordering) — so that two files can be merged first. */
+async function lireBrut(fichier: File, matrice: Matrice): Promise<Lecture> {
   const XLSX = await import('xlsx')
   const classeur = XLSX.read(await fichier.arrayBuffer(), { type: 'array' })
   const feuilles = classeur.SheetNames.map((nom) => ({
     nom,
     grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
   }))
-  if (matrice !== 'air') {
-    const lecture = ordonnerCOHV(lireClasseur(feuilles, 'tout'))
-    return matrice === 'eau' ? ajouterSommesCalculees(lecture) : ordonnerParProfondeur(lecture)
-  }
+  if (matrice !== 'air') return lireClasseur(feuilles, 'tout')
   const essayer = (mode: 'support' | 'concentration') => {
     try {
       return lireClasseur(feuilles, mode)
@@ -99,7 +99,17 @@ async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
   const concentration = essayer('concentration')
   const lecture =
     concentration && (!support || concentration.parametres.CM.length >= support.parametres.CM.length) ? concentration : support
-  return ordonnerCOHV(lecture ?? lireClasseur(feuilles, 'support'))
+  return lecture ?? lireClasseur(feuilles, 'support')
+}
+
+function finaliser(brute: Lecture, matrice: Matrice): Lecture {
+  const lecture = ordonnerCOHV(brute)
+  if (matrice === 'eau') return ajouterSommesCalculees(lecture)
+  return matrice === 'sol' ? ordonnerParProfondeur(lecture) : lecture
+}
+
+async function lireFichier(fichier: File, matrice: Matrice): Promise<Lecture> {
+  return finaliser(await lireBrut(fichier, matrice), matrice)
 }
 
 /** A file whose units belong to another matrix is most likely a wrong pick. */
@@ -115,6 +125,10 @@ export default function ResultatsLabo() {
   const [milieu, setMilieu] = useState<MilieuAir>('gaz du sol')
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [fichier, setFichier] = useState('')
+  /** The campaign's lab files, as read: one or more, merged into `lecture`. */
+  const [fichiers, setFichiers] = useState<{ nom: string; lecture: Lecture }[]>([])
+  const [notesFusion, setNotesFusion] = useState<string[]>([])
+  const inputAjout = useRef<HTMLInputElement>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
   const [survol, setSurvol] = useState(false)
@@ -155,6 +169,8 @@ export default function ResultatsLabo() {
     setMatrice(m)
     setLecture(null)
     setFichier('')
+    setFichiers([])
+    setNotesFusion([])
     setErreur(null)
     setSurcharges({})
     setParFamille({})
@@ -165,9 +181,12 @@ export default function ResultatsLabo() {
     setChargement(true)
     setErreur(null)
     try {
-      const l = await lireFichier(f, matrice)
+      const brute = await lireBrut(f, matrice)
+      const l = finaliser(brute, matrice)
       setLecture(l)
       setFichier(f.name)
+      setFichiers([{ nom: f.name, lecture: brute }])
+      setNotesFusion([])
       setSaisies({})
       setSelection({})
       setExclus({})
@@ -183,10 +202,45 @@ export default function ResultatsLabo() {
       setOuvragesManuels(null)
     } catch (e) {
       setLecture(null)
+      setFichiers([])
       setErreur(
         e instanceof LectureImpossible
           ? `${e.message}${matrice === 'air' ? ' Pour des eaux ou des sols, choisissez la matrice correspondante.' : ''} Si ce fichier vient bien d'un laboratoire, transmettez-le pour que son format soit pris en charge.`
           : "Le fichier n'a pas pu être lu. Vérifiez qu'il s'agit d'un classeur Excel (.xlsx, .xls) ou d'un CSV.",
+      )
+    } finally {
+      setChargement(false)
+    }
+  }
+
+  /** Several files of one campaign in one table. What was entered for the
+   *  samples already there (sampling, qualification, position) is kept. */
+  function reunir(liste: { nom: string; lecture: Lecture }[]) {
+    if (!matrice) return
+    const { lecture: fusion, notes } = fusionnerLectures(liste)
+    const l = finaliser(fusion, matrice)
+    setFichiers(liste)
+    setLecture(l)
+    setFichier(liste.map((x) => x.nom).join(' + '))
+    setNotesFusion(notes)
+    setQualifications((q) => ({ ...qualifierAuto(l.points), ...q }))
+    const detectees = positionsAuto(l.points)
+    setPositions((p) => ({ ...detectees, ...p }))
+    setPositionsDetectees(detectees)
+    setOuvragesManuels(null)
+  }
+
+  async function ajouterFichier(f: File | undefined) {
+    if (!f || !matrice) return
+    setChargement(true)
+    setErreur(null)
+    try {
+      reunir([...fichiers, { nom: f.name, lecture: await lireBrut(f, matrice) }])
+    } catch (e) {
+      setErreur(
+        e instanceof LectureImpossible
+          ? `${f.name} : ${e.message}`
+          : `${f.name} n'a pas pu être lu. Vérifiez qu'il s'agit d'un classeur Excel (.xlsx, .xls) ou d'un CSV.`,
       )
     } finally {
       setChargement(false)
@@ -464,9 +518,28 @@ export default function ResultatsLabo() {
 
           {lecture && (
             <div className="card" style={{ marginTop: '1.5rem', maxWidth: '40rem' }}>
-              <strong>{fichier}</strong>
+              {fichiers.length > 1 ? (
+                <>
+                  <strong>{fichiers.length} fichiers réunis dans un même tableau</strong>
+                  <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.1rem', fontSize: '0.9rem' }}>
+                    {fichiers.map((x, i) => (
+                      <li key={`${i}-${x.nom}`} style={{ marginBottom: '0.2rem' }}>
+                        {x.nom}{' '}
+                        <span style={{ color: 'var(--color-muted)' }}>
+                          ({x.lecture.points.length} échantillon{x.lecture.points.length > 1 ? 's' : ''}, {x.lecture.parametres.CM.length} paramètres)
+                        </span>{' '}
+                        <button type="button" className="btn btn--ghost btn--petit" onClick={() => reunir(fichiers.filter((_, k) => k !== i))}>
+                          Retirer
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <strong>{fichier}</strong>
+              )}
               <p style={{ margin: '0.35rem 0 0', fontSize: '0.9rem', color: 'var(--color-muted)' }}>
-                {lecture.feuille && <>Feuille « {lecture.feuille} » · </>}
+                {lecture.feuille && <>Feuille{lecture.feuille.includes(', ') ? 's' : ''} « {lecture.feuille} » · </>}
                 {points.length} échantillon{points.length > 1 ? 's' : ''} · {lecture.parametres.CM.length} paramètres
                 {lecture.coucheControle ? ' · couche de mesure et couche de contrôle' : ''} · unités : {lecture.unites.join(', ')}
               </p>
@@ -481,7 +554,29 @@ export default function ResultatsLabo() {
                   Lignes non converties (unité autre qu'une masse par support) : {lecture.lignesIgnorees.join(', ')}
                 </p>
               )}
+              {notesFusion.map((n) => (
+                <p key={n} style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>
+                  {n}
+                </p>
+              ))}
               {avertissement && <p className="alerte" style={{ margin: '0.75rem 0 0' }}>{avertissement}</p>}
+              <input
+                ref={inputAjout}
+                type="file"
+                accept=".xlsx,.xlsm,.xls,.csv"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  void ajouterFichier(e.target.files?.[0])
+                  e.target.value = ''
+                }}
+              />
+              <p style={{ margin: '0.75rem 0 0', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+                Le laboratoire a rendu la campagne en plusieurs fichiers ? Ajoutez les autres : échantillons et paramètres sont réunis dans un
+                même tableau (un échantillon présent dans deux fichiers garde une seule colonne).
+              </p>
+              <button type="button" className="btn btn--petit" style={{ marginTop: '0.5rem' }} onClick={() => inputAjout.current?.click()} disabled={chargement}>
+                {chargement ? 'Lecture…' : 'Ajouter un fichier de la même campagne'}
+              </button>
             </div>
           )}
 
