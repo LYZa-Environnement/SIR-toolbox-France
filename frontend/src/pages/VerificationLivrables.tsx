@@ -1,7 +1,19 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { preparer, verifier, type Decision, type Resultat, type Statut } from '../lib/livrables/controles'
 import { lireDocument, type Document } from '../lib/livrables/extraction'
-import { REFERENTIELS } from '../lib/livrables/referentiels'
+import { categories, PAR_ID } from '../lib/livrables/referentiels'
+import type { Point, Source } from '../lib/livrables/controles'
+
+/** A source as a link, or as plain text when it has no public page (the standard). */
+function LienSource({ s }: { s: Source }) {
+  return s.url ? (
+    <a href={s.url} target="_blank" rel="noreferrer">
+      {s.libelle}
+    </a>
+  ) : (
+    <span>{s.libelle}</span>
+  )
+}
 
 const LIBELLES: Record<Statut, string> = {
   present: 'Trouvé',
@@ -40,7 +52,21 @@ export default function VerificationLivrables() {
   const [export_, setExport] = useState(false)
   const input = useRef<HTMLInputElement>(null)
 
-  const referentiel = REFERENTIELS.find((r) => r.id === typeId) ?? null
+  const referentiel = (typeId && PAR_ID.get(typeId)) || null
+  /** General requirements of the standard added to the checklist. */
+  const [avecComplements, setAvecComplements] = useState(true)
+  const complements = useMemo(() => (referentiel?.complements ?? []).map((id) => PAR_ID.get(id)).filter((r) => !!r), [referentiel])
+  const points: Point[] = useMemo(() => {
+    if (!referentiel) return []
+    const ajoutes = avecComplements
+      ? complements.flatMap((c) => c!.points.map((p) => ({ ...p, id: `${c!.id}:${p.id}`, groupe: `${c!.court ?? c!.titre} — ${p.groupe}` })))
+      : []
+    return [...referentiel.points, ...ajoutes]
+  }, [referentiel, complements, avecComplements])
+  const limites = useMemo(
+    () => [...new Set([...(referentiel?.limites ?? []), ...(avecComplements ? complements.flatMap((c) => c!.limites) : [])])],
+    [referentiel, complements, avecComplements],
+  )
 
   /** Files are added to the deliverable's documents, not in place of them. */
   async function charger(fichiers: FileList | File[] | undefined | null) {
@@ -87,8 +113,8 @@ export default function VerificationLivrables() {
 
   const resultats: Resultat[] = useMemo(() => {
     if (!referentiel || !texte) return []
-    return referentiel.points.map((point) => ({ point, verdict: verifier(point, texte), decision: decisions[point.id] ?? '', commentaire: commentaires[point.id] ?? '' }))
-  }, [referentiel, texte, decisions, commentaires])
+    return points.map((point) => ({ point, verdict: verifier(point, texte), decision: decisions[point.id] ?? '', commentaire: commentaires[point.id] ?? '' }))
+  }, [referentiel, points, texte, decisions, commentaires])
 
   /** The status shown: the reader's decision when given. */
   const effectif = (r: Resultat): Statut =>
@@ -108,7 +134,7 @@ export default function VerificationLivrables() {
       const { telechargerVerification } = await import('../lib/livrables/export')
       const date = new Date().toISOString().slice(0, 10)
       const nom = livrables.length > 1 ? `${livrables.length} documents` : livrable.nom.replace(/\.[^.]+$/, '')
-      await telechargerVerification({ referentiel, documents: livrables, resultats, statut: effectif }, `Vérification ${referentiel.titre} - ${nom} - ${date}.xlsx`)
+      await telechargerVerification({ referentiel: { ...referentiel, limites }, documents: livrables, resultats, statut: effectif }, `Vérification ${referentiel.titre} - ${nom} - ${date}.xlsx`)
     } finally {
       setExport(false)
     }
@@ -121,48 +147,58 @@ export default function VerificationLivrables() {
           <p className="eyebrow">Sites et sols pollués</p>
           <h1 style={{ maxWidth: '24ch' }}>Vérification de livrables réglementés</h1>
           <p className="lede">
-            Contrôlez une attestation ATTES ou un dossier de déclaration IOTA avant diffusion : chaque exigence des textes est recherchée
-            dans le document, avec sa source officielle, et l’outil indique où trouver l’information manquante ou comment corriger. Le
-            document est lu dans votre navigateur et n’est envoyé nulle part.
+            Contrôlez un livrable avant diffusion — attestation ATTES, déclaration IOTA, rapport d’étude ou de travaux, offre — au regard
+            des textes, de la norme NF X31-620 et du référentiel de certification LNE SSP : chaque exigence est recherchée dans le
+            document, avec sa source, et l’outil indique où trouver l’information manquante ou comment corriger. Le document est lu dans
+            votre navigateur et n’est envoyé nulle part.
           </p>
 
           <h2 className="etape">
             <span>1</span> Type de livrable
           </h2>
-          <div className="grid grid--3 choix" role="radiogroup" aria-label="Type de livrable">
-            {REFERENTIELS.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                role="radio"
-                aria-checked={typeId === r.id}
-                className={`card choix__option${typeId === r.id ? ' choix__option--actif' : ''}`}
-                onClick={() => {
-                  setTypeId(r.id)
-                  setDecisions({})
-                  setCommentaires({})
-                }}
-              >
-                <strong>{r.titre}</strong>
-                <span style={{ fontWeight: 600 }}>{r.accroche}</span>
-                <span>{r.description}</span>
-              </button>
-            ))}
-          </div>
+          {categories().map(([cat, rs]) => (
+            <div key={cat} style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 0.5rem', fontSize: '1rem' }}>{cat}</h3>
+              <div className="grid grid--3 choix" role="radiogroup" aria-label={cat}>
+                {rs.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={typeId === r.id}
+                    className={`card choix__option${typeId === r.id ? ' choix__option--actif' : ''}`}
+                    onClick={() => {
+                      setTypeId(r.id)
+                      setDecisions({})
+                      setCommentaires({})
+                    }}
+                  >
+                    <strong>{r.titre}</strong>
+                    {r.accroche !== r.titre && <span style={{ fontWeight: 600 }}>{r.accroche}</span>}
+                    <span>{r.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
 
           {referentiel && (
             <>
               <p style={{ fontSize: '0.88rem', margin: '1rem 0 0' }}>
                 <strong>Textes de référence :</strong>{' '}
                 {referentiel.cadre.map((s, i) => (
-                  <span key={s.url}>
+                  <span key={s.libelle}>
                     {i > 0 && ' · '}
-                    <a href={s.url} target="_blank" rel="noreferrer">
-                      {s.libelle}
-                    </a>
+                    <LienSource s={s} />
                   </span>
                 ))}
               </p>
+              {complements.length > 0 && (
+                <label style={{ display: 'block', fontSize: '0.88rem', marginTop: '0.5rem' }}>
+                  <input type="checkbox" checked={avecComplements} onChange={(e) => setAvecComplements(e.target.checked)} /> Ajouter{' '}
+                  {complements.map((c) => c!.titre).join(' et ')}
+                </label>
+              )}
 
               <h2 className="etape">
                 <span>2</span> Document{referentiel.pieces ? 's' : ''} à vérifier
@@ -272,7 +308,7 @@ export default function VerificationLivrables() {
               </label>
             </div>
             <ul style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0 0 1.25rem', paddingLeft: '1.1rem' }}>
-              {referentiel.limites.map((l) => (
+              {limites.map((l) => (
                 <li key={l}>{l}</li>
               ))}
             </ul>
@@ -345,11 +381,9 @@ function PointControle({ r, statut, onDecision, onCommentaire }: { r: Resultat; 
       <p style={{ margin: '0.45rem 0 0', fontSize: '0.8rem' }}>
         Sources :{' '}
         {p.sources.map((s, i) => (
-          <span key={s.url}>
+          <span key={s.libelle}>
             {i > 0 && ' · '}
-            <a href={s.url} target="_blank" rel="noreferrer">
-              {s.libelle}
-            </a>
+            <LienSource s={s} />
           </span>
         ))}
       </p>

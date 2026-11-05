@@ -82,6 +82,14 @@ export interface Referentiel {
   limites: string[]
   /** Separate documents the deliverable usually comes as. */
   pieces?: Piece[]
+  /** Heading the choice is listed under. */
+  categorie?: string
+  /** Checklists added to this one (general requirements of the standard). */
+  complements?: string[]
+  /** Only ever a complement of another checklist. */
+  masque?: boolean
+  /** Short name, prefixing its groups when added to another checklist. */
+  court?: string
 }
 
 /** Each page in a searchable form of the same length: accents and case

@@ -1,0 +1,557 @@
+{
+ "referentiels": [
+  {
+   "id": "rapport-general",
+   "titre": "Rapport d'étude / de travaux — exigences générales NF X31-620-1 et LNE SSP",
+   "description": "Points vérifiables dans tout livrable SSP issus des engagements de la NF X31-620-1 (déc. 2021) et du référentiel LNE SSP rév. 8 ; le contenu détaillé par prestation relève des parties 2 à 5.",
+   "points": [
+    {
+     "id": "nf1-r-norme",
+     "groupe": "Conformité normative",
+     "intitule": "Référence aux normes NF X31-620 appliquées",
+     "exigence": "Le livrable doit respecter le contenu prévu par les parties 2 à 5 de la série NF X31-620 pour les prestations réalisées.",
+     "clause": "NF X31-620-1, § 5.2 (Tableau 2, E15A2)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "nf x ?31[- ]?620"
+     ],
+     "tous": false,
+     "aide": "Citer la ou les parties de la NF X31-620 (2021) suivies, en page de garde ou dans l'introduction."
+    },
+    {
+     "id": "nf1-r-codes",
+     "groupe": "Conformité normative",
+     "intitule": "Codes des prestations réalisées (A100, A200, DIAG…)",
+     "exigence": "Les prestations réalisées sont identifiées par leur codification normalisée (parties 2 à 5), qui conditionne le contenu attendu du livrable.",
+     "clause": "NF X31-620-1, § 4.2 et § 5.2 (E15A2)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\b(a1[0-3]0|a2[0-7]0|a3[0-3]0|a400|b1[0-3]\\d|b200|b3[1-3]0|c[1-4]\\d{2}|xper|amo|cont|moe|pcr|diag|iem|ari)\\b|plan de gestion|interpretation de l.etat des milieux|analyse des risques residuels"
+     ],
+     "tous": false,
+     "aide": "Lister les codes élémentaires et globaux réalisés (ex. A100, A200, A270, DIAG) dans un tableau en début de rapport."
+    },
+    {
+     "id": "nf1-r-cp",
+     "groupe": "Rôles et vérification",
+     "intitule": "Chef de projet nommément identifié",
+     "exigence": "Le livrable est élaboré sous le contrôle d'un chef de projet du prestataire ; les intervenants du projet doivent être identifiés.",
+     "clause": "NF X31-620-1, § 5.2 (E15A2) ; Référentiel LNE SSP rév. 8, § III.2.1",
+     "niveau": "obligatoire",
+     "motifs": [
+      "chef de projet|charge d.affaires?|responsable (du )?projet"
+     ],
+     "tous": false,
+     "aide": "Indiquer le nom du chef de projet dans le bloc de visas ou la fiche signalétique (correspondance d'intitulé de fonction admise)."
+    },
+    {
+     "id": "nf1-r-sup",
+     "groupe": "Rôles et vérification",
+     "intitule": "Superviseur nommément identifié",
+     "exigence": "Un superviseur contrôle le projet ; en cas de cumul chef de projet/superviseur (XPER, AMO, CONT seulement), le livrable est élaboré sous son contrôle.",
+     "clause": "NF X31-620-1, § 3.9 et § 5.2 (E4A1, E15A2) ; Référentiel LNE SSP rév. 8, § III.2.1",
+     "niveau": "obligatoire",
+     "motifs": [
+      "superviseur|supervision|supervise par"
+     ],
+     "tous": false,
+     "aide": "Faire figurer le nom du superviseur ; le cumul des deux rôles n'est admis que pour XPER, AMO études/travaux et CONT."
+    },
+    {
+     "id": "nf1-r-visas",
+     "groupe": "Rôles et vérification",
+     "intitule": "Bloc de visas rédigé / vérifié / approuvé",
+     "exigence": "La vérification des livrables doit être tracée (processus d'élaboration et de vérification décrit et enregistré).",
+     "clause": "NF X31-620-1, § 5.2 (Tableau 2, E14A1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "redige|redaction|redacteur|auteur|etabli par",
+      "verifi|controle|relu|relecture|approuv|valid|supervis"
+     ],
+     "tous": true,
+     "aide": "Ajouter un tableau de visas (nom, fonction, date, signature) pour rédaction, vérification et approbation."
+    },
+    {
+     "id": "nf1-r-verif-tiers",
+     "groupe": "Rôles et vérification",
+     "intitule": "Vérificateur distinct du chef de projet et du rédacteur",
+     "exigence": "Chaque domaine technique est vérifié par le superviseur ou par un tiers compétent qui n'est ni le chef de projet ni le rédacteur de la partie concernée.",
+     "clause": "NF X31-620-1, § 5.2 (E15A2) ; Référentiel LNE SSP rév. 8, § III.2.1",
+     "niveau": "obligatoire",
+     "motifs": [
+      "verifi\\w* par|verificat(eur|rice)|relu par|controle par|supervise par|relecteur"
+     ],
+     "tous": false,
+     "aide": "Contrôler que le nom du vérificateur diffère de ceux du chef de projet et du rédacteur ; précision introduite en rév. 8."
+    },
+    {
+     "id": "nf1-r-version",
+     "groupe": "Identification du document",
+     "intitule": "Version / indice et date du livrable",
+     "exigence": "La gestion documentaire doit permettre d'identifier les éléments d'une prestation ; une version projet peut être remise à la demande du client.",
+     "clause": "NF X31-620-1, § 5.2 (E15A1, E16A1)",
+     "niveau": "attendu",
+     "motifs": [
+      "version|indice|\\brev(ision)?\\b|\\bv\\d",
+      "\\bdate\\b|\\d{1,2}[/.]\\d{1,2}[/.]\\d{2,4}|(janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre) \\d{4}"
+     ],
+     "tous": true,
+     "aide": "Afficher référence du dossier, indice (projet/définitif) et date dans la page de garde et l'historique des versions."
+    },
+    {
+     "id": "nf1-r-st",
+     "groupe": "Sous-traitance",
+     "intitule": "Sous-traitants identifiés (laboratoire, foreur…)",
+     "exigence": "Tout recours à la sous-traitance est signalé au client ; le prestataire doit pouvoir expliquer les conditions et résultats des opérations sous-traitées.",
+     "clause": "NF X31-620-1, § 5.2 (E8A1, E8A3)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "sous[- ]?trait|laboratoire|foreur|entreprise de (forage|sondage)"
+     ],
+     "tous": false,
+     "aide": "Nommer chaque sous-traitant et l'opération confiée ; vérifier la concordance avec l'offre (pas de sous-traitance en cascade)."
+    },
+    {
+     "id": "nf1-r-labo",
+     "groupe": "Sous-traitance",
+     "intitule": "Laboratoire accrédité (ISO/CEI 17025, COFRAC ou agréé)",
+     "exigence": "Les laboratoires sous-traitants répondent à l'ISO 17025 ; pour les analyses d'eaux réglementaires, accréditation COFRAC (ou équivalent) ou agrément requis.",
+     "clause": "NF X31-620-1, § 5.2 (E8A1) ; Référentiel LNE SSP rév. 8, § III.3.2 et § III.3.4",
+     "niveau": "obligatoire",
+     "motifs": [
+      "17025|cofrac|accredit|agree?s?\\b|agrement"
+     ],
+     "tous": false,
+     "aide": "Mentionner l'accréditation du laboratoire (n° COFRAC) et joindre les bordereaux d'analyses en annexe."
+    },
+    {
+     "id": "nf1-r-lq",
+     "groupe": "Analyses",
+     "intitule": "Méthodes analytiques et limites de quantification indiquées",
+     "exigence": "Les analyses suivent les normes de référence et respectent les limites de quantification minimales de l'annexe C (milieu sol).",
+     "clause": "NF X31-620-1, Annexe C (C.1)",
+     "niveau": "attendu",
+     "motifs": [
+      "limites? de quantification|\\blq\\b|\\bldq\\b",
+      "nf en|nf iso|xp cen|\\biso \\d{4,5}|norme|methode"
+     ],
+     "tous": true,
+     "aide": "Présenter pour chaque paramètre la méthode/norme et la LQ ; comparer aux LQ de l'annexe C de la NF X31-620-1."
+    },
+    {
+     "id": "nf1-r-materiel",
+     "groupe": "Traçabilité terrain",
+     "intitule": "Traçabilité du matériel de terrain (fiches, étalonnage)",
+     "exigence": "Les matériels et équipements utilisés pour une prestation donnée sont enregistrés (fiche terrain, fiche de vie) et leur vérification tracée.",
+     "clause": "NF X31-620-1, § 5.2 (E7A3)",
+     "niveau": "attendu",
+     "motifs": [
+      "fiches? (de )?(terrain|prelevement|forage|sondage|echantillonnage|purge)|\\bpid\\b|etalonn|appareil de mesure|sonde (piezo|multiparam|d.interface)"
+     ],
+     "tous": false,
+     "aide": "Joindre les fiches terrain en annexe en y identifiant les appareils utilisés (n°, étalonnage/vérification)."
+    },
+    {
+     "id": "nf1-r-ecarts",
+     "groupe": "Écarts et imprévus",
+     "intitule": "Écarts au programme de l'offre et imprévus expliqués",
+     "exigence": "Le client est informé des dérives de planning, des imprévus, de leurs conséquences et de leur gestion, et des modifications des conditions de réalisation.",
+     "clause": "NF X31-620-1, § 5.2 (E5A2, E13A2, E13A3)",
+     "niveau": "attendu",
+     "motifs": [
+      "ecarts?|imprevus?|aleas?|non realise|refus|par rapport (a|au) (l.offre|programme|devis|prevu)|adaptation du programme|modifications? (du|de la) (programme|prestation)|conformement (a|au) (l.offre|programme)"
+     ],
+     "tous": false,
+     "aide": "Ajouter un paragraphe « écarts par rapport à l'offre » : sondages non réalisés, refus, modifications et leurs conséquences."
+    }
+   ]
+  },
+  {
+   "id": "offre",
+   "titre": "Offre de prestation — NF X31-620-1 § 6 et LNE SSP § III.5",
+   "description": "Contenu administratif, technique et financier attendu d'une offre SSP, proportionné à l'importance de la prestation (hors situations d'urgence).",
+   "points": [
+    {
+     "id": "nf1-o-ident",
+     "groupe": "Partie administrative",
+     "intitule": "Prestataire : siège, établissement en charge, SIRET",
+     "exigence": "L'offre indique l'adresse du siège social et de l'établissement en charge de l'offre ainsi que son SIRET (ou équivalent).",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 3)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "siret|siren|rcs|n.\\s*d.identification",
+      "siege|etablissement|agence"
+     ],
+     "tous": true,
+     "aide": "Partie administrative communicable une fois par an si ≥2 offres/an au même client ou contrat cadre (LNE § III.5)."
+    },
+    {
+     "id": "nf1-o-assur",
+     "groupe": "Partie administrative",
+     "intitule": "Attestation d'assurance RC pro / atteinte à l'environnement",
+     "exigence": "Les attestations d'assurance du prestataire (RC professionnelle et d'exploitation couvrant les atteintes à l'environnement) accompagnent l'offre.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 3) ; § 5.2 (E3A1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "attestations? d.assurance|assurance (de )?responsabilite civile|\\brc ?pro|responsabilite civile (professionnelle|d.exploitation)"
+     ],
+     "tous": false,
+     "aide": "Joindre l'attestation ; si elle ne précise pas risques SSP ou montants, ajouter une note complémentaire."
+    },
+    {
+     "id": "nf1-o-assur-compl",
+     "groupe": "Partie administrative",
+     "intitule": "Engagement d'assurance complémentaire si risques > garantie",
+     "exigence": "L'offre comporte l'engagement de souscrire une assurance complémentaire si les risques du projet dépassent le montant garanti.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 3) ; § 5.2 (E3A1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(assurance|garantie|police)s? complementaires?|depass\\w* (le )?(montant|plafond)"
+     ],
+     "tous": false,
+     "aide": "Ajouter une phrase d'engagement explicite de souscription complémentaire en cas de dépassement."
+    },
+    {
+     "id": "nf1-o-contexte",
+     "groupe": "Partie technique",
+     "intitule": "Rappel du contexte, des besoins et des objectifs de la mission",
+     "exigence": "L'offre résume les informations remises par le client (études antérieures), ses besoins et attentes, et présente les objectifs de la mission.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "contexte|rappel de la demande|cahier des charges|documents? (remis|transmis|fournis)|etudes? (anterieures|precedentes|existantes)|besoins?|attentes?",
+      "objectifs?"
+     ],
+     "tous": true,
+     "aide": "Rédiger une section « contexte et objectifs » citant les documents reçus et l'usage visé."
+    },
+    {
+     "id": "nf1-o-conflit",
+     "groupe": "Partie technique",
+     "intitule": "Information sur le risque de conflit d'intérêts",
+     "exigence": "L'offre informe le client des liens de dépendance et du risque de conflit d'intérêts (cumul de domaines A/B/C ou B/C/D, AMO et XPER sur un même site).",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4) ; § 5.2 (E12A1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "conflits? d.interets?|liens? de dependance|independance"
+     ],
+     "tous": false,
+     "aide": "Insérer une déclaration d'absence (ou de description) de liens de dépendance et de conflit d'intérêts."
+    },
+    {
+     "id": "nf1-o-orient",
+     "groupe": "Partie technique",
+     "intitule": "Note d'orientation : analyse critique, variantes, adaptations",
+     "exigence": "Une note résume l'orientation proposée : première analyse critique des documents remis, variantes ou adaptations du cahier des charges.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4) ; § 5.2 (E2A1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "analyse critique|orientation|variantes?|adaptations? du cahier des charges|comprehension (de la demande|du besoin|de votre)|notre (approche|proposition)|methodologie proposee"
+     ],
+     "tous": false,
+     "aide": "Ajouter une note montrant la compréhension du problème et les compléments/variantes suggérés (devoir de conseil)."
+    },
+    {
+     "id": "nf1-o-codes",
+     "groupe": "Partie technique",
+     "intitule": "Prestations proposées codifiées (NF X31-620-2 à 5) et limites",
+     "exigence": "Les éléments de mission sont présentés par référence aux codes des parties 2 à 5, avec rappel de leurs objectifs et de leurs limites.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "\\b(a1[0-3]0|a2[0-7]0|a3[0-3]0|a400|b1[0-3]\\d|b200|b3[1-3]0|c[1-4]\\d{2}|xper|amo|cont|moe|pcr|diag|iem|ari)\\b|plan de gestion|interpretation de l.etat des milieux|analyse des risques residuels",
+      "limites?"
+     ],
+     "tous": true,
+     "aide": "Tableau des codes proposés (ex. A100, A200, A270) avec objectifs et limites ; une technique C350 exige des éléments de performance."
+    },
+    {
+     "id": "nf1-o-visite",
+     "groupe": "Partie technique",
+     "intitule": "Visite de site préalable : date, auteur et rôle (ou justification)",
+     "exigence": "L'offre indique la date de la visite préalable, la personne l'ayant faite et son rôle, ou justifie son absence (technique ou refus du client).",
+     "clause": "NF X31-620-1, § 5.2 (Tableau 2, E2A2)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "visite (de|du|sur) (site|terrain)|visite prealable|reconnaissance (de|du) site"
+     ],
+     "tous": false,
+     "aide": "Préciser date, nom et rôle (chef de projet, ingénieur…) du visiteur, ou la justification de non-réalisation."
+    },
+    {
+     "id": "nf1-o-planning",
+     "groupe": "Partie technique",
+     "intitule": "Étapes, durées, points d'arrêt, réunions et planning",
+     "exigence": "L'offre décrit les étapes, la durée prévisionnelle de chacune, les points d'arrêt intermédiaires, le nombre de réunions et un planning prévisionnel.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4) ; § 5.2 (E2A3)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "planning|calendrier|delais?|duree",
+      "reunions?|points? d.arret|etapes?|phases?"
+     ],
+     "tous": true,
+     "aide": "Joindre un planning prévisionnel avec jalons (remise des résultats, rapports d'étape) et nombre de réunions."
+    },
+    {
+     "id": "nf1-o-quantit",
+     "groupe": "Partie technique",
+     "intitule": "Description technique et quantitative (sondages, analyses…)",
+     "exigence": "Chaque prestation est décrite techniquement et quantitativement : ouvrages et prélèvements, programme analytique, équipements, gestion des déchets.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "programme analytique|programme d.investigations?|nombre de (sondages|forages|piezometres|prelevements|echantillons)|\\d+\\s*(sondages|forages|piezometres|prelevements|echantillons|ouvrages)"
+     ],
+     "tous": false,
+     "aide": "Chiffrer sondages, profondeurs, échantillons et paramètres ; préciser aussi les ouvrages laissés en place et la réception."
+    },
+    {
+     "id": "nf1-o-client",
+     "groupe": "Partie technique",
+     "intitule": "Éléments à fournir par le client",
+     "exigence": "L'offre liste les éléments à fournir par le donneur d'ordre (plans, autorisations, accès, fluides, surveillance…).",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "a (la charge|fournir) (du|par le|de votre) (client|donneur d.ordre|maitre d.ouvrage)|elements? a fournir|fourni(e)?s? par (le|votre) (client|donneur|maitre)|incombant au client|charge du client"
+     ],
+     "tous": false,
+     "aide": "Ajouter une liste « à la charge du client » : plans de réseaux, autorisations d'accès, DT, eau/électricité…"
+    },
+    {
+     "id": "nf1-o-livrables",
+     "groupe": "Partie technique",
+     "intitule": "Type de livrables et nombre d'exemplaires (papier/numérique)",
+     "exigence": "L'offre précise le type de livrables (rapport d'étape, résultats, rapport final…) et le nombre d'exemplaires papier et/ou numériques.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "livrables?|rapport (final|d.etape|de synthese)",
+      "exemplaires?|format (numerique|papier|pdf|informatique)|version (numerique|papier|pdf|electronique|informatique)"
+     ],
+     "tous": true,
+     "aide": "Indiquer les livrables prévus et leur format (ex. 1 PDF + 1 papier) ; mentionner la version projet si demandée."
+    },
+    {
+     "id": "nf1-o-cp-sup",
+     "groupe": "Équipe",
+     "intitule": "Chef de projet et superviseur désignés, qualification et expérience",
+     "exigence": "L'offre désigne le chef de projet et le superviseur avec leur qualification et expérience ; si le superviseur est externe, son organisme est indiqué.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4) ; § 5.2 (E4A1) ; Référentiel LNE SSP rév. 8, § III.2.1",
+     "niveau": "obligatoire",
+     "motifs": [
+      "chef de projet|charge d.affaires",
+      "superviseur|supervision",
+      "experience|qualification|curriculum|\\bcv\\b|diplome"
+     ],
+     "tous": true,
+     "aide": "Cumul CP/superviseur seulement pour XPER, AMO, CONT et à signaler dès l'offre ; nommer l'organisme d'un superviseur externe."
+    },
+    {
+     "id": "nf1-o-moyens",
+     "groupe": "Équipe",
+     "intitule": "Moyens humains, techniques et matériels par étape",
+     "exigence": "L'offre décrit les moyens par étape en distinguant moyens propres, moyens du client et sous-traitance, et justifie la composition de l'équipe.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "moyens (humains|techniques|materiels)|equipe (projet|proposee|d.intervention|mobilisee)|composition de l.equipe"
+     ],
+     "tous": false,
+     "aide": "Ajouter un tableau des moyens par étape (propres / client / sous-traités) et justifier l'équipe proposée."
+    },
+    {
+     "id": "nf1-o-st",
+     "groupe": "Équipe",
+     "intitule": "Prestations sous-traitées présentées",
+     "exigence": "L'offre présente les prestations sous-traitées ; le sous-traitant retenu est désigné au client en temps utile et sans sous-traitance en cascade.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4) ; § 5.2 (E8A1, E8A2)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "sous[- ]?trait"
+     ],
+     "tous": false,
+     "aide": "Lister les prestations sous-traitées (forage, analyses…) ; certaines ne peuvent l'être qu'à un certifié (LNE § III.3.4)."
+    },
+    {
+     "id": "nf1-o-qualite",
+     "groupe": "Organisation",
+     "intitule": "Organisation qualité spécifique à la mission",
+     "exigence": "L'offre décrit l'organisation qualité spécifique à la mission (note qualité ou SOPAQ possible).",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4) ; § 5.2 (E14A1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "organisation qualite|assurance (de la )?qualite|\\bs?o?paq\\b|controle qualite|demarche qualite|management de la qualite|iso 9001|note qualite"
+     ],
+     "tous": false,
+     "aide": "Ajouter une section « organisation qualité » : circuit de vérification des livrables, enregistrements, PAQ si demandé."
+    },
+    {
+     "id": "nf1-o-env",
+     "groupe": "Organisation",
+     "intitule": "Mesures de préservation de l'environnement du site",
+     "exigence": "Si intervention sur site, l'offre décrit impacts prévisionnels, mesures conservatoires, maîtrise des émissions et gestion des déchets (hors domaine D).",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4) ; § 5.2 (E10A1)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "nuisances?|gestion des (dechets|deblais|cuttings|eaux de purge|terres)|\\bs?o?pae\\b|impacts? (environnementa|du chantier)|preservation de l.environnement|mesures conservatoires"
+     ],
+     "tous": false,
+     "aide": "Décrire bruit, poussières, rejets, déchets (cuttings, eaux de purge) et leur gestion ; SOPAE possible."
+    },
+    {
+     "id": "nf1-o-hss",
+     "groupe": "Organisation",
+     "intitule": "Dispositions hygiène, santé et sécurité",
+     "exigence": "Une note précise les dispositions HSS pour les salariés et sous-traitants, cohérente avec le PGCSPS ou le plan de prévention s'ils existent.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 4) ; § 5.2 (E9)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "hygiene|sante et (de )?securite|\\bq?hse\\b|plan de prevention|ppsps|pgcsps|\\bepi\\b|analyse (des|de) risques? (prealable|securite)"
+     ],
+     "tous": false,
+     "aide": "Ajouter une note HSS (EPI, analyse de risques, DT/DICT, AIPR/SST) ; non applicable au domaine D."
+    },
+    {
+     "id": "nf1-o-prix",
+     "groupe": "Partie financière",
+     "intitule": "Prix forfaitaire et/ou unitaire (DQE si prix unitaires)",
+     "exigence": "L'offre financière précise si le prix est forfaitaire ou à prix unitaires ; un détail quantitatif estimatif est exigé pour des prix unitaires.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 5)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "forfait|prix unitaires?|bordereau|\\bbpu\\b|\\bdqe\\b|\\bdpgf\\b|detail quantitatif"
+     ],
+     "tous": false,
+     "aide": "Indiquer le mode de prix ; joindre un DQE pour les prix unitaires, DPGF/BPU si le client le demande."
+    },
+    {
+     "id": "nf1-o-validite",
+     "groupe": "Partie financière",
+     "intitule": "Validité du devis, révision des prix, paiement, prestations exclues",
+     "exigence": "L'offre expose la validité du devis, la révision/actualisation du prix, les conditions de paiement et les prestations prévues ou exclues.",
+     "clause": "NF X31-620-1, § 6.2 (Tableau 5)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "validite|valable",
+      "paiement|reglement|facturation"
+     ],
+     "tous": true,
+     "aide": "Préciser durée de validité, clause de révision, délais de paiement et exclusions (accès, repérage réseaux, topographie…)."
+    }
+   ]
+  },
+  {
+   "id": "marque-lne",
+   "titre": "Marque LNE SSP et mention de la certification",
+   "description": "Règles d'usage de la marque LNE SSP et de la communication sur la certification dans les offres, rapports et supports (référentiel rév. 8, chap. I et IV).",
+   "points": [
+    {
+     "id": "lne-m-appose",
+     "groupe": "Usage de la marque",
+     "intitule": "Marque LNE SSP apposée sur l'offre et le rapport final",
+     "exigence": "Le prestataire certifié appose la marque LNE SSP sur ses offres et sur les rapports de fin de prestation.",
+     "clause": "Référentiel LNE SSP rév. 8, § IV.2",
+     "niveau": "obligatoire",
+     "motifs": [
+      "lne ?ssp|lne sites et sols pollues|certifi\\w* (de service )?lne|certification lne|lne\\b.{0,40}(sites et sols|ssp)"
+     ],
+     "tous": false,
+     "aide": "Le logo étant une image, vérifier visuellement la page de garde ; respecter la charte graphique publiée par le LNE."
+    },
+    {
+     "id": "lne-m-domaine",
+     "groupe": "Usage de la marque",
+     "intitule": "Domaine(s) certifié(s) indiqué(s) avec la marque",
+     "exigence": "Toute référence à la certification reprend au minimum la marque LNE SSP selon le ou les domaines certifiés (A, B, C).",
+     "clause": "Référentiel LNE SSP rév. 8, § IV.3",
+     "niveau": "obligatoire",
+     "motifs": [
+      "lne",
+      "domaines? (a|b|c)\\b|etudes, assistance (et )?controle|ingenierie des travaux|execution des travaux"
+     ],
+     "tous": true,
+     "aide": "Accompagner la marque du domaine certifié, ex. « Domaine A : Études, assistance et contrôle »."
+    },
+    {
+     "id": "lne-m-coherence",
+     "groupe": "Usage de la marque",
+     "intitule": "Mention de certification cohérente avec le certificat (n°, validité)",
+     "exigence": "Les déclarations sur la certification doivent être cohérentes avec le certificat émis (titulaire, établissements, portée, validité).",
+     "clause": "Référentiel LNE SSP rév. 8, § IV.1",
+     "niveau": "attendu",
+     "motifs": [
+      "certificat (lne )?(n.|numero)|n. (de )?certificat|certificat\\s*:?\\s*[a-z]*\\s*\\d{3,}"
+     ],
+     "tous": false,
+     "aide": "Le n° de certificat n'est pas exigé par le référentiel mais facilite le contrôle ; vérifier sur lne.fr la validité et la portée."
+    },
+    {
+     "id": "lne-m-etab",
+     "groupe": "Périmètre",
+     "intitule": "Établissement émetteur inclus dans le périmètre certifié",
+     "exigence": "La communication ne doit pas être ambiguë sur l'entreprise et les établissements certifiés ; aucune adresse d'établissement hors certificat sur les documents.",
+     "clause": "Référentiel LNE SSP rév. 8, § IV.1 et § IV.2 (cas 3)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "siret|adresse|agence|etablissement"
+     ],
+     "tous": false,
+     "aide": "Comparer l'adresse/SIRET figurant sur l'offre ou le rapport à la liste des établissements du certificat."
+    },
+    {
+     "id": "lne-m-perimetre",
+     "groupe": "Périmètre",
+     "intitule": "Périmètre certifié explicite si des établissements sont exclus",
+     "exigence": "Si des établissements sont exclus, la communication porte exclusivement sur le périmètre certifié et le mentionne explicitement.",
+     "clause": "Référentiel LNE SSP rév. 8, § IV.2 (cas 3) et § IV.3",
+     "niveau": "attendu",
+     "motifs": [
+      "perimetre (de (la )?certification|certifie)|etablissements? (certifies|couverts)|couvert\\w* par la certification"
+     ],
+     "tous": false,
+     "aide": "Ne s'applique qu'aux entreprises multi-établissements avec exclusions ; citer les établissements couverts."
+    },
+    {
+     "id": "lne-m-hors-domaine",
+     "groupe": "Prestations hors certification",
+     "intitule": "Offre multi-domaines : prestations non couvertes signalées",
+     "exigence": "Une offre couvrant un domaine non certifié doit indiquer que seules les prestations du domaine certifié relèvent de la certification LNE SSP.",
+     "clause": "Référentiel LNE SSP rév. 8, § IV.2 (cas 2)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "seules? les prestations (du|des) domaines?|ne (sont|relevent) pas (couvertes|de la certification)|hors (du )?(perimetre de )?(la )?certification|non couvertes? par la certification"
+     ],
+     "tous": false,
+     "aide": "Insérer la mention-type du § IV.2 adaptée (ex. domaine A certifié, B non couvert) ; conditionnel."
+    },
+    {
+     "id": "lne-m-attes",
+     "groupe": "Prestations hors certification",
+     "intitule": "ATTES (domaine D) présentée hors marque LNE SSP",
+     "exigence": "La certification LNE SSP ne couvre pas la partie 5 (attestations ATTES), relevant de la seule certification réglementaire (arrêté du 9 février 2022).",
+     "clause": "Référentiel LNE SSP rév. 8, § I.1 et § I.4",
+     "niveau": "attendu",
+     "motifs": [
+      "certification (reglementaire|ministerielle)|arrete du 9 fevrier 2022|l\\.? ?556-[12]"
+     ],
+     "tous": false,
+     "aide": "Pour un livrable ATTES, ne pas utiliser la marque LNE SSP comme justification ; citer la certification réglementaire."
+    },
+    {
+     "id": "lne-m-certif-complet",
+     "groupe": "Usage de la marque",
+     "intitule": "Certificat reproduit intégralement s'il est joint",
+     "exigence": "Un certificat fourni à un tiers doit être reproduit en totalité, annexes comprises.",
+     "clause": "Référentiel LNE SSP rév. 8, § IV.1",
+     "niveau": "attendu",
+     "motifs": [
+      "certificat.{0,60}(annexe|joint|ci-joint)|annexe.{0,60}certificat"
+     ],
+     "tous": false,
+     "aide": "Si le certificat est annexé à l'offre, joindre toutes ses pages et annexes (portée, établissements)."
+    }
+   ]
+  }
+ ]
+}

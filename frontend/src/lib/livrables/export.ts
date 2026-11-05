@@ -26,6 +26,10 @@ export interface RapportVerification {
 }
 
 function lien(ws: Worksheet, r: number, c: number, s: Source) {
+  if (!s.url) {
+    ecrire(ws, r, c, s.libelle, { taille: 8, wrap: true })
+    return
+  }
   const cell = ecrire(ws, r, c, s.libelle, { taille: 8, wrap: true, couleur: 'FF1F4E79', souligne: true })
   cell.value = { text: s.libelle, hyperlink: s.url }
 }
@@ -93,7 +97,7 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
     // One source per line in the last column; the first as a link.
     const [premiere, ...autres] = x.point.sources
     if (premiere) lien(ws, r, 12, premiere)
-    if (autres.length) ws.getCell(r, 12).note = autres.map((s) => `${s.libelle} : ${s.url}`).join('\n')
+    if (autres.length) ws.getCell(r, 12).note = autres.map((s) => (s.url ? `${s.libelle} : ${s.url}` : s.libelle)).join('\n')
     r++
   }
   r++
@@ -105,10 +109,14 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
   wsS.getColumn(2).width = 90
   ecrire(wsS, 1, 1, 'Sources officielles citées', { gras: true, taille: 12, bord: false })
   const vues = new Map<string, Source>()
-  for (const s of [...rp.referentiel.cadre, ...rp.resultats.flatMap((x) => x.point.sources)]) vues.set(s.url, s)
+  for (const s of [...rp.referentiel.cadre, ...rp.resultats.flatMap((x) => x.point.sources)]) vues.set(s.url || s.libelle, s)
   let k = 3
   for (const s of vues.values()) {
     ecrire(wsS, k, 1, s.libelle, { taille: 9 })
+    if (!s.url) {
+      ecrire(wsS, k++, 2, 'Pas de page publique (norme AFNOR)', { taille: 9, italique: true })
+      continue
+    }
     const c = ecrire(wsS, k++, 2, s.url, { taille: 9, couleur: 'FF1F4E79', souligne: true })
     c.value = { text: s.url, hyperlink: s.url }
   }

@@ -1,0 +1,3098 @@
+{
+ "referentiels": [
+  {
+   "id": "nf3-PCT",
+   "titre": "Plan de conception des travaux (PCT)",
+   "description": "Rapport de conception des travaux : essais B111/B112, conclusions et mise à jour du PG (le contenu de l’avant-projet est dans nf3-B120).",
+   "points": [
+    {
+     "id": "pct-resumes",
+     "groupe": "Présentation",
+     "intitule": "Résumé technique et résumé non technique",
+     "exigence": "Le livrable PCT comporte un résumé technique et un résumé non technique.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "resume technique",
+      "resume non[- ]technique"
+     ],
+     "tous": true,
+     "aide": "Deux résumés distincts sont attendus : l’un pour les techniciens, l’autre pour un public non spécialiste."
+    },
+    {
+     "id": "pct-contexte",
+     "groupe": "Présentation",
+     "intitule": "Rappel du contexte : objectifs et périmètre du PCT",
+     "exigence": "Rappel du contexte de la prestation PCT : objectifs poursuivis, périmètre étudié, etc.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "contexte",
+      "objectifs?",
+      "perimetre|emprise|zones? (a traiter|de travaux|sources?)"
+     ],
+     "tous": true,
+     "aide": "Rappeler pourquoi le PCT est mené, sur quelles zones sources et dans quel cadre (projet, cessation, etc.)."
+    },
+    {
+     "id": "pct-synthese-pg",
+     "groupe": "Présentation",
+     "intitule": "Synthèse détaillée du plan de gestion (PCT dissocié du PG)",
+     "exigence": "Si le PCT est dissocié du PG, le livrable reprend une synthèse détaillée du plan de gestion, prérequis du PCT.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "attendu",
+     "motifs": [
+      "synthese",
+      "plan de gestion|\\bpg\\b"
+     ],
+     "tous": true,
+     "aide": "Si PG et PCT sont concomitants, le PCT est un chapitre du rapport PG et cette synthèse n’est pas requise."
+    },
+    {
+     "id": "pct-essais",
+     "groupe": "Essais",
+     "intitule": "Essais de laboratoire (B111) et/ou de terrain (B112) réalisés",
+     "exigence": "Le PCT comprend au moins des essais en laboratoire ou des essais de terrain, l’avant-projet ne pouvant être réalisé seul.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "essais? (en |de )?(laboratoire|terrain|traitabilite|pilote)|\\bb11[12]\\b|tests? de (traitabilite|biodegradabilite|lavage|stabilisation|lixiviation)|essai de (pompage|venting)|pilote"
+     ],
+     "tous": false,
+     "aide": "Un PCT sans essai ne respecte pas la composition : la prestation B120 doit être associée à B111 ou B112."
+    },
+    {
+     "id": "pct-faisabilite",
+     "groupe": "Conclusions",
+     "intitule": "Faisabilité des scénarios et des objectifs de dépollution du PG",
+     "exigence": "Conclusions sur la faisabilité des scénarios étudiés et sur l’atteinte des objectifs de dépollution définis dans le PG.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "faisabilite",
+      "objectifs? de (depollution|rehabilitation|traitement)"
+     ],
+     "tous": true,
+     "aide": "Conclure scénario par scénario et rappeler les objectifs de dépollution du PG."
+    },
+    {
+     "id": "pct-ap",
+     "groupe": "Conclusions",
+     "intitule": "Avant-projet (B120) pour les solutions retenues après essais",
+     "exigence": "Le PCT inclut les études d’avant-projet (B120) pour les solutions retenues à l’issue des essais.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "avant[- ]projet|\\bb120\\b"
+     ],
+     "tous": false,
+     "aide": "Le contenu de l’avant-projet est contrôlé par le référentiel nf3-B120."
+    },
+    {
+     "id": "pct-incertitudes",
+     "groupe": "Conclusions",
+     "intitule": "Incertitudes techniques et financières de la solution retenue",
+     "exigence": "Description des incertitudes attachées à la solution retenue, notamment sur les plans technique et financier.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "incertitudes?",
+      "financi|couts?|budget"
+     ],
+     "tous": true,
+     "aide": "Chiffrer si possible la marge d’incertitude sur volumes, durée et coût."
+    },
+    {
+     "id": "pct-maj-pg",
+     "groupe": "Conclusions",
+     "intitule": "Mise à jour du PG, notamment du bilan coûts/avantages",
+     "exigence": "Éléments de mise à jour du PG, notamment du bilan coûts/avantages et, si nécessaire, des objectifs de dépollution.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bilan (des )?couts?[ /-]*(avantages?|benefices?)|analyse couts?[ /-]*(avantages?|benefices?)|mise a jour du (plan de gestion|pg)|actualisation du (plan de gestion|pg)"
+     ],
+     "tous": false,
+     "aide": "Reprendre le bilan coûts/avantages du PG avec les données issues des essais."
+    },
+    {
+     "id": "pct-objectifs-sanitaires",
+     "groupe": "Conclusions",
+     "intitule": "Objectifs de dépollution révisés restant valides sur le plan sanitaire",
+     "exigence": "Si les objectifs de dépollution sont révisés, ils doivent rester valides d’un point de vue sanitaire.",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "attendu",
+     "motifs": [
+      "objectifs? de depollution",
+      "sanitaires?|risques? residuels?|\\beqrs\\b|analyse des risques"
+     ],
+     "tous": true,
+     "aide": "Justifier la validité sanitaire (ARR, EQRS) de tout objectif modifié."
+    },
+    {
+     "id": "pct-preco-suivi",
+     "groupe": "Conclusions",
+     "intitule": "Préconisations d’ajustement des prestations CONT, SUIVI et A400",
+     "exigence": "Le cas échéant, préconisations sur l’ajustement des prestations de contrôle, de suivi et de servitudes (CONT, SUIVI, A400).",
+     "clause": "NF X31-620-3, § 6.3 (PCT)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\ba400\\b|\\bcont\\b|programme de (suivi|surveillance|controle)|plan de (controle|surveillance)|servitudes?|restrictions? d.usage"
+     ],
+     "tous": false,
+     "aide": "Indiquer si les essais modifient le programme de contrôle des travaux, de surveillance ou les restrictions d’usage."
+    },
+    {
+     "id": "essai-objectifs",
+     "groupe": "Essais (B111/B112)",
+     "intitule": "Objectifs de l’essai ou de l’acquisition de données",
+     "exigence": "Présentation des objectifs de l’essai (laboratoire ou terrain) ou de l’acquisition de données de dimensionnement.",
+     "clause": "NF X31-620-3, § 6.3 (B111, B112)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "objectifs? (de l.|des |du |de ces )?(essais?|tests?|pilote|campagne)"
+     ],
+     "tous": false,
+     "aide": "Pour B112, relier les objectifs aux résultats des essais en laboratoire le cas échéant."
+    },
+    {
+     "id": "essai-methodes",
+     "groupe": "Essais (B111/B112)",
+     "intitule": "Matériels et méthodes, y compris réactifs testés",
+     "exigence": "Description des matériels et méthodes employés, avec identification des réactifs testés.",
+     "clause": "NF X31-620-3, § 6.3 (B111, B112)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "materiels? et methodes?|methodologie|dispositif experimental|materiel (utilise|mis en (?:oe|œ)uvre)"
+     ],
+     "tous": false,
+     "aide": "Préciser les réactifs (nature, fournisseur, dosage) testés."
+    },
+    {
+     "id": "essai-mode-operatoire",
+     "groupe": "Essais (B111/B112)",
+     "intitule": "Mode opératoire précis et détaillé de l’essai",
+     "exigence": "Descriptif précis et détaillé du mode opératoire mis en œuvre pour l’essai.",
+     "clause": "NF X31-620-3, § 6.3 (B111, B112)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "mode operatoire|protocole (d.essai|operatoire|experimental|de test)"
+     ],
+     "tous": false,
+     "aide": "Le mode opératoire doit permettre de reproduire l’essai."
+    },
+    {
+     "id": "essai-resultats-biais",
+     "groupe": "Essais (B111/B112)",
+     "intitule": "Résultats, mécanismes en jeu, interférences et biais",
+     "exigence": "Résultats des essais avec mécanismes identifiés et interférences ou biais expérimentaux ou de mise en œuvre.",
+     "clause": "NF X31-620-3, § 6.3 (B111, B112)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "resultats? (des |de l.|du )?(essais?|tests?|pilote)",
+      "biais|interferences?|limites?|artefacts?"
+     ],
+     "tous": true,
+     "aide": "Discuter explicitement les biais (témoins, pertes par volatilisation, effet d’échelle, etc.)."
+    },
+    {
+     "id": "essai-interpretation",
+     "groupe": "Essais (B111/B112)",
+     "intitule": "Interprétation des résultats tenant compte du retour d’expérience",
+     "exigence": "Interprétation des résultats d’essais, en tenant compte notamment du retour d’expérience.",
+     "clause": "NF X31-620-3, § 6.3 (B111, B112)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "interpretation",
+      "retour d.experience|\\brex\\b|litterature|bibliograph|chantiers? (similaires|comparables)"
+     ],
+     "tous": true,
+     "aide": "Comparer aux performances observées sur des chantiers ou essais comparables."
+    },
+    {
+     "id": "essai-conclusion",
+     "groupe": "Essais (B111/B112)",
+     "intitule": "Conclusion sur la faisabilité technique du traitement",
+     "exigence": "Conclusions quant à la faisabilité technique du traitement testé.",
+     "clause": "NF X31-620-3, § 6.3 (B111, B112)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "faisabilite technique|traitabilite|(technique|traitement|procede) (est |apparait |s.avere )?(faisable|realisable|efficace|adapte)"
+     ],
+     "tous": false,
+     "aide": "Conclure clairement : faisable, faisable sous conditions ou non faisable."
+    },
+    {
+     "id": "essai-preconisations",
+     "groupe": "Essais (B111/B112)",
+     "intitule": "Préconisations de mise en œuvre de la technique testée",
+     "exigence": "Préconisations quant à la mise en œuvre de la technique testée.",
+     "clause": "NF X31-620-3, § 6.3 (B111, B112)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "preconisations?|recommandations?",
+      "mise en (?:oe|œ)uvre|dimensionnement"
+     ],
+     "tous": true,
+     "aide": "Donner les paramètres de dimensionnement à reprendre dans l’avant-projet."
+    },
+    {
+     "id": "essai-labo-terrain",
+     "groupe": "Essais (B111/B112)",
+     "intitule": "Mise en perspective des résultats laboratoire et terrain",
+     "exigence": "Pour un essai de terrain, mise en perspective le cas échéant de ses résultats avec ceux des essais en laboratoire.",
+     "clause": "NF X31-620-3, § 6.3 (B112)",
+     "niveau": "attendu",
+     "motifs": [
+      "laboratoire",
+      "terrain|pilote|sur site|in situ"
+     ],
+     "tous": true,
+     "aide": "Uniquement si des essais de laboratoire ont précédé l’essai de terrain.",
+     "siConcerne": {
+      "motif": "essais? (de terrain|pilote|in situ)|\\bb112\\b|essai de (pompage|venting)",
+      "libelle": "un essai de terrain"
+     }
+    }
+   ]
+  },
+  {
+   "id": "nf3-B120",
+   "titre": "Études d’avant-projet (B120)",
+   "description": "Rapport d’avant-projet, livré seul ou au sein d’un PCT ou d’une MOE.",
+   "points": [
+    {
+     "id": "ap-donnees",
+     "groupe": "Données",
+     "intitule": "Interprétation actualisée des données et essais antérieurs",
+     "exigence": "Interprétation détaillée et actualisée de toutes les données disponibles, avec le cas échéant les résultats des essais antérieurs.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "donnees (disponibles|existantes|acquises|anterieures)|synthese des (donnees|etudes|investigations)|essais? (anterieurs|realises|de traitabilite)"
+     ],
+     "tous": false,
+     "aide": "Citer les études et essais exploités (références, dates)."
+    },
+    {
+     "id": "ap-solutions",
+     "groupe": "Solutions",
+     "intitule": "Description de chaque solution : principe, coûts, délais, incertitudes",
+     "exigence": "Description détaillée de chaque solution étudiée : principes, coûts, délais, incertitudes, nuisances, etc.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "solutions?|variantes?|scenarios?",
+      "couts?|budget",
+      "delais?|duree|planning"
+     ],
+     "tous": true,
+     "aide": "Présenter les solutions sous une forme comparable (tableau multicritère par exemple)."
+    },
+    {
+     "id": "ap-principe",
+     "groupe": "Solutions",
+     "intitule": "Principe de la technologie, faisabilité et performances attendues",
+     "exigence": "Description du principe de la technologie proposée, des conditions de faisabilité et estimation des performances attendues.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "principe",
+      "performances?|rendement|efficacite|abattement"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "ap-dimensionnement",
+     "groupe": "Dimensionnement",
+     "intitule": "Éléments de dimensionnement (délimitation, bilan massique, milieu)",
+     "exigence": "Éléments de dimensionnement : délimitation de la pollution pour fiabiliser le bilan massique, influence du milieu, caractéristiques des polluants.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "dimensionnement",
+      "volumes?|tonnages?|masse|bilan massique|delimitation"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "ap-flux",
+     "groupe": "Dimensionnement",
+     "intitule": "Schéma des flux et/ou bilan matière",
+     "exigence": "Le livrable présente un schéma des flux et/ou un bilan de matière.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "schema (des |de )?flux|bilan (matiere|massique|de masse|des masses)|synoptique"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "ap-connexes",
+     "groupe": "Contraintes",
+     "intitule": "Éléments connexes : géotechnique, utilités, accès, espace, co-activité",
+     "exigence": "Éléments connexes influant sur la faisabilité technique et financière : géotechnique, utilités, accès, espace, co-activité, voisinage.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "geotechni|utilites|acces (au )?(chantier|site)|co-?activite|voisinage|riverains"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "ap-autres-pb",
+     "groupe": "Contraintes",
+     "intitule": "Problématiques amiante, pyrotechnie, radiologie et impact sur le chantier",
+     "exigence": "Prise en compte des autres problématiques (amiante, pyrotechnie, radiologie, etc.) et de leurs impacts possibles sur le chantier.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "amiante|pyrotechni|radiolog|radioacti|munitions?"
+     ],
+     "tous": false,
+     "aide": "Indiquer explicitement l’absence de ces problématiques si elles ne se posent pas."
+    },
+    {
+     "id": "ap-plan-chantier",
+     "groupe": "Organisation",
+     "intitule": "Plan prévisionnel d’aménagement du chantier",
+     "exigence": "Plan prévisionnel d’aménagement du chantier : installations et ouvrages de traitement, zones de terrassement ou remblais, points de rejet.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "plan (previsionnel )?(d.)?(installation|amenagement)s? (de|du) chantier|installations? de chantier|implantation (previsionnelle )?des (installations|ouvrages|unites)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "ap-emissions",
+     "groupe": "Organisation",
+     "intitule": "Émissions et nuisances sur et hors site, principes de gestion",
+     "exigence": "Évaluation des émissions et nuisances (rejets, déchets, odeurs, poussières, bruit, vibrations) sur et hors site, et principes de gestion.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "nuisances?|emissions?",
+      "odeurs?|poussieres?|bruit|vibrations?|rejets?"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "ap-aleas",
+     "groupe": "Risques",
+     "intitule": "Analyse des aléas réglementaires, techniques, sociétaux, environnementaux",
+     "exigence": "Analyse des aléas réglementaires, techniques, sociétaux et environnementaux.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "aleas?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "ap-budget",
+     "groupe": "Coûts et délais",
+     "intitule": "Budget actualisé intégrant incertitudes et aléas",
+     "exigence": "Budget des travaux actualisé pour la technique retenue, intégrant incertitudes et aléas.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "budget|estimation (financiere|des couts)|couts? (estimes?|previsionnels?|globa(l|ux))|chiffrage|€|euros? ht",
+      "aleas?|incertitudes?|provisions?|fourchette"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "ap-phasage",
+     "groupe": "Coûts et délais",
+     "intitule": "Description sommaire des travaux par phase et durée prévisionnelle",
+     "exigence": "Description sommaire des travaux par phase avec leur durée prévisionnelle.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "phas(e|es|age)",
+      "duree|delais?|planning|semaines?|mois"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "ap-hse",
+     "groupe": "Organisation",
+     "intitule": "Préconisations d’organisation, HSE et encadrement des travaux",
+     "exigence": "Préconisations sur l’organisation, le volet hygiène sécurité environnement et l’encadrement des travaux.",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "\\bhse\\b|hygiene,? (et )?securite|securite (des travailleurs|du chantier)|protection des travailleurs|ed ?866"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "ap-autorisations",
+     "groupe": "Réglementaire",
+     "intitule": "Liste des autorisations administratives nécessaires",
+     "exigence": "Liste des autorisations administratives nécessaires (leur établissement relève de B200).",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "autorisations? (administratives?|prefectorales?|de rejet)|procedures? administratives?|declaration loi sur l.eau|dossier (icpe|iota|administratif)|convention de rejet|regime (d.autorisation|de declaration|d.enregistrement)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "ap-complements",
+     "groupe": "Suite",
+     "intitule": "Investigations et études complémentaires pour le stade projet",
+     "exigence": "Liste des investigations et études complémentaires nécessaires pour passer au stade projet (B130).",
+     "clause": "NF X31-620-3, § 6.3 (B120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(investigations?|etudes?|reconnaissances?|essais?) complementaires?"
+     ],
+     "tous": false,
+     "aide": "Indiquer « aucune » si l’avant-projet suffit, plutôt que de passer le point sous silence."
+    }
+   ]
+  },
+  {
+   "id": "nf3-B130",
+   "titre": "Études de projet (B130)",
+   "description": "Rapport de projet (MOE, ou offre en conception-réalisation).",
+   "points": [
+    {
+     "id": "pro-contraintes",
+     "groupe": "Conception",
+     "intitule": "Énumération et description des contraintes du projet",
+     "exigence": "Énumération et description des contraintes conditionnant le projet.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "contraintes?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-principe",
+     "groupe": "Conception",
+     "intitule": "Principe de la technologie proposée",
+     "exigence": "Description du principe de la technologie proposée.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "principe (de la |du |des )?(technique|technologie|procede|traitement)|principe de fonctionnement"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-notes-calcul",
+     "groupe": "Dimensionnement",
+     "intitule": "Notes de calcul détaillées de dimensionnement des ouvrages",
+     "exigence": "Notes de calcul détaillées du dimensionnement des ouvrages.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "notes? de calculs?|calculs? de dimensionnement"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-terrassement",
+     "groupe": "Dimensionnement",
+     "intitule": "Notes de calcul des terrassements (talutage, confortement)",
+     "exigence": "Le cas échéant, notes de calcul des conditions de terrassement (talutage, confortement, etc.).",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "attendu",
+     "motifs": [
+      "talus|talutage|soutenement|blindage|confortement|stabilite des (fouilles|talus|parois)"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "excavation|terrassement|fouilles?|deblais",
+      "libelle": "des terrassements"
+     }
+    },
+    {
+     "id": "pro-plans-implantation",
+     "groupe": "Plans",
+     "intitule": "Plans d’implantation des ouvrages",
+     "exigence": "Plans d’implantation des ouvrages.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "plans? d.implantation|implantation des ouvrages"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-plans-echelle",
+     "groupe": "Plans",
+     "intitule": "Plans à l’échelle des ouvrages",
+     "exigence": "Plans des ouvrages établis à l’échelle.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "echelle|\\b1 ?\\/ ?[1-9][0-9]{1,4}\\b|plans? (de detail|cotes?|d.ouvrages?)"
+     ],
+     "tous": false,
+     "aide": "Vérifier la présence d’une échelle graphique ou numérique sur les plans."
+    },
+    {
+     "id": "pro-schemas",
+     "groupe": "Plans",
+     "intitule": "Schémas fonctionnels",
+     "exigence": "Schémas fonctionnels de l’installation.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "schemas? (fonctionnels?|de principe|de procede|p&id)|synoptique|\\bpid\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-specifications",
+     "groupe": "Dimensionnement",
+     "intitule": "Spécifications techniques des matériels, équipements, fournitures",
+     "exigence": "Spécifications techniques détaillées des matériels, équipements et fournitures.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "specifications? techniques?|caracteristiques? (techniques? )?des (materiels|equipements|fournitures)|fiches? techniques?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-deroulement",
+     "groupe": "Organisation",
+     "intitule": "Déroulement des travaux et phasage",
+     "exigence": "Description du déroulement des travaux et du phasage éventuel du projet.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "deroulement|phasage|sequencement|enchainement des (taches|phases)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-flux",
+     "groupe": "Dimensionnement",
+     "intitule": "Schéma des flux et/ou bilan massique",
+     "exigence": "Schéma des flux et/ou bilan massique de la solution retenue.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "schema (des |de )?flux|bilan (matiere|massique|de masse|des masses)|synoptique"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-emissions",
+     "groupe": "Exigences",
+     "intitule": "Contraintes sur les émissions (rejets, déchets, odeurs, bruit)",
+     "exigence": "Contraintes fixées sur les émissions : rejets liquides et gazeux, déchets, odeurs, bruit, etc.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "rejets?|emissions?",
+      "seuils?|valeurs? limites?|normes? de rejet|contraintes?|\\bvle\\b"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "pro-performances",
+     "groupe": "Exigences",
+     "intitule": "Performances attendues et protocoles de contrôle",
+     "exigence": "Performances attendues de la solution et protocoles de contrôle associés.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "performances? (attendues?|visees?|garanties?)|objectifs? de (depollution|traitement|rehabilitation)",
+      "controles?|reception"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "pro-sante",
+     "groupe": "Exigences",
+     "intitule": "Protocoles de contrôle santé et sécurité (salariés, riverains)",
+     "exigence": "Les protocoles de contrôle couvrent la santé et la sécurité des personnes, salariés comme riverains.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(sante|securite) des (personnes|travailleurs|salaries|riverains)|riverains|surveillance (atmospherique|de l.air|des emissions)|exposition"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-planning",
+     "groupe": "Coûts et délais",
+     "intitule": "Planning prévisionnel de réalisation",
+     "exigence": "Planning prévisionnel de réalisation des travaux.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "planning|calendrier (previsionnel|d.execution)|gantt"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "pro-couts",
+     "groupe": "Coûts et délais",
+     "intitule": "Détail des coûts directs et indirects avec incertitudes et aléas",
+     "exigence": "Détail des coûts directs et indirects, en intégrant incertitudes et aléas.",
+     "clause": "NF X31-620-3, § 6.3 (B130)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "couts? (directs?|indirects?)|detail (estimatif|des couts)|estimation (detaillee )?des couts|devis estimatif|\\bdqe\\b|bordereau",
+      "aleas?|incertitudes?|provisions?"
+     ],
+     "tous": true,
+     "aide": ""
+    }
+   ]
+  },
+  {
+   "id": "nf3-MOE-B310",
+   "titre": "MOE – Assistance aux contrats de travaux (B310)",
+   "description": "Dossier de consultation des entreprises et rapport d’analyse des offres.",
+   "points": [
+    {
+     "id": "dce-allotissement",
+     "groupe": "Préparation",
+     "intitule": "Proposition d’allotissement ou de phasage des travaux",
+     "exigence": "Proposition d’allotissement ou de phasage des travaux.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "allotissement|\\blots?\\b|phasage|tranches? (ferme|optionnelle|conditionnelle)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "dce-reception",
+     "groupe": "Préparation",
+     "intitule": "Protocole de réception des travaux défini",
+     "exigence": "Définition du protocole de réception des travaux.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(protocole|modalites|criteres|procedure)s? de reception|reception des (travaux|fonds de fouilles?)|essais de reception"
+     ],
+     "tous": false,
+     "aide": "Fixer dans le DCE les contrôles, seuils et maillage qui fondent la réception."
+    },
+    {
+     "id": "dce-cctp",
+     "groupe": "DCE",
+     "intitule": "Cahier des charges technique (pièce technique du DCE)",
+     "exigence": "Pièces techniques du dossier de consultation, notamment le cahier des charges.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "cahier des (charges|clauses techniques)|\\bcctp\\b|\\bcct\\b|specifications? techniques?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "dce-bpu",
+     "groupe": "DCE",
+     "intitule": "Bordereau de prix (pièce financière du DCE)",
+     "exigence": "Pièces financières du dossier de consultation, notamment le bordereau de prix.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bordereau (des |de )?prix|\\bbpu\\b|\\bdpgf\\b|\\bdqe\\b|detail quantitatif|decomposition du prix"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "dce-criteres",
+     "groupe": "DCE",
+     "intitule": "Critères de sélection des candidats et pondérations",
+     "exigence": "Critères de sélection des prestataires candidats avec leurs pondérations.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "criteres? (de selection|de jugement|d.attribution|d.analyse|de notation)",
+      "ponderations?|\\d{1,3} ?%|coefficients?|\\bpoints\\b"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "dce-coherence",
+     "groupe": "DCE",
+     "intitule": "Cohérence des pièces du DCE, y compris administratives",
+     "exigence": "Le cas échéant, vérification de la cohérence de l’ensemble des pièces du DCE, y compris administratives.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bccap\\b|reglement de (la )?consultation|acte d.engagement|pieces administratives"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "dce-notice-hs",
+     "groupe": "Sécurité",
+     "intitule": "Notice d’hygiène et de sécurité en l’absence de PGCSPS",
+     "exigence": "En l’absence de plan général de coordination, établissement d’une notice d’hygiène et de sécurité.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bpgc(sps)?\\b|plan general de coordination|notice (d.)?hygiene et (de )?securite"
+     ],
+     "tous": false,
+     "aide": "Citer le PGCSPS s’il existe, sinon fournir la notice."
+    },
+    {
+     "id": "dce-visite",
+     "groupe": "Consultation",
+     "intitule": "Attestation de visite de site des candidats",
+     "exigence": "Le cas échéant, accompagnement des candidats lors d’une visite de site et établissement d’une attestation de visite.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "attendu",
+     "motifs": [
+      "attestation de visite|visite (de site|sur site|obligatoire|prealable)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "dce-analyse-candidatures",
+     "groupe": "Analyse",
+     "intitule": "Analyse détaillée et argumentée des candidatures",
+     "exigence": "Analyse détaillée et argumentée des candidatures des prestataires.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "analyse des candidatures|candidatures?|capacites? (techniques?|professionnelles?|financieres?)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "dce-analyse-offres",
+     "groupe": "Analyse",
+     "intitule": "Analyse comparative des offres au regard des critères",
+     "exigence": "Analyse comparative, détaillée et argumentée des offres au regard des critères de sélection.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "analyse (comparative )?des offres|rapport d.analyse des offres|tableau comparatif|comparaison des offres"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "dce-proposition",
+     "groupe": "Analyse",
+     "intitule": "Proposition d’un prestataire au donneur d’ordre",
+     "exigence": "L’analyse des offres aboutit à la proposition d’un prestataire au donneur d’ordre.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(propos|recommand)\\w* (de retenir|d.attribuer|l.attribution)|offre (la mieux classee|economiquement la plus avantageuse)|mieux[- ]disant|classement (des offres|final)|attributaire"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "dce-mise-au-point",
+     "groupe": "Analyse",
+     "intitule": "Assistance aux négociations et à la mise au point des contrats",
+     "exigence": "Assistance du donneur d’ordre pour les négociations éventuelles et la mise au point des contrats.",
+     "clause": "NF X31-620-3, § 6.3 (B310)",
+     "niveau": "attendu",
+     "motifs": [
+      "negociations?|mise au point (du|des) (marche|contrat)s?"
+     ],
+     "tous": false,
+     "aide": ""
+    }
+   ]
+  },
+  {
+   "id": "nf3-MOE-B320",
+   "titre": "MOE – Direction de l’exécution des travaux (B320)",
+   "description": "Comptes rendus, procès-verbaux, rapports de contrôle et rapport de mission de suivi des travaux.",
+   "points": [
+    {
+     "id": "det-execution",
+     "groupe": "Contrôle technique",
+     "intitule": "Examen de conformité des études d’exécution",
+     "exigence": "Examen de la conformité des études d’exécution remises par l’entreprise de travaux.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "etudes? d.execution|plans? d.execution|\\bvisas?\\b|avis sur (les )?documents"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "det-presence",
+     "groupe": "Suivi",
+     "intitule": "Présence régulière du maître d’œuvre sur le chantier",
+     "exigence": "Présence régulière et suffisante du prestataire sur le chantier.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "attendu",
+     "motifs": [
+      "visites? (de|du|sur) chantier|presence (sur|au) chantier|suivi (de|du) chantier"
+     ],
+     "tous": false,
+     "aide": "Dates et fréquence des visites dans les comptes rendus ou le rapport de mission."
+    },
+    {
+     "id": "det-reunions",
+     "groupe": "Suivi",
+     "intitule": "Réunions de chantier et comptes rendus détaillés",
+     "exigence": "Organisation des réunions de chantier et rédaction de comptes rendus détaillés.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "comptes? rendus? (de |des )?(reunions?|chantier)|reunions? de chantier"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "det-hs",
+     "groupe": "Sécurité",
+     "intitule": "Contrôle des règles d’hygiène et sécurité en l’absence de CSPS",
+     "exigence": "En l’absence de coordinateur santé sécurité, contrôle du respect des règles d’hygiène et de sécurité.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bcsps\\b|coordonn?ateur (sps|securite)|hygiene et (de )?securite|\\bppsps\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "det-pv-os",
+     "groupe": "Administratif",
+     "intitule": "Procès-verbaux et ordres de service",
+     "exigence": "Rédaction des procès-verbaux, ordres de service et comptes rendus nécessaires.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "ordres? de service|proces[- ]verba(l|ux)|\\bpv\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "det-controles",
+     "groupe": "Contrôle technique",
+     "intitule": "Examen des contrôles, identification et suivi des écarts",
+     "exigence": "Examen des contrôles internes et externes de l’entreprise, identification des écarts et suivi de leur traitement.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "controles? (internes?|externes?|contradictoires?)|autocontroles?",
+      "ecarts?|non[- ]conformites?"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "det-dechets",
+     "groupe": "Déchets",
+     "intitule": "Suivi des déchets : BSD visés, certificats d’élimination",
+     "exigence": "Suivi des déchets de chantier : bordereaux de suivi visés, certificats de ferraillage et d’élimination.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bordereaux? de suivi (des )?dechets|\\bbsdd?\\b|trackdechets|certificats? d.(elimination|acceptation|ferraillage)"
+     ],
+     "tous": false,
+     "aide": "L’émission des BSD par le maître d’œuvre suppose une délégation du maître d’ouvrage."
+    },
+    {
+     "id": "det-acceptabilite",
+     "groupe": "Déchets",
+     "intitule": "Vérification de l’acceptabilité des matériaux en filière",
+     "exigence": "Vérification de l’acceptabilité des matériaux dans les filières d’évacuation.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "acceptabilite|acceptation prealable|\\bcap\\b|\\bisd(i|nd|d)\\b|filieres? (d.elimination|de traitement|agreees?|autorisees?)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "det-prelevements",
+     "groupe": "Contrôle technique",
+     "intitule": "Rapports de contrôle avec fiches de prélèvement et analyses",
+     "exigence": "Rapports de contrôles sur chantier comportant fiches de prélèvement et bordereaux d’analyses.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "fiches? de prelevements?",
+      "bulletins? (d.analyses?|analytiques?)|bordereaux? d.analyses?|rapports? d.essais?|certificats? d.analyses?"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "det-situations",
+     "groupe": "Financier",
+     "intitule": "Vérification des situations financières intermédiaires",
+     "exigence": "Vérification des situations financières intermédiaires de l’entreprise ; états des décomptes du projet.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "situations? (de travaux|financieres?|mensuelles?|intermediaires?)|decomptes?|etat d.avancement financier"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "det-information",
+     "groupe": "Suivi",
+     "intitule": "Information et assistance du donneur d’ordre ; rapport de mission",
+     "exigence": "Information et assistance du donneur d’ordre, notamment en cas de litige ; rapport de mission.",
+     "clause": "NF X31-620-3, § 6.3 (B320)",
+     "niveau": "attendu",
+     "motifs": [
+      "rapport de mission|information du (maitre d.ouvrage|donneur d.ordre)|(note|courrier) (au|a l.attention du) (maitre d.ouvrage|donneur d.ordre)"
+     ],
+     "tous": false,
+     "aide": ""
+    }
+   ]
+  },
+  {
+   "id": "nf3-MOE-B330",
+   "titre": "MOE – Assistance aux opérations de réception (B330)",
+   "description": "Dossier de récolement, PV de réception et décompte général définitif.",
+   "points": [
+    {
+     "id": "aor-operations",
+     "groupe": "Réception",
+     "intitule": "Organisation des opérations de réception",
+     "exigence": "Organisation des opérations de réception, y compris les contrôles réalisés pendant les travaux.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "operations? de reception|reception des travaux|\\baor\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "aor-objectifs",
+     "groupe": "Réception",
+     "intitule": "Validation de l’atteinte des objectifs de dépollution",
+     "exigence": "Le livrable valide l’atteinte des objectifs de dépollution tels que prévus au cahier des charges.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "objectifs? de (depollution|rehabilitation|traitement)|seuils? de (reception|depollution)",
+      "atteint|atteinte|respect|conform"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "aor-constat-fin",
+     "groupe": "Réception",
+     "intitule": "Constat de fin de chantier : démobilisation et état du site",
+     "exigence": "Constat de fin de chantier actant la démobilisation des matériels et installations et l’état du site.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "constat de fin de chantier|repli (du|des) (chantier|installations|materiels)|demobilisation|etat (final )?du site"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "aor-reserves",
+     "groupe": "Réception",
+     "intitule": "Réserves et levée des réserves",
+     "exigence": "Le cas échéant, établissement des réserves sur les dispositions non respectées, puis levée de ces réserves.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "attendu",
+     "motifs": [
+      "reserves?"
+     ],
+     "tous": false,
+     "aide": "Mentionner explicitement « sans réserve » ou lister les réserves et leur levée."
+    },
+    {
+     "id": "aor-pv",
+     "groupe": "Réception",
+     "intitule": "Procès-verbaux de réception (et de levée des réserves)",
+     "exigence": "Procès-verbaux de réception des travaux, voire de levée des réserves.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "proces[- ]verba(l|ux) de (reception|levee)|\\bpv\\b de (reception|levee)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "aor-validation-c400",
+     "groupe": "Récolement",
+     "intitule": "Validation du rapport de fin de travaux de l’entreprise (C400)",
+     "exigence": "Validation du rapport de fin de travaux établi par l’entreprise de travaux (C400 de la partie 4).",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "rapport de fin de (travaux|chantier)|\\bc400\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "aor-recolement",
+     "groupe": "Récolement",
+     "intitule": "Dossier de récolement des travaux",
+     "exigence": "Établissement du dossier de récolement des travaux, regroupant toutes les pièces.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "recolement"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "aor-risques-residuels",
+     "groupe": "Récolement",
+     "intitule": "Analyse des risques résiduels de validation des travaux",
+     "exigence": "Le dossier de récolement comprend l’analyse des risques résiduels de validation des travaux (enjeux sanitaires : A320).",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "analyse des risques residuels|\\barr\\b|risques? residuels?|\\ba320\\b"
+     ],
+     "tous": false,
+     "aide": "L’analyse des enjeux sanitaires en fin de travaux relève de la prestation A320 (partie 2)."
+    },
+    {
+     "id": "aor-prelevements",
+     "groupe": "Récolement",
+     "intitule": "Fiches de prélèvement et bordereaux d’analyses de réception",
+     "exigence": "Fiches de prélèvement et bordereaux d’analyses des contrôles de réception.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "fiches? de prelevements?",
+      "bulletins? (d.analyses?|analytiques?)|bordereaux? d.analyses?|rapports? d.essais?|certificats? d.analyses?"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "aor-decompte",
+     "groupe": "Financier",
+     "intitule": "Projet de décompte final vérifié et décompte général définitif",
+     "exigence": "Vérification du projet de décompte final de l’entreprise et élaboration du décompte général définitif.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "decompte (general )?(definitif|final)|\\bdgd\\b|projet de decompte"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "aor-diuo",
+     "groupe": "Récolement",
+     "intitule": "Éléments pour le dossier d’intervention ultérieure (DIUO)",
+     "exigence": "Le cas échéant, éléments destinés au dossier d’intervention ultérieure sur l’ouvrage.",
+     "clause": "NF X31-620-3, § 6.3 (B330)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bdiuo\\b|intervention ulterieure"
+     ],
+     "tous": false,
+     "aide": ""
+    }
+   ]
+  },
+  {
+   "id": "nf4-organisation",
+   "titre": "Organisation du chantier (C110, C120, C130)",
+   "description": "Dossier de préparation du chantier de l’entreprise de travaux (organisation, sécurité, dossiers administratifs).",
+   "points": [
+    {
+     "id": "org-etat-initial",
+     "groupe": "Organisation (C110)",
+     "intitule": "Relevé d’état initial du site",
+     "exigence": "Relevé de l’état initial du site (infrastructures et structures pérennes), éventuellement constat d’huissier.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "etat (des lieux )?initial|etat des lieux|constat d.huissier|commissaire de justice|refere preventif"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-plan-perimetre",
+     "groupe": "Organisation (C110)",
+     "intitule": "Plan du périmètre, des installations de chantier et des accès",
+     "exigence": "Plan du périmètre du chantier, des installations de chantier et des accès.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "perimetre (du )?chantier|emprise (du )?chantier|installations? de chantier|plan d.installation"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-circulation",
+     "groupe": "Organisation (C110)",
+     "intitule": "Plans de circulation, stationnement et zones de stockage",
+     "exigence": "Le cas échéant, plans de circulation, aires de stationnement des engins et véhicules, zones de stockage.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "attendu",
+     "motifs": [
+      "plan de circulation|circulations?|stationnement|zones? de (stockage|transit)|aires? de (stockage|transit)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-implantation",
+     "groupe": "Organisation (C110)",
+     "intitule": "Implantation des ouvrages et installations de traitement",
+     "exigence": "Plan d’implantation des ouvrages (forages, fouilles, réseaux de collecte) et des installations de traitement.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "plans? d.implantation|implantation des (ouvrages|forages|installations|unites)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-ouvrages-restants",
+     "groupe": "Organisation (C110)",
+     "intitule": "Liste des ouvrages restant sur site après travaux",
+     "exigence": "Liste des ouvrages qui resteront sur le site après les travaux.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "ouvrages? (qui )?(restant|resteront|conserves?|laisses?|maintenus?)|(piezometres?|ouvrages?) (a )?(conserver|reboucher|abandonner)"
+     ],
+     "tous": false,
+     "aide": "Indiquer « aucun » le cas échéant."
+    },
+    {
+     "id": "org-gestion-terres",
+     "groupe": "Organisation (C110)",
+     "intitule": "Procédures de gestion des terres",
+     "exigence": "Procédures de gestion des terres (tri, stockage, orientation).",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "gestion des (terres|deblais|materiaux excaves)|tri des terres|stockage des terres|plan de gestion des (terres|deblais)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-autorisations",
+     "groupe": "Organisation (C110)",
+     "intitule": "Autorisations administratives nécessaires identifiées",
+     "exigence": "Identification des autorisations administratives nécessaires à la prestation (voir C130).",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "autorisations? (administratives?|de (rejet|voirie|prelevement))|convention de rejet|arrete (prefectoral|de voirie|municipal)|permis de demol|\\bdict\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-controles",
+     "groupe": "Organisation (C110)",
+     "intitule": "Procédures de contrôle en phase chantier et points d’arrêt",
+     "exigence": "Procédures de contrôle proposées en phase chantier et points d’arrêt.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "points? d.arret|plan de controle|procedures? de controle|\\bpaq\\b|plan d.assurance qualite"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-plans-execution",
+     "groupe": "Organisation (C110)",
+     "intitule": "Plans d’exécution des ouvrages",
+     "exigence": "Plans d’exécution des ouvrages.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "plans? d.execution|plans? de detail"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-dimensionnement",
+     "groupe": "Organisation (C110)",
+     "intitule": "Rappel des résultats de dimensionnement (conception-réalisation)",
+     "exigence": "En contrat de conception-réalisation, rappel des résultats de dimensionnement (le livrable B130 fait partie de l’offre).",
+     "clause": "NF X31-620-4, § 4 et § 6.3.1 (C110)",
+     "niveau": "attendu",
+     "motifs": [
+      "dimensionnement|notes? de calcul"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "conception[- ]realisation",
+      "libelle": "un contrat de conception-réalisation"
+     }
+    },
+    {
+     "id": "org-materiels",
+     "groupe": "Organisation (C110)",
+     "intitule": "Caractéristiques des matériels et fournitures",
+     "exigence": "Caractéristiques des matériels et des fournitures.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "caracteristiques (des )?(materiels|equipements|fournitures)|fiches? techniques?|liste des (materiels|engins|equipements)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-agrements",
+     "groupe": "Organisation (C110)",
+     "intitule": "Demandes d’agrément des fournitures et sous-traitants",
+     "exigence": "Demandes d’agrément des fournitures et des sous-traitants au donneur d’ordre.",
+     "clause": "NF X31-620-4, § 6.3.1 (C110)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "agrements?|sous[- ]traitan|\\bdc4\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-ppsps",
+     "groupe": "Hygiène et sécurité (C120)",
+     "intitule": "Plan particulier de sécurité (PPSPS)",
+     "exigence": "Dispositions de prévention conformes à la réglementation et, si nécessaire, PPSPS.",
+     "clause": "NF X31-620-4, § 6.3.1 (C120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "\\bppsps\\b|plan particulier de securite"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-plan-prevention",
+     "groupe": "Hygiène et sécurité (C120)",
+     "intitule": "Analyse des risques et plan de prévention",
+     "exigence": "Si nécessaire, analyse des risques et plan de prévention établis conjointement, sous la responsabilité du donneur d’ordre.",
+     "clause": "NF X31-620-4, § 6.3.1 (C120)",
+     "niveau": "attendu",
+     "motifs": [
+      "plan de prevention|analyse des risques"
+     ],
+     "tous": false,
+     "aide": "Cas d’une intervention sur un site en activité (entreprise utilisatrice)."
+    },
+    {
+     "id": "org-resp-securite",
+     "groupe": "Hygiène et sécurité (C120)",
+     "intitule": "Désignation d’un responsable sécurité",
+     "exigence": "Désignation d’un responsable sécurité.",
+     "clause": "NF X31-620-4, § 6.3.1 (C120)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "responsable (de la )?(securite|hse|qse)|charge de securite|referent (securite|hse)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "org-dossiers-admin",
+     "groupe": "Dossiers administratifs (C130)",
+     "intitule": "Dossiers administratifs préalables",
+     "exigence": "Dossiers administratifs préalables conformes à la réglementation : convention de rejet, permis de démolir, voirie, étude d’impact.",
+     "clause": "NF X31-620-4, § 6.3.1 (C130)",
+     "niveau": "attendu",
+     "motifs": [
+      "convention de rejet|permis de demol|autorisation de voirie|permission de voirie|etude d.impact|dossier (de )?declaration"
+     ],
+     "tous": false,
+     "aide": ""
+    }
+   ]
+  },
+  {
+   "id": "nf4-suivi",
+   "titre": "Suivi du chantier (C200)",
+   "description": "Document de suivi et de synthèse des travaux, commun à toutes les techniques.",
+   "points": [
+    {
+     "id": "suivi-conditions",
+     "groupe": "Mise en œuvre",
+     "intitule": "Conditions opérationnelles de mise en œuvre des procédés",
+     "exigence": "Description des conditions opérationnelles de mise en œuvre des procédés.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "conditions? (operationnelles|de mise en (?:oe|œ)uvre)|mise en (?:oe|œ)uvre (du|des) (procedes?|traitements?)|description (du|des) (procedes?|traitements?|travaux)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-parametres",
+     "groupe": "Mise en œuvre",
+     "intitule": "Suivi régulier des paramètres de conduite du traitement",
+     "exigence": "Suivi régulier des paramètres de conduite du traitement.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "parametres? (de |du )?(conduite|fonctionnement|suivi|traitement|pilotage)|suivi (des parametres|d.exploitation)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-plan-controle",
+     "groupe": "Contrôles",
+     "intitule": "Plan de contrôle de l’efficacité du traitement",
+     "exigence": "Plan de contrôle de l’efficacité du traitement, sauf s’il est assuré par le maître d’œuvre ou le donneur d’ordre.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "plan de controle|controles? de l.efficacite|suivi de l.efficacite|controles? de performance"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-prelevement",
+     "groupe": "Contrôles",
+     "intitule": "Techniques de prélèvement et de contrôle décrites",
+     "exigence": "Description des techniques de prélèvement et de contrôle.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(technique|methode|protocole|modalite|mode)s? (de |d.)(prelevement|echantillonnage)|echantillonnage|fiches? de prelevements?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-journal",
+     "groupe": "Traçabilité",
+     "intitule": "Journal de chantier tenu",
+     "exigence": "Tenue d’un journal de chantier.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "journal de chantier|cahier de chantier|main courante"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-ppsps-paq-pae",
+     "groupe": "Traçabilité",
+     "intitule": "PPSPS, PAQ et PAE tenus à jour et appliqués",
+     "exigence": "Tenue à jour et application du PPSPS, du plan d’assurance qualité et du plan d’assurance environnement.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bppsps\\b",
+      "\\bpaq\\b|plan d.assurance qualite",
+      "\\bpae\\b|plan d.assurance environnement"
+     ],
+     "tous": true,
+     "aide": "Citer les versions (indice, date) des trois documents."
+    },
+    {
+     "id": "suivi-dechets",
+     "groupe": "Déchets",
+     "intitule": "Modalités de gestion des déchets du chantier",
+     "exigence": "Modalités de gestion des déchets issus du chantier.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "gestion des dechets|dechets? (de|du) chantier|\\bbsdd?\\b|bordereaux? de suivi|filieres? (d.elimination|de traitement|agreees?)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-bilan-massique",
+     "groupe": "Synthèse",
+     "intitule": "Suivi entrée/sortie des produits récupérés et bilan massique",
+     "exigence": "Suivi entrée/sortie de la masse des produits récupérés et de leur élimination, pour établir un bilan massique.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bilan (massique|matiere|de masse|des masses)|masse (de |des )?(polluants?|produits?) (recuperee|extraite|eliminee|degradee)s?|quantites? (de polluants? )?(recuperees|extraites)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-analyse-critique",
+     "groupe": "Synthèse",
+     "intitule": "Analyse critique des performances au regard des objectifs",
+     "exigence": "Analyse critique des performances et des résultats par rapport aux objectifs de réhabilitation.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "analyse critique|performances?|efficacite",
+      "objectifs?"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "suivi-comparaison",
+     "groupe": "Synthèse",
+     "intitule": "Concentrations résiduelles comparées aux objectifs du cahier des charges",
+     "exigence": "Comparaison des concentrations résiduelles mesurées aux objectifs du cahier des charges et aux décisions de réunion de chantier.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "concentrations? residuelles?|teneurs? residuelles?|pollution residuelle",
+      "objectifs?|seuils? de (depollution|reception|coupure)|valeurs? cibles?"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "suivi-ecarts",
+     "groupe": "Synthèse",
+     "intitule": "Justification des écarts entre objectifs et résultats",
+     "exigence": "Si des écarts existent entre objectifs du cahier des charges et résultats obtenus, le rapport doit les justifier.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "attendu",
+     "motifs": [
+      "ecarts?|non[- ]atteinte|non atteints?|depassements?",
+      "justif|explication|expliqu|raisons?"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "suivi-taux-fonctionnement",
+     "groupe": "Synthèse",
+     "intitule": "Taux de fonctionnement global et périodes d’arrêt",
+     "exigence": "Taux de fonctionnement global de l’installation, avec mention des périodes de non-fonctionnement.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "attendu",
+     "motifs": [
+      "taux de (fonctionnement|disponibilite|marche)|periodes? (de non[- ]fonctionnement|d.arret)|arrets? (techniques?|de l.installation)"
+     ],
+     "tous": false,
+     "aide": "Requis pour toute installation de traitement (in situ, sur site, traitement des rejets).",
+     "siConcerne": {
+      "motif": "installation|unite de traitement|pompage|venting|sparging|extraction|injection",
+      "libelle": "une installation de traitement"
+     }
+    },
+    {
+     "id": "suivi-nuisances",
+     "groupe": "Environnement",
+     "intitule": "Bilan des mesures de gestion des nuisances",
+     "exigence": "Bilan des mesures prises pour gérer les nuisances du chantier.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "nuisances?|poussieres?|odeurs?|bruit|vibrations?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-rejets-conformite",
+     "groupe": "Environnement",
+     "intitule": "Conformité réglementaire des rejets",
+     "exigence": "En cas de rejets, leur conformité à la réglementation applicable est démontrée.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "attendu",
+     "motifs": [
+      "rejets?",
+      "conformite|conformes?|normes? de rejet|valeurs? limites?|convention de rejet|arrete"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "rejets?|effluents?",
+      "libelle": "des rejets"
+     }
+    },
+    {
+     "id": "suivi-dt-dict",
+     "groupe": "Préalables",
+     "intitule": "Déclarations d’ouvrages souterrains fournies par le maître d’ouvrage",
+     "exigence": "L’entreprise s’assure que le maître d’ouvrage a réalisé et lui a transmis les déclarations d’ouvrages souterrains (engagement E10).",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bdict\\b|\\bdt\\b|declaration de projet de travaux|declaration d.intention de commencement|guichet unique"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-milieux-a2xx",
+     "groupe": "Contrôles",
+     "intitule": "Suivi des milieux selon A200, A210, A230",
+     "exigence": "Si le contrat inclut un suivi des sols, eaux souterraines ou gaz du sol, il est réalisé selon les prestations A200, A210 et A230.",
+     "clause": "NF X31-620-4, § 6.3.1 (C200)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\ba2[0-3]0\\b|nf x ?31-620-2"
+     ],
+     "tous": false,
+     "aide": "Référencer les prestations de la partie 2 appliquées aux prélèvements de suivi.",
+     "siConcerne": {
+      "motif": "gaz du sol|eaux souterraines|piezometr",
+      "libelle": "un suivi des milieux"
+     }
+    },
+    {
+     "id": "suivi-ecart-contenu",
+     "groupe": "Synthèse",
+     "intitule": "Élément de contenu minimum omis mentionné et justifié",
+     "exigence": "Tout élément du contenu minimum non fourni, même à la demande du client, doit être mentionné et justifié dans le livrable.",
+     "clause": "NF X31-620-4, § 6.3.2",
+     "niveau": "attendu",
+     "motifs": [
+      "sans objet|non applicable|non (realise|fourni|mesure)e?s?|a la demande du (client|donneur d.ordre|maitre d.ouvrage)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "suivi-rebond",
+     "groupe": "Synthèse",
+     "intitule": "Effets rebonds pris en compte (si prévu au contrat)",
+     "exigence": "Pour les traitements in situ, les effets rebonds sont pris en compte si le contrat le prévoit.",
+     "clause": "NF X31-620-4, § 6.3.2",
+     "niveau": "attendu",
+     "motifs": [
+      "rebonds?"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "in situ|venting|sparging|pompage|oxydation|reduction chimique|biodegradation",
+      "libelle": "un traitement in situ"
+     }
+    }
+   ]
+  },
+  {
+   "id": "nf4-recolement",
+   "titre": "Rapport de fin de chantier (C400, C321a)",
+   "description": "Rapport de fin de chantier de l’entreprise de travaux, avec les éléments propres à l’excavation.",
+   "points": [
+    {
+     "id": "rfc-etat-final",
+     "groupe": "État du site",
+     "intitule": "Relevé d’état du site après travaux",
+     "exigence": "Le rapport de fin de chantier comprend le relevé de l’état du site après travaux (infrastructures, structures pérennes).",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "etat (du site )?(apres|en fin de|final)|etat des lieux (final|de sortie|apres)|constat (de fin|final)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "rfc-plans-recolement",
+     "groupe": "Plans",
+     "intitule": "Plans de récolement : excavations et ouvrages exécutés",
+     "exigence": "Plans de récolement : implantation des excavations, ouvrages exécutés et leurs caractéristiques.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "plans? de recolement|recolement"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "rfc-notice",
+     "groupe": "Plans",
+     "intitule": "Notice d’exploitation et de maintenance des ouvrages",
+     "exigence": "Le cas échéant, notice d’exploitation et de maintenance des ouvrages laissés en place.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "attendu",
+     "motifs": [
+      "notice d.(exploitation|entretien|maintenance)|manuel d.(exploitation|utilisation)|\\bdoe\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "rfc-descriptif",
+     "groupe": "Travaux",
+     "intitule": "Descriptif technique des travaux réalisés",
+     "exigence": "Descriptif technique des travaux réalisés.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "descriptif (technique )?des travaux|description des travaux|travaux realises|deroulement (du chantier|des travaux)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "rfc-bilan-quantites",
+     "groupe": "Bilan",
+     "intitule": "Bilan des matériaux extraits : terres, déchets, eaux traitées",
+     "exigence": "Bilan récapitulatif des matériaux et polluants extraits : terres et déchets expédiés, volumes d’eau traitée, etc.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "tonnages?|\\btonnes?\\b|\\bm3\\b|m³|volumes?",
+      "evacu|expedi|traite|extrait"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "rfc-masse-polluant",
+     "groupe": "Bilan",
+     "intitule": "Masse de polluant extraite ou dégradée",
+     "exigence": "Le bilan récapitulatif indique la masse de polluant extraite ou dégradée.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "attendu",
+     "motifs": [
+      "masse (de |des )?polluants?|bilan massique|kg (de |d.)?(polluants?|hydrocarbures|hct|cov|cohv)|quantite de polluants?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "rfc-bsd",
+     "groupe": "Bilan",
+     "intitule": "Bordereaux de suivi des déchets",
+     "exigence": "Le rapport de fin de chantier joint les bordereaux de suivi des déchets.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "bordereaux? de suivi (des )?dechets|\\bbsdd?\\b|trackdechets"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "rfc-emissions",
+     "groupe": "Contrôles",
+     "intitule": "Comptes rendus des contrôles périodiques des émissions",
+     "exigence": "Comptes rendus des contrôles périodiques des émissions réalisés en cours de chantier.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "controles? (des |periodiques? des )?(emissions|rejets|air ambiant|poussieres)|surveillance (atmospherique|de l.air|des emissions|des rejets)|mesures? (d.empoussierement|de poussieres|d.air ambiant|des rejets)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "rfc-controles-internes",
+     "groupe": "Contrôles",
+     "intitule": "Contrôles internes : fiches de prélèvement et bulletins analytiques",
+     "exigence": "Comptes rendus des contrôles internes avec fiches de prélèvement et bulletins analytiques.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "fiches? de prelevements?",
+      "bulletins? (d.analyses?|analytiques?)|bordereaux? d.analyses?|rapports? d.essais?|certificats? d.analyses?"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "rfc-interpretation",
+     "groupe": "Contrôles",
+     "intitule": "Synthèse et interprétation des résultats de contrôle",
+     "exigence": "Les comptes rendus des contrôles internes comportent la synthèse et l’interprétation des résultats.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "interpretation|synthese des resultats"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "rfc-suivi-futur",
+     "groupe": "Suite",
+     "intitule": "Recommandations sur le suivi futur des milieux",
+     "exigence": "Recommandations concernant le suivi futur des milieux.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "(suivi|surveillance) (futur|ulterieur|post[- ]?travaux|a long terme|des milieux|des eaux)|programme de surveillance"
+     ],
+     "tous": false,
+     "aide": "Indiquer explicitement si aucun suivi n’est jugé nécessaire."
+    },
+    {
+     "id": "rfc-photos",
+     "groupe": "Travaux",
+     "intitule": "Reportage photographique",
+     "exigence": "Le rapport de fin de chantier peut comporter un reportage photographique.",
+     "clause": "NF X31-620-4, § 6.3.1 (C400)",
+     "niveau": "attendu",
+     "motifs": [
+      "photo"
+     ],
+     "tous": false,
+     "aide": "Facultatif selon la norme, mais utile au récolement."
+    },
+    {
+     "id": "rfc-plan-terrassement",
+     "groupe": "Excavation (C321a)",
+     "intitule": "Plan de terrassement maille par maille",
+     "exigence": "Plan de terrassement par maille : profondeur excavée, caractéristiques chimiques et destination prévue des matériaux.",
+     "clause": "NF X31-620-4, § 6.3.2 (C321a)",
+     "niveau": "attendu",
+     "motifs": [
+      "mailles?",
+      "profondeurs?|cotes?",
+      "destination|filieres?|exutoires?"
+     ],
+     "tous": true,
+     "aide": "Les analyses doivent être adaptées à la filière (pas de pack ISDI pour une valorisation).",
+     "siConcerne": {
+      "motif": "excavation|terrassements?|deblais|fouilles?|\\bc321a\\b",
+      "libelle": "une excavation"
+     }
+    },
+    {
+     "id": "rfc-bords-fonds",
+     "groupe": "Excavation (C321a)",
+     "intitule": "Caractérisation des bords et fonds de fouille",
+     "exigence": "Plan des prélèvements de bords et fonds de fouille (position, épaisseur) avec concentrations résiduelles des sols laissés en place.",
+     "clause": "NF X31-620-4, § 6.3.2 (C321a)",
+     "niveau": "attendu",
+     "motifs": [
+      "(bords?|flancs?|parois?) (et|de) fonds? de fouilles?|fonds? (et|de) (bords?|parois?|flancs?)|fonds? de fouilles?"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "excavation|terrassements?|deblais|fouilles?|\\bc321a\\b",
+      "libelle": "une excavation"
+     }
+    },
+    {
+     "id": "rfc-tracabilite",
+     "groupe": "Excavation (C321a)",
+     "intitule": "Traçabilité des terres évacuées hors site",
+     "exigence": "Documents de traçabilité des terres évacuées hors site.",
+     "clause": "NF X31-620-4, § 6.3.2 (C321a)",
+     "niveau": "attendu",
+     "motifs": [
+      "tracabilite|bordereaux? de suivi|bons? de pesee|tickets? de pesee|certificats? d.acceptation"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "excavation|terrassements?|deblais|fouilles?|\\bc321a\\b",
+      "libelle": "une excavation"
+     }
+    },
+    {
+     "id": "rfc-terres-reutilisees",
+     "groupe": "Excavation (C321a)",
+     "intitule": "Localisation, volumes et qualité des terres réutilisées sur site",
+     "exigence": "Plan de localisation des terres polluées réutilisées sur site, avec volumes et caractéristiques chimiques.",
+     "clause": "NF X31-620-4, § 6.3.2 (C321a)",
+     "niveau": "attendu",
+     "motifs": [
+      "reutilis|reemploi|valorisation sur site|remis(es)? en place|regalage"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "excavation|terrassements?|deblais|fouilles?|\\bc321a\\b",
+      "libelle": "une excavation"
+     }
+    },
+    {
+     "id": "rfc-releve-geometre",
+     "groupe": "Excavation (C321a)",
+     "intitule": "Plan d’avancement des terrassements (relevé géomètre)",
+     "exigence": "Plan d’avancement des terrassements établi par relevé de géomètre.",
+     "clause": "NF X31-620-4, § 6.3.2 (C321a)",
+     "niveau": "attendu",
+     "motifs": [
+      "geometre|releve topographique|leve topographique|plan topographique"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "excavation|terrassements?|deblais|fouilles?|\\bc321a\\b",
+      "libelle": "une excavation"
+     }
+    },
+    {
+     "id": "rfc-remblais",
+     "groupe": "Excavation (C321a)",
+     "intitule": "Remblais : origine, qualité, volumes, mise en œuvre, géotechnique",
+     "exigence": "En cas de remblaiement : origine et qualité des matériaux, volumes, mise en œuvre et atteinte des objectifs géotechniques exigés.",
+     "clause": "NF X31-620-4, § 6.3.2 (C321a)",
+     "niveau": "attendu",
+     "motifs": [
+      "remblai",
+      "origine|provenance|qualite|compactage|portance"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "remblai",
+      "libelle": "un remblaiement"
+     }
+    },
+    {
+     "id": "rfc-servitudes",
+     "groupe": "Pollution résiduelle",
+     "intitule": "Éléments techniques pour le dossier de servitudes (A400)",
+     "exigence": "Si une pollution résiduelle reste en place : extension et profondeur, polluants, état résiduel, topographie, récolement, DOE pour les servitudes.",
+     "clause": "NF X31-620-4, § 6.3.2 (C321a)",
+     "niveau": "attendu",
+     "motifs": [
+      "servitudes?|restrictions? d.usage|\\bsup\\b|\\ba400\\b|conservation de la memoire"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "pollution residuelle|teneurs? residuelles?|laissees? en place|confinement",
+      "libelle": "une pollution résiduelle"
+     }
+    }
+   ]
+  },
+  {
+   "id": "nf4-techniques",
+   "titre": "Techniques de dépollution (C311 à C350)",
+   "description": "Éléments de suivi propres à chaque technique, à appliquer selon la technique mise en œuvre (champ siConcerne).",
+   "points": [
+    {
+     "id": "tech-venting",
+     "groupe": "Extraction in situ",
+     "intitule": "Venting/bioventing : dépression, débit d’air, gaz du sol",
+     "exigence": "Suivi de la dépression en tête de puits et de réseau, du débit d’air et des concentrations dans les gaz du sol (extraction et surveillance).",
+     "clause": "NF X31-620-4, § 6.3.2 (C311a, C315b)",
+     "niveau": "attendu",
+     "motifs": [
+      "depression|\\bvide\\b",
+      "debits? d.air|debit (d.)?extraction",
+      "gaz (du|des) sols?"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "venting|ventilation de la zone non saturee|extraction (des )?gaz du sol|\\bsve\\b|\\bc311a\\b|\\bc315b\\b",
+      "libelle": "un venting"
+     }
+    },
+    {
+     "id": "tech-mpe",
+     "groupe": "Extraction in situ",
+     "intitule": "Extraction multiphase : piézométrie, surnageant récupéré, dissous",
+     "exigence": "Suivi des débits eau et air, piézométrie, épaisseur et masse de surnageant récupéré avec justificatifs d’élimination, dissous.",
+     "clause": "NF X31-620-4, § 6.3.2 (C311b)",
+     "niveau": "attendu",
+     "motifs": [
+      "surnageant|phase flottante|produit pur|flottant|\\blnapl\\b",
+      "piezometr|niveaux? d.eau",
+      "elimination|bsd|bordereau"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "multi-?phase|\\bmpe\\b|\\bdpe\\b|slurping|double[- ]phase|\\bc311b\\b",
+      "libelle": "une extraction multiphase"
+     }
+    },
+    {
+     "id": "tech-sparging",
+     "groupe": "Extraction in situ",
+     "intitule": "Sparging/biosparging : débit et pression d’injection, suivi amont/aval",
+     "exigence": "Débit et pression d’air injecté par puits, gaz du sol, piézométrie et qualité des eaux en amont, aval et au droit de la source.",
+     "clause": "NF X31-620-4, § 6.3.2 (C311c, C315c)",
+     "niveau": "attendu",
+     "motifs": [
+      "pression d.injection|debit d.injection|injection d.air|air injecte",
+      "amont",
+      "aval"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "sparging|barbotage|injection d.air",
+      "libelle": "un sparging"
+     }
+    },
+    {
+     "id": "tech-pompage",
+     "groupe": "Extraction in situ",
+     "intitule": "Pompage/écrémage/piège hydraulique : rabattement, débits, qualité",
+     "exigence": "Piézométrie et rabattement par point, débits et volumes pompés, qualité des eaux en amont, aval et au droit de la source.",
+     "clause": "NF X31-620-4, § 6.3.2 (C311d, C311e, C312c)",
+     "niveau": "attendu",
+     "motifs": [
+      "rabattement|piezometr",
+      "debits?|volumes? (d.eau )?pompes?|\\bm3\\b",
+      "amont",
+      "aval"
+     ],
+     "tous": true,
+     "aide": "Pour l’écrémage, expliquer si l’épaisseur de surnageant n’est pas mesurable et suivre le rendement.",
+     "siConcerne": {
+      "motif": "pompage|ecremage|piege hydraulique|confinement hydraulique|pump (and|&) treat|\\bc311[de]\\b|\\bc312c\\b",
+      "libelle": "un pompage"
+     }
+    },
+    {
+     "id": "tech-energie",
+     "groupe": "Commun in situ",
+     "intitule": "Consommation énergétique de l’installation, traitement des rejets inclus",
+     "exigence": "Consommation énergétique de l’ensemble de l’installation, y compris le traitement des rejets.",
+     "clause": "NF X31-620-4, § 6.3.2 (C311a à e, C312c, C313a, C314, C315b, c)",
+     "niveau": "attendu",
+     "motifs": [
+      "consommations? (energetiques?|electriques?|d.energie)|\\bkwh\\b|\\bmwh\\b|bilan energetique"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "venting|ventilation de la zone non saturee|sparging|barbotage|pompage|ecremage|multi-?phase|bioventing|biosparging|lavage in situ|desorption thermique",
+      "libelle": "une installation in situ"
+     }
+    },
+    {
+     "id": "tech-ouvrages",
+     "groupe": "Commun in situ",
+     "intitule": "Coupes géologiques et techniques ; état des ouvrages",
+     "exigence": "Coupes géologiques et techniques des points ou aiguilles, description et suivi de l’état des ouvrages (ouverts/fermés).",
+     "clause": "NF X31-620-4, § 6.3.2 (C311a, b, d, e, C312c)",
+     "niveau": "attendu",
+     "motifs": [
+      "coupes? (geologiques?|techniques?|lithologiques?)|logs? (de forage|geologiques?|techniques?)",
+      "ouverts?|fermes?|etat des (ouvrages|puits)"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "venting|ventilation de la zone non saturee|pompage|ecremage|multi-?phase|piege hydraulique",
+      "libelle": "des ouvrages d’extraction"
+     }
+    },
+    {
+     "id": "tech-couverture",
+     "groupe": "Confinement",
+     "intitule": "Couverture/encapsulation : étanchéité, eaux météoriques, entretien",
+     "exigence": "Nature et qualité de l’étanchéité (soudures par poseur agréé, compactage, perméabilité, épaisseur), gestion des eaux météoriques, entretien.",
+     "clause": "NF X31-620-4, § 6.3.2 (C312a, C322a)",
+     "niveau": "attendu",
+     "motifs": [
+      "etancheit|geomembrane|permeabilite",
+      "epaisseur|soudures?|compactage",
+      "eaux (meteoriques|pluviales)|ruissellement|infiltration"
+     ],
+     "tous": true,
+     "aide": "Pour C312a, joindre aussi le registre des livraisons et, selon le cas, la planche d’essai.",
+     "siConcerne": {
+      "motif": "couverture|encapsulation|geomembrane|recouvrement|alveole|\\bc312a\\b|\\bc322a\\b",
+      "libelle": "une couverture ou encapsulation"
+     }
+    },
+    {
+     "id": "tech-surveillance-confinement",
+     "groupe": "Confinement",
+     "intitule": "Réseau de surveillance des eaux en amont et aval du confinement",
+     "exigence": "Mise en place d’un réseau de surveillance des eaux souterraines en amont et en aval du confinement.",
+     "clause": "NF X31-620-4, § 6.3.2 (C312a, C312b, C322a)",
+     "niveau": "attendu",
+     "motifs": [
+      "piezometres?|reseau de surveillance|ouvrages? de surveillance",
+      "amont",
+      "aval"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "confinement|encapsulation|alveole",
+      "libelle": "un confinement"
+     }
+    },
+    {
+     "id": "tech-confinement-vertical",
+     "groupe": "Confinement",
+     "intitule": "Confinement vertical : ancrage, étanchéité, charges amont/aval",
+     "exigence": "Mesures de résistance et d’étanchéité, vérification de la profondeur d’ancrage, calcul de charge amont/aval, continuité.",
+     "clause": "NF X31-620-4, § 6.3.2 (C312b, C316b)",
+     "niveau": "attendu",
+     "motifs": [
+      "ancrage",
+      "etancheit|permeabilit|continuite|resistance",
+      "charges? (hydrauliques? )?(amont|aval)|piezometr"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "confinement vertical|paroi (moulee|etanche|au coulis)|palplanches?|ecran (etanche|vertical)|funnel|\\bc312b\\b",
+      "libelle": "un confinement vertical"
+     }
+    },
+    {
+     "id": "tech-servitudes",
+     "groupe": "Confinement",
+     "intitule": "Éléments pour servitudes (A400), DOE et DIUO",
+     "exigence": "Éléments techniques pour le dossier de servitudes : géométrie, polluants, quantités, structure, récolement, DOE, entretien pour DIUO.",
+     "clause": "NF X31-620-4, § 6.3.2 (C312a, b, d, C316, C321a, C322, C324b, C325)",
+     "niveau": "attendu",
+     "motifs": [
+      "servitudes?|restrictions? d.usage|\\ba400\\b|conservation de la memoire",
+      "\\bdiuo\\b|\\bdoe\\b|recolement"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "confinement|encapsulation|stabilisation|solidification|barriere (permeable )?reactive|\\bbpr\\b|pollution residuelle",
+      "libelle": "des matériaux pollués laissés en place"
+     }
+    },
+    {
+     "id": "tech-ss",
+     "groupe": "Stabilisation",
+     "intitule": "Solidification/stabilisation : adjuvant, tests, excédents",
+     "exigence": "Profondeur et conditions d’injection ou malaxage, nature et quantité d’adjuvant, tests (lixiviation, perméabilité, résistance), excédents.",
+     "clause": "NF X31-620-4, § 6.3.2 (C312d, C322b)",
+     "niveau": "attendu",
+     "motifs": [
+      "lixiviation|permeabilite|resistance (a la compression|mecanique)|geotechni",
+      "liants?|adjuvants?|reactifs?|ciment|chaux",
+      "foisonnement|excedent"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "stabilisation|solidification|inertage|liants? hydrauliques?",
+      "libelle": "une solidification/stabilisation"
+     }
+    },
+    {
+     "id": "tech-reactifs-fds",
+     "groupe": "Réactifs",
+     "intitule": "Réactifs : nature, quantités, injection et fiches de données de sécurité",
+     "exigence": "Nature et quantités de réactifs, additifs ou adjuvants, profondeur, débit et pression d’injection, avec leurs FDS.",
+     "clause": "NF X31-620-4, § 6.3.2 (C312d, C313a à c, C314, C316, C322b)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bfds\\b|fiches? (de )?donnees (de )?securite",
+      "quantites?|masse|volume|dosage|\\bkg\\b|\\bm3\\b"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "oxydation chimique|reduction chimique|\\bisc[or]\\b|reactifs?|permanganate|persulfate|peroxyde|fenton|fer zero|\\bzvi\\b|nutriments|adjuvants?|additifs?",
+      "libelle": "l’emploi de réactifs"
+     }
+    },
+    {
+     "id": "tech-metabolites",
+     "groupe": "Réactifs",
+     "intitule": "Argumentaire sur la production et la quantification des métabolites",
+     "exigence": "Argumentaire sur la production de métabolites et leur quantification si possible (méthode analytique, toxicité).",
+     "clause": "NF X31-620-4, § 6.3.2 (C313b, c, C315a à c, C316, C325b, d)",
+     "niveau": "attendu",
+     "motifs": [
+      "metabolites?|sous[- ]produits?|produits? de (degradation|decomposition)|chlorure de vinyle|cis[- ]?(1,2[- ])?dce"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "oxydation chimique|reduction chimique|biodegradation|attenuation naturelle|bioventing|biosparging|barriere (permeable )?reactive|biotertre|biopile|landfarming",
+      "libelle": "un traitement chimique ou biologique"
+     }
+    },
+    {
+     "id": "tech-redox",
+     "groupe": "Réactifs",
+     "intitule": "Qualité des eaux amont/aval/source avec potentiel redox",
+     "exigence": "Évolution de la qualité des eaux en amont, aval et au droit de la source, paramètres physico-chimiques dont potentiel redox.",
+     "clause": "NF X31-620-4, § 6.3.2 (C313b, C313c, C315a)",
+     "niveau": "attendu",
+     "motifs": [
+      "redox|potentiel d.oxydo[- ]?reduction|\\beh\\b|\\borp\\b",
+      "amont",
+      "aval"
+     ],
+     "tous": true,
+     "aide": "Selon la demande du donneur d’ordre.",
+     "siConcerne": {
+      "motif": "oxydation chimique|reduction chimique|\\bisc[or]\\b|biodegradation|attenuation naturelle",
+      "libelle": "un traitement chimique ou biologique in situ"
+     }
+    },
+    {
+     "id": "tech-bio",
+     "groupe": "Biologique",
+     "intitule": "Paramètres de développement bactérien (pH, O2, nutriments, humidité)",
+     "exigence": "Paramètres du développement bactérien : pH, température, O2/CO2, humidité, nutriments C/N/P/K, accepteurs ou donneurs d’électrons.",
+     "clause": "NF X31-620-4, § 6.3.2 (C315a à c, C325b, d)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bph\\b",
+      "\\bo2\\b|oxygene|humidite|c\\/n|nutriments|accepteurs?"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "biodegradation|bioventing|biosparging|biotertre|biopile|landfarming|attenuation naturelle|bioremediation",
+      "libelle": "un traitement biologique"
+     }
+    },
+    {
+     "id": "tech-thermique",
+     "groupe": "Thermique",
+     "intitule": "Désorption thermique : températures, dépression, sous-produits, géotechnique",
+     "exigence": "Température de chauffe et induite dans les sols, dépression et débit, sous-produits (dioxines si PCB), impact géotechnique, bilan énergétique.",
+     "clause": "NF X31-620-4, § 6.3.2 (C314, C324b)",
+     "niveau": "attendu",
+     "motifs": [
+      "temperatures?|°\\s?c\\b",
+      "depression|debits?",
+      "dioxines?|furann?es?|sous[- ]produits?|produits? de decomposition|geotechni|tassement"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "desorption thermique|\\bistd\\b|\\btcd\\b|conduction thermique|four rotatif",
+      "libelle": "une désorption thermique"
+     }
+    },
+    {
+     "id": "tech-phyto",
+     "groupe": "Biologique",
+     "intitule": "Phytoremédiation : sols, eaux, plantes, agronomie, végétaux fauchés",
+     "exigence": "Concentrations dans sols, eaux souterraines, ruissellement et plantes ; qualité agronomique ; gestion des végétaux fauchés.",
+     "clause": "NF X31-620-4, § 6.3.2 (C315d)",
+     "niveau": "attendu",
+     "motifs": [
+      "plantes?|vegetaux|biomasse",
+      "agronomi|matiere organique|\\bph\\b|fauche"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "phyto",
+      "libelle": "une phytoremédiation"
+     }
+    },
+    {
+     "id": "tech-bpr",
+     "groupe": "Barrière réactive",
+     "intitule": "Barrière réactive : ancrage, interception du panache, rendement",
+     "exigence": "Ancrage vérifié, suivi piézométrique pour l’interception du panache, dosages amont/aval et rendement épuratoire, réactifs ou filtres.",
+     "clause": "NF X31-620-4, § 6.3.2 (C316a, C316b)",
+     "niveau": "attendu",
+     "motifs": [
+      "ancrage|panache|intercept",
+      "amont",
+      "aval",
+      "rendement|efficacite|abattement|bilan massique"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "barriere (permeable )?reactive|\\bbpr\\b|funnel|porte filtrante",
+      "libelle": "une barrière réactive"
+     }
+    },
+    {
+     "id": "tech-tri-lavage",
+     "groupe": "Sur site",
+     "intitule": "Tri/lavage : granulométrie, entrée/sortie, destination des fractions",
+     "exigence": "Quantités, granulométrie et concentrations en entrée et sortie des unités, destination des fractions, consommation d’eau.",
+     "clause": "NF X31-620-4, § 6.3.2 (C321b, C321c)",
+     "niveau": "attendu",
+     "motifs": [
+      "granulometr|fractions?",
+      "entree",
+      "sortie",
+      "destination|filieres?|exutoires?|reutilis"
+     ],
+     "tous": true,
+     "aide": "Pour des polluants volatils, décrire les dispositions contre le transfert à l’atmosphère.",
+     "siConcerne": {
+      "motif": "tri granulometrique|criblage|lavage (a l.eau|des terres)|attrition|scalpage",
+      "libelle": "un tri ou lavage sur site"
+     }
+    },
+    {
+     "id": "tech-tas",
+     "groupe": "Sur site",
+     "intitule": "Biotertre/landfarming/désorption sur site : lots, caractérisation, bilan",
+     "exigence": "Méthode de caractérisation de chaque tas ou maille, plan des mailles, traçabilité et bilan des quantités tenant compte du foisonnement.",
+     "clause": "NF X31-620-4, § 6.3.2 (C324b, C325b, C325d)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\btas\\b|andains?|mailles?|\\blots?\\b",
+      "caracteris|echantillon|analyses?",
+      "foisonnement|bilan (des |recapitulatif des )?(quantites|volumes|tonnages|materiaux)"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "biotertre|biopile|landfarming|andains?|desorption thermique sur site|\\bc32[45][bd]\\b",
+      "libelle": "un traitement de terres sur site"
+     }
+    }
+   ]
+  },
+  {
+   "id": "nf4-rejets",
+   "titre": "Traitement des rejets (C331 à C342)",
+   "description": "Éléments de suivi du traitement des rejets aqueux et gazeux sur site.",
+   "points": [
+    {
+     "id": "rej-debits",
+     "groupe": "Commun",
+     "intitule": "Débits des rejets (aqueux) ou débits d’air (gazeux)",
+     "exigence": "Suivi des débits des rejets aqueux, ou des débits d’air (et volume traité) pour les rejets gazeux.",
+     "clause": "NF X31-620-4, § 6.3.2 (C331 à C342)",
+     "niveau": "attendu",
+     "motifs": [
+      "debits?|m3\\/h|nm3"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "rejets? aqueux|traitement (des )?eaux|station de traitement|stripping|debourbeur|deshuileur|separateur (a )?hydrocarbures|floculation|echange d.ions|charbon actif|\\bc33[134]|rejets? gazeux|traitement (de l.)?air|charbon actif|oxydation thermique|condenseur|condensation|depoussiereur|cyclone|electrofiltre|filtres? (a manches|hepa)|biofiltre|\\bc34[12]",
+      "libelle": "un traitement des rejets"
+     }
+    },
+    {
+     "id": "rej-entree-sortie",
+     "groupe": "Commun",
+     "intitule": "Concentrations en entrée et en sortie de traitement",
+     "exigence": "Concentrations en polluants (ou poussières) en entrée et en sortie du traitement des rejets.",
+     "clause": "NF X31-620-4, § 6.3.2 (C331 à C342)",
+     "niveau": "attendu",
+     "motifs": [
+      "entree",
+      "sortie"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "rejets? aqueux|traitement (des )?eaux|station de traitement|stripping|debourbeur|deshuileur|separateur (a )?hydrocarbures|floculation|echange d.ions|charbon actif|\\bc33[134]|rejets? gazeux|traitement (de l.)?air|charbon actif|oxydation thermique|condenseur|condensation|depoussiereur|cyclone|electrofiltre|filtres? (a manches|hepa)|biofiltre|\\bc34[12]",
+      "libelle": "un traitement des rejets"
+     }
+    },
+    {
+     "id": "rej-rendement",
+     "groupe": "Commun",
+     "intitule": "Rendement et bilan de masse des polluants traités",
+     "exigence": "Rendement du traitement et bilan de masse des polluants traités.",
+     "clause": "NF X31-620-4, § 6.3.2 (C331 à C342)",
+     "niveau": "attendu",
+     "motifs": [
+      "rendement|abattement|efficacite",
+      "bilan (de |massique|des masses|matiere)|masse (de |des )?polluants?"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "rejets? aqueux|traitement (des )?eaux|station de traitement|stripping|debourbeur|deshuileur|separateur (a )?hydrocarbures|floculation|echange d.ions|charbon actif|\\bc33[134]|rejets? gazeux|traitement (de l.)?air|charbon actif|oxydation thermique|condenseur|condensation|depoussiereur|cyclone|electrofiltre|filtres? (a manches|hepa)|biofiltre|\\bc34[12]",
+      "libelle": "un traitement des rejets"
+     }
+    },
+    {
+     "id": "rej-normes",
+     "groupe": "Commun",
+     "intitule": "Comparaison aux normes de rejet et vérification de leur respect",
+     "exigence": "Comparaison des concentrations rejetées aux normes de rejet et vérification de leur respect (DCO, MES, pH pour le déshuileur).",
+     "clause": "NF X31-620-4, § 6.3.2 (C331 à C342)",
+     "niveau": "attendu",
+     "motifs": [
+      "normes? de rejet|valeurs? limites?|\\bvle\\b|convention de rejet|seuils? de rejet|arrete d.autorisation de rejet"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "rejets? aqueux|traitement (des )?eaux|station de traitement|stripping|debourbeur|deshuileur|separateur (a )?hydrocarbures|floculation|echange d.ions|charbon actif|\\bc33[134]|rejets? gazeux|traitement (de l.)?air|charbon actif|oxydation thermique|condenseur|condensation|depoussiereur|cyclone|electrofiltre|filtres? (a manches|hepa)|biofiltre|\\bc34[12]",
+      "libelle": "un traitement des rejets"
+     }
+    },
+    {
+     "id": "rej-dechets",
+     "groupe": "Commun",
+     "intitule": "Déchets générés par le traitement et gestion (BSD)",
+     "exigence": "Nature et quantité des déchets générés par le traitement des rejets (charbons, boues, produits purs) et leur gestion, BSD.",
+     "clause": "NF X31-620-4, § 6.3.2 (C331 à C342)",
+     "niveau": "attendu",
+     "motifs": [
+      "charbons? (actifs? )?(uses|usages|satures)|boues|produits? purs?|dechets? (generes|produits)|consommables",
+      "\\bbsdd?\\b|bordereaux? de suivi|elimination|regeneration"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "rejets? aqueux|traitement (des )?eaux|station de traitement|stripping|debourbeur|deshuileur|separateur (a )?hydrocarbures|floculation|echange d.ions|charbon actif|\\bc33[134]|rejets? gazeux|traitement (de l.)?air|charbon actif|oxydation thermique|condenseur|condensation|depoussiereur|cyclone|electrofiltre|filtres? (a manches|hepa)|biofiltre|\\bc34[12]",
+      "libelle": "un traitement des rejets"
+     }
+    },
+    {
+     "id": "rej-reactifs",
+     "groupe": "Aqueux",
+     "intitule": "Réactifs de traitement des eaux : quantités et FDS",
+     "exigence": "Quantités de réactifs utilisés pour le traitement des eaux et fiches de données de sécurité associées.",
+     "clause": "NF X31-620-4, § 6.3.2 (C334a, C334e)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bfds\\b|fiches? (de )?donnees (de )?securite",
+      "reactifs?|floculants?|coagulants?"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "oxydoreduction|precipitation|coagulation|floculation|\\bc334[ae]\\b",
+      "libelle": "un traitement physico-chimique des eaux"
+     }
+    },
+    {
+     "id": "rej-boues",
+     "groupe": "Aqueux",
+     "intitule": "MES et déshydratation des boues : mode et siccité",
+     "exigence": "Suivi des MES en coagulation-floculation, mode de déshydratation des boues et siccité en entrée et sortie.",
+     "clause": "NF X31-620-4, § 6.3.2 (C334e)",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bmes\\b|matieres en suspension",
+      "siccite|deshydratation|filtre[- ]presse|centrifug"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "coagulation|floculation|decantation|\\bc334e\\b",
+      "libelle": "une coagulation-floculation"
+     }
+    },
+    {
+     "id": "rej-parametres-specifiques",
+     "groupe": "Aqueux",
+     "intitule": "Paramètres propres au procédé (redox, conductivité, O2, pression)",
+     "exigence": "Paramètres propres au procédé : potentiel redox (C334a), conductivité (C334d), O2 dissous (C333d), pressions et colmatage (C334f).",
+     "clause": "NF X31-620-4, § 6.3.2 (C333d, C333e, C334a, C334d, C334f)",
+     "niveau": "attendu",
+     "motifs": [
+      "redox|conductivite|oxygene dissous|\\bo2\\b|pressions?|colmatage"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "oxydoreduction|echange d.ions|resines?|bioreacteur|lagunage|filtration|\\bc33[34][a-f]\\b",
+      "libelle": "un traitement des eaux spécifique"
+     }
+    },
+    {
+     "id": "rej-pression-gaz",
+     "groupe": "Gazeux",
+     "intitule": "Rejets gazeux : pression en entrée de traitement",
+     "exigence": "Pour les rejets gazeux et le dépoussiérage, pression mesurée en entrée de traitement.",
+     "clause": "NF X31-620-4, § 6.3.2 (C341, C342)",
+     "niveau": "attendu",
+     "motifs": [
+      "pression",
+      "entree"
+     ],
+     "tous": true,
+     "aide": "",
+     "siConcerne": {
+      "motif": "rejets? gazeux|traitement (de l.)?air|charbon actif|oxydation thermique|condenseur|condensation|depoussiereur|cyclone|electrofiltre|filtres? (a manches|hepa)|biofiltre|\\bc34[12]",
+      "libelle": "un traitement des rejets gazeux"
+     }
+    },
+    {
+     "id": "rej-sous-produits",
+     "groupe": "Commun",
+     "intitule": "Sous-produits de dégradation (UV, bioréacteurs, oxydation thermique)",
+     "exigence": "Si nécessaire, concentrations des sous-produits de dégradation (photo-oxydation, bioréacteurs, oxydation thermique).",
+     "clause": "NF X31-620-4, § 6.3.2 (C333b, d, e, C341d, e, g)",
+     "niveau": "attendu",
+     "motifs": [
+      "sous[- ]produits?|produits? de (degradation|combustion)|dioxines?|\\bco\\b|\\bnox\\b"
+     ],
+     "tous": false,
+     "aide": "",
+     "siConcerne": {
+      "motif": "photo[- ]?oxydation|\\buv\\b|bioreacteurs?|lagunage|oxydation thermique|oxydateur|torchere|biofiltre",
+      "libelle": "un procédé générant des sous-produits"
+     }
+    }
+   ]
+  },
+  {
+   "id": "nf5-alur",
+   "titre": "ATTES-ALUR – exigences complémentaires de la norme",
+   "description": "Exigences de NF X31-620-5 non couvertes par le contrôle du modèle de l’arrêté du 9 février 2022 (liste des documents, note de synthèse, prérequis).",
+   "points": [
+    {
+     "id": "alur-liste-docs",
+     "groupe": "Livrable",
+     "intitule": "Liste des documents examinés",
+     "exigence": "Le livrable liste les documents examinés : étude de sols (DIAG, IEM et/ou PG) et éléments du projet transmis par le maître d’ouvrage.",
+     "clause": "NF X31-620-5, § 6.3 (Livrable(s))",
+     "niveau": "obligatoire",
+     "motifs": [
+      "liste des documents|documents? (examines|consultes|analyses|etudies)|pieces examinees|documents? de reference"
+     ],
+     "tous": false,
+     "aide": "Une liste unique, avec titre, auteur, référence et date de chaque document."
+    },
+    {
+     "id": "alur-prerequis",
+     "groupe": "Prérequis",
+     "intitule": "Prestations d’étude prérequises identifiées (DIAG, PG, IEM…)",
+     "exigence": "L’étude de sols servant de base comprend l’ensemble des éléments d’une prestation DIAG et/ou PG (voire IEM, B120, PCT, B130).",
+     "clause": "NF X31-620-5, § 6.3 (Objectif(s))",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bdiag\\b|\\bpg\\b|\\biem\\b|\\bpct\\b|\\bb1[23]0\\b|nf x ?31-620-[23]"
+     ],
+     "tous": false,
+     "aide": "Identifier par leur code les prestations de la partie 2 (ou 3) couvertes par les rapports examinés."
+    },
+    {
+     "id": "alur-engagement-mo",
+     "groupe": "Prérequis",
+     "intitule": "Document d’engagement du maître d’ouvrage sur les dispositions techniques",
+     "exigence": "Document du maître d’ouvrage détaillant les dispositions techniques qu’il s’engage à mettre en œuvre (dépollution, ventilation, recouvrement…).",
+     "clause": "NF X31-620-5, § 6.3 (Objectif(s))",
+     "niveau": "obligatoire",
+     "motifs": [
+      "engag",
+      "maitre d.ouvrage",
+      "dispositions? (techniques?|constructives?)|mesures? constructives?|ventilation|recouvrement|vide sanitaire|travaux de depollution"
+     ],
+     "tous": true,
+     "aide": "Plus qu’une liste de plans : un document où le maître d’ouvrage s’engage sur ces mesures."
+    },
+    {
+     "id": "alur-bilan-evolutions",
+     "groupe": "Analyse",
+     "intitule": "Bilan des évolutions réglementaires, normatives et méthodologiques",
+     "exigence": "Bilan des évolutions réglementaires, normatives et méthodologiques intervenues depuis la réalisation de l’étude de sols.",
+     "clause": "NF X31-620-5, § 6.3 (Description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "evolutions? (reglementaires?|normatives?|methodologiques?)|bilan (des |de l.)?evolutions?"
+     ],
+     "tous": false,
+     "aide": "Dater l’étude et citer les textes ou guides parus depuis (ou indiquer qu’aucun n’a d’incidence)."
+    },
+    {
+     "id": "alur-incidences",
+     "groupe": "Analyse",
+     "intitule": "Incidence des évolutions et constats sur les préconisations de l’étude",
+     "exigence": "Analyse de l’incidence des évolutions et des constats sur les préconisations formulées en conclusion de l’étude de sols.",
+     "clause": "NF X31-620-5, § 6.3 (Description)",
+     "niveau": "obligatoire",
+     "motifs": [
+      "incidences?|consequences?|impacts?",
+      "preconisations?|conclusions? de l.etude|mesures? de gestion"
+     ],
+     "tous": true,
+     "aide": ""
+    },
+    {
+     "id": "alur-evolutions-site",
+     "groupe": "Analyse",
+     "intitule": "Évolutions du site susceptibles de modifier les conclusions",
+     "exigence": "Le cas échéant, analyse des évolutions du site pouvant influencer les conclusions des études remises.",
+     "clause": "NF X31-620-5, § 6.3 (Description)",
+     "niveau": "attendu",
+     "motifs": [
+      "evolutions? (du site|de l.occupation|des usages|du projet)|modifications? (du site|du projet)|changements? (du site|d.usage)|depuis (la realisation de )?l.etude"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "alur-analyse-critique",
+     "groupe": "Analyse",
+     "intitule": "Constats de l’analyse critique et leurs incidences",
+     "exigence": "Si nécessaire, constats issus de l’analyse critique des éléments mis à disposition, et leurs incidences, présentés dans la note.",
+     "clause": "NF X31-620-5, § 6.3 (Description, Livrable(s))",
+     "niveau": "attendu",
+     "motifs": [
+      "analyse critique",
+      "constats?|remarques?|observations?|incidences?"
+     ],
+     "tous": true,
+     "aide": "Le modèle réglementaire ne vise que la référence de la note ; la norme en précise le contenu."
+    },
+    {
+     "id": "alur-verifications",
+     "groupe": "Analyse",
+     "intitule": "Vérifications ponctuelles d’hypothèses et de calculs",
+     "exigence": "Selon le contexte, vérification ponctuelle d’hypothèses (paramètres physico-chimiques, VTR, report de données) ou de calculs de risques.",
+     "clause": "NF X31-620-5, § 6.3 (Description)",
+     "niveau": "attendu",
+     "motifs": [
+      "verification (ponctuelle )?(des|de certaines|de certains) (hypotheses|calculs|donnees)|\\bvtr\\b|valeurs? toxicologiques?|parametres? physico[- ]chimiques?|recalcul|\\beqrs\\b"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "alur-visite",
+     "groupe": "Analyse",
+     "intitule": "Visite de terrain (adéquation investigations / projet)",
+     "exigence": "Si le contexte l’exige, visite de terrain pour vérifier notamment l’adéquation entre investigations réalisées et projet.",
+     "clause": "NF X31-620-5, § 6.3 (Description)",
+     "niveau": "attendu",
+     "motifs": [
+      "visite (de terrain|de site|du site|sur site)|reconnaissance (de terrain|du site)"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "alur-adequation",
+     "groupe": "Conclusion",
+     "intitule": "Conclusion sur l’adéquation projet / conclusions de l’étude de sols",
+     "exigence": "Conclusions sur l’adéquation entre les documents transmis par le maître d’ouvrage et les conclusions de l’étude de sols.",
+     "clause": "NF X31-620-5, § 6.3 (Livrable(s))",
+     "niveau": "obligatoire",
+     "motifs": [
+      "adequation|coheren|compatib",
+      "maitre d.ouvrage|projet",
+      "etude de sols?|conclusions?|preconisations?|mesures? de gestion"
+     ],
+     "tous": true,
+     "aide": "L’attestation n’est délivrée qu’en cas d’adéquation : une note concluant à une inadéquation ne peut être suivie d’une attestation."
+    },
+    {
+     "id": "alur-nouvelle-etude",
+     "groupe": "Conclusion",
+     "intitule": "Motifs d’une nouvelle étude ou d’une révision de l’étude de sols",
+     "exigence": "Le cas échéant, éléments motivant une nouvelle prestation DIAG, IEM ou PG, ou la révision de l’étude (hors ATTES-ALUR).",
+     "clause": "NF X31-620-5, § 6.3 (Livrable(s))",
+     "niveau": "attendu",
+     "motifs": [
+      "(nouvelle|complement\\w*|mise a jour|actualisation|revision) (de l.|d.une |du |de la )?(etude|diagnostic|plan de gestion|\\bpg\\b|\\bdiag\\b)|investigations? complementaires?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "alur-observations",
+     "groupe": "Conclusion",
+     "intitule": "Observations sur le projet de construction ou d’aménagement",
+     "exigence": "Le cas échéant, observations formulées sur le projet de construction ou d’aménagement.",
+     "clause": "NF X31-620-5, § 6.3 (Livrable(s))",
+     "niveau": "attendu",
+     "motifs": [
+      "observations?|remarques? sur le projet|recommandations?"
+     ],
+     "tous": false,
+     "aide": ""
+    },
+    {
+     "id": "alur-travaux-realises",
+     "groupe": "Prérequis",
+     "intitule": "Livrables des travaux déjà réalisés pris en compte (B330, C400)",
+     "exigence": "Si des travaux de dépollution ont déjà été réalisés, leurs livrables (B330, C400 : récolement, fin de travaux) sont pris en compte.",
+     "clause": "NF X31-620-5, § 6.3 (Objectif(s))",
+     "niveau": "attendu",
+     "motifs": [
+      "\\bb330\\b|\\bc400\\b|rapport de fin de (travaux|chantier)|dossier de recolement|recolement"
+     ],
+     "tous": false,
+     "aide": "Complète le contrôle des attestations de travaux antérieures.",
+     "siConcerne": {
+      "motif": "travaux de (depollution|rehabilitation|excavation|traitement)",
+      "libelle": "des travaux de dépollution"
+     }
+    },
+    {
+     "id": "alur-a270",
+     "groupe": "Prérequis",
+     "intitule": "Vigilance sur l’interprétation des résultats (A270)",
+     "exigence": "Les mesures de gestion reposant sur les investigations, une vigilance particulière est recommandée sur le respect de la prestation A270.",
+     "clause": "NF X31-620-5, § 6.3 (Objectif(s))",
+     "niveau": "attendu",
+     "motifs": [
+      "\\ba270\\b|interpretation des resultats"
+     ],
+     "tous": false,
+     "aide": "Recommandation (« il convient ») : vérifier que l’interprétation des résultats de l’étude est conforme à A270."
+    }
+   ]
+  }
+ ],
+ "codes": [
+  {
+   "code": "AMO Travaux",
+   "intitule": "Assistance à maîtrise d’ouvrage dans la phase des travaux",
+   "type": "globale",
+   "composition": [],
+   "clause": "NF X31-620-3, § 6.2 (tableau 1) et § 6.3 (AMO Travaux)",
+   "note": "Mission de conseil, complétée selon contrat (cahiers des charges MOE, veille, suivi des dossiers et des travaux, revue technique, communication) ; livrables sans format imposé."
+  },
+  {
+   "code": "PCT",
+   "intitule": "Plan de conception des travaux",
+   "type": "globale",
+   "composition": [
+    "B111?",
+    "B112?",
+    "B120"
+   ],
+   "clause": "NF X31-620-3, § 6.2 (tableau 1) et § 6.3 (PCT)",
+   "note": "B120 toujours associée à au moins une des prestations B111 ou B112 ; PG prérequis (PCT dissocié) ou chapitre du livrable PG (concomitant)."
+  },
+  {
+   "code": "MOE",
+   "intitule": "Maîtrise d’œuvre dans la phase des travaux",
+   "type": "globale",
+   "composition": [
+    "PCT?",
+    "B120?",
+    "B130?",
+    "B310",
+    "B320",
+    "B330"
+   ],
+   "clause": "NF X31-620-3, § 6.2 (tableau 1) et § 6.3 (MOE)",
+   "note": "Tout ou partie des études de conception (PCT, B120, B130) ; si le prestataire les juge inutiles, il doit en informer le donneur d’ordre."
+  },
+  {
+   "code": "B111",
+   "intitule": "Essais en laboratoire",
+   "type": "elementaire",
+   "clause": "NF X31-620-3, § 6.2 (tableau 2) et § 6.3 (B111)"
+  },
+  {
+   "code": "B112",
+   "intitule": "Essais de terrain",
+   "type": "elementaire",
+   "clause": "NF X31-620-3, § 6.2 (tableau 2) et § 6.3 (B112)"
+  },
+  {
+   "code": "B120",
+   "intitule": "Études d’avant-projet (AP)",
+   "type": "elementaire",
+   "clause": "NF X31-620-3, § 6.2 (tableau 2) et § 6.3 (B120)"
+  },
+  {
+   "code": "B130",
+   "intitule": "Études de projet",
+   "type": "elementaire",
+   "clause": "NF X31-620-3, § 6.2 (tableau 2) et § 6.3 (B130)"
+  },
+  {
+   "code": "B200",
+   "intitule": "Établissement des dossiers administratifs",
+   "type": "elementaire",
+   "clause": "NF X31-620-3, § 6.2 (tableau 2) et § 6.3 (B200)"
+  },
+  {
+   "code": "B310",
+   "intitule": "Assistance aux contrats de travaux",
+   "type": "elementaire",
+   "clause": "NF X31-620-3, § 6.2 (tableau 2) et § 6.3 (B310)"
+  },
+  {
+   "code": "B320",
+   "intitule": "Direction de l’exécution des travaux",
+   "type": "elementaire",
+   "clause": "NF X31-620-3, § 6.2 (tableau 2) et § 6.3 (B320)"
+  },
+  {
+   "code": "B330",
+   "intitule": "Assistance aux opérations de réception",
+   "type": "elementaire",
+   "clause": "NF X31-620-3, § 6.2 (tableau 2) et § 6.3 (B330)"
+  },
+  {
+   "code": "C110",
+   "intitule": "Organisation du chantier",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 1) et § 6.3.1 (C110)",
+   "note": "Indissociable d’une prestation de technique de dépollution (tableau 2)."
+  },
+  {
+   "code": "C120",
+   "intitule": "Définition d’un plan d’hygiène et de sécurité",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 1) et § 6.3.1 (C120)"
+  },
+  {
+   "code": "C130",
+   "intitule": "Établissement des dossiers administratifs",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 1) et § 6.3.1 (C130)"
+  },
+  {
+   "code": "C200",
+   "intitule": "Mise en place, réalisation et suivi du chantier",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 1) et § 6.3.1 (C200)"
+  },
+  {
+   "code": "C400",
+   "intitule": "Réception du chantier",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 1) et § 6.3.1 (C400)"
+  },
+  {
+   "code": "C311a",
+   "intitule": "Ventilation de la zone non saturée in situ (venting)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C311a)"
+  },
+  {
+   "code": "C311b",
+   "intitule": "Extraction multiphase in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C311b)"
+  },
+  {
+   "code": "C311c",
+   "intitule": "Barbotage in situ (sparging)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C311c)"
+  },
+  {
+   "code": "C311d",
+   "intitule": "Pompage et traitement in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C311d)"
+  },
+  {
+   "code": "C311e",
+   "intitule": "Pompage-écrémage in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C311e)"
+  },
+  {
+   "code": "C312a",
+   "intitule": "Confinement par couverture et étanchéification in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C312a)"
+  },
+  {
+   "code": "C312b",
+   "intitule": "Confinement vertical in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C312b)"
+  },
+  {
+   "code": "C312c",
+   "intitule": "Piège ou confinement hydraulique in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C312c)"
+  },
+  {
+   "code": "C312d",
+   "intitule": "Solidification/stabilisation in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C312d)"
+  },
+  {
+   "code": "C313a",
+   "intitule": "Lavage in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C313a)"
+  },
+  {
+   "code": "C313b",
+   "intitule": "Oxydation chimique in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C313b)"
+  },
+  {
+   "code": "C313c",
+   "intitule": "Réduction chimique in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C313c)"
+  },
+  {
+   "code": "C314a",
+   "intitule": "Désorption thermique in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C314)",
+   "note": "Codé C314 dans la description du § 6.3.2."
+  },
+  {
+   "code": "C315a",
+   "intitule": "Biodégradation (atténuation naturelle) dynamisée in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C315a)"
+  },
+  {
+   "code": "C315b",
+   "intitule": "Bioventing in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C315b)"
+  },
+  {
+   "code": "C315c",
+   "intitule": "Biosparging in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C315c)"
+  },
+  {
+   "code": "C315d",
+   "intitule": "Phytoremédiation in situ",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C315d)"
+  },
+  {
+   "code": "C316a",
+   "intitule": "Barrière perméable réactive in situ – système mur",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C316a)"
+  },
+  {
+   "code": "C316b",
+   "intitule": "Barrière réactive in situ – système porte",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C316b)"
+  },
+  {
+   "code": "C321a",
+   "intitule": "Excavation des sols sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C321a)"
+  },
+  {
+   "code": "C321b",
+   "intitule": "Tri granulométrique sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C321b)"
+  },
+  {
+   "code": "C321c",
+   "intitule": "Lavage à l’eau sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C321c)"
+  },
+  {
+   "code": "C322a",
+   "intitule": "Encapsulation sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C322a)"
+  },
+  {
+   "code": "C322b",
+   "intitule": "Solidification/stabilisation sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C322b)"
+  },
+  {
+   "code": "C324b",
+   "intitule": "Désorption thermique sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C324b)"
+  },
+  {
+   "code": "C325b",
+   "intitule": "Biotertre sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C325b)"
+  },
+  {
+   "code": "C325d",
+   "intitule": "Landfarming sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C325d)"
+  },
+  {
+   "code": "C350",
+   "intitule": "Techniques non listées",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 2) et § 6.3.2 (C350)"
+  },
+  {
+   "code": "C331",
+   "intitule": "Récupération des produits purs par débourbeur/déshuileur sur site",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C331)",
+   "note": "Indissociable d’une technique du tableau 2."
+  },
+  {
+   "code": "C333a",
+   "intitule": "Stripping à l’air",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C333a)"
+  },
+  {
+   "code": "C333b",
+   "intitule": "Photo-oxydation sous UV",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C333b)"
+  },
+  {
+   "code": "C333c",
+   "intitule": "Adsorption de polluants organiques",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C333c)"
+  },
+  {
+   "code": "C333d",
+   "intitule": "Bioréacteur (procédés intensifs)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C333d)"
+  },
+  {
+   "code": "C333e",
+   "intitule": "Bioréacteur dont lagunage (procédés extensifs)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C333e)"
+  },
+  {
+   "code": "C334a",
+   "intitule": "Oxydoréduction",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C334a)"
+  },
+  {
+   "code": "C334b",
+   "intitule": "Adsorption de polluants inorganiques",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C334b)"
+  },
+  {
+   "code": "C334d",
+   "intitule": "Échange d’ions",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C334d)"
+  },
+  {
+   "code": "C334e",
+   "intitule": "Précipitation, coagulation-floculation, décantation",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C334e)"
+  },
+  {
+   "code": "C334f",
+   "intitule": "Filtration",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C334f)"
+  },
+  {
+   "code": "C341a",
+   "intitule": "Adsorption (rejets gazeux)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C341a)"
+  },
+  {
+   "code": "C341b",
+   "intitule": "Absorption ou lavage (rejets gazeux)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C341b)"
+  },
+  {
+   "code": "C341c",
+   "intitule": "Condensation",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C341c)"
+  },
+  {
+   "code": "C341d",
+   "intitule": "Procédés d’oxydation thermique",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C341d)"
+  },
+  {
+   "code": "C341e",
+   "intitule": "Photo-oxydation (rejets gazeux)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C341e)"
+  },
+  {
+   "code": "C341g",
+   "intitule": "Bioréacteurs (rejets gazeux)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C341g)"
+  },
+  {
+   "code": "C342a",
+   "intitule": "Cyclones",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C342a)"
+  },
+  {
+   "code": "C342b",
+   "intitule": "Dépoussiéreurs humides (laveurs)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C342b)"
+  },
+  {
+   "code": "C342c",
+   "intitule": "Électrofiltres",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C342c)"
+  },
+  {
+   "code": "C342d",
+   "intitule": "Filtres (particules)",
+   "type": "elementaire",
+   "clause": "NF X31-620-4, § 6.2 (tableau 3) et § 6.3.2 (C342d)"
+  },
+  {
+   "code": "ATTES-ALUR",
+   "intitule": "Attestation de prise en compte des mesures de gestion de la pollution dans la conception d’un projet de construction ou d’aménagement",
+   "type": "globale",
+   "composition": [],
+   "clause": "NF X31-620-5, § 6.2 et § 6.3",
+   "note": "Prestation globale non scindable. Prérequis : DIAG et/ou PG (ou IEM, B120, PCT, B130), livrables B330/C400 si travaux réalisés, document d’engagement du maître d’ouvrage."
+  }
+ ]
+}
