@@ -71,8 +71,8 @@ export interface Lecture {
 
 const UNITE_CONCENTRATION_AIR = /^\s*([nµμum]|mc)?g\s*\/\s*N?m\s*[3³]/i
 const UNITE_SUPPORT = /^\s*([nµμum]|mc)?g\s*\/\s*(support|supp?\.?|[ée]ch\.?|[ée]chantillon|tube|cartouche|badge|filtre|t[êe]te|m[ée]dia|cassette)\b/i
-// "mg O2/l", "mg N/l", "mg NO3/l", "mg P/l": water quality parameters given as an element or an ion.
-const UNITE = /^\s*(([nµμum]|mc)?g\s*(o\s*2|n-?no\s*[23]|no\s*[23]|p-?po\s*4|po\s*4|so\s*4|n|p|pt)?\s*\/\s*\S+|%|‰|°\s*c|ms\/m|µs\/cm|us\/cm|mv|upH|unit[ée]s?\s*ph|ntu|ufc)/i
+// "mg O2/l", "mg N/l", "mg NO3/l", "mg P/l", "µg F/l": parameters given as an element or an ion.
+const UNITE = /^\s*(([nµμum]|mc)?g\s*(o\s*2|n-?no\s*[23]|no\s*[23]|p-?po\s*4|po\s*4|so\s*4|n|p|pt|f)?\s*\/\s*\S+|%|‰|°\s*c|ms\/m|µs\/cm|us\/cm|mv|upH|unit[ée]s?\s*ph|ntu|ufc)/i
 const EN_TETE_UNITE = /^(unit[ée]s?|units?)$/i
 const EN_TETE_CAS = /^(n°?\s*)?cas(\s*n°?)?$/i
 const CAS = /^\d{2,7}-\d{2}-\d$/

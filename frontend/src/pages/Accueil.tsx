@@ -28,6 +28,14 @@ const OUTILS: Outil[] = [
     route: '/resultats-labo',
   },
   {
+    titre: 'Interprétation PFAS',
+    accroche: 'Ordres de grandeur et sources',
+    description:
+      'Chargez des résultats PFAS (eaux souterraines ou sols) : la somme des 20, le TFA et le 6:2 FTS situés sur des valeurs publiées, le profil de chaque échantillon et des pistes de sources, chaque lecture sourcée.',
+    points: ['Directive 2020/2184, ANSES, RIVM, littérature', 'Profil par longueur de chaîne, bilan du fluor'],
+    route: '/interpretation-pfas',
+  },
+  {
     titre: 'Conformité des rejets',
     accroche: 'Arrêté du 2 février 1998',
     description:
@@ -104,7 +112,7 @@ export default function Accueil() {
         <p className="eyebrow">ERM — boîte à outils</p>
         <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
         <p className="lede">
-          Sept outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
+          Huit outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
           d'analyses et au contrôle des rejets.
         </p>
         <div className="grid grid--2" style={{ marginTop: '2.5rem', gap: '1.25rem' }}>
