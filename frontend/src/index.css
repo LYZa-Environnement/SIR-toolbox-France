@@ -789,14 +789,15 @@ a.card:hover {
   flex-direction: column;
   color: var(--color-ink);
   text-decoration: none;
-  border-top: 4px solid var(--color-mint);
+  border-top: 4px solid var(--cat, var(--color-mint));
   transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 .outil:hover,
 .outil:focus-visible {
   box-shadow: 0 8px 24px rgba(13, 36, 33, 0.12);
   transform: translateY(-2px);
-  border-top-color: var(--color-accent);
+  border-color: var(--cat, var(--color-accent));
+  border-top-color: var(--cat, var(--color-accent));
 }
 .outil:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -808,10 +809,13 @@ a.card:hover {
   right: 1.25rem;
   font-family: var(--font-heading);
   font-size: 2rem;
-  color: var(--color-border);
+  color: var(--cat-trait, var(--color-border));
 }
 .outil .eyebrow {
   padding-right: 3rem;
+}
+.outil .eyebrow::before {
+  background: var(--cat, var(--color-accent-red));
 }
 .outil__titre {
   margin: 0 0 0.6rem;
@@ -833,7 +837,7 @@ a.card:hover {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-accent);
+  color: var(--cat, var(--color-accent));
 }
 @media (prefers-reduced-motion: reduce) {
   .outil {
@@ -842,6 +846,116 @@ a.card:hover {
   .outil:hover {
     transform: none;
   }
+}
+
+/* Home page: tools grouped by stage of the study, one colour per group. */
+.categorie--contexte {
+  --cat: #00756a;
+  --cat-soft: #e2f8f2;
+  --cat-trait: #b3ded6;
+}
+.categorie--terrain {
+  --cat: #2f5f9e;
+  --cat-soft: #e5edf8;
+  --cat-trait: #bccde6;
+}
+.categorie--labo {
+  --cat: #8a5a12;
+  --cat-soft: #f6ecd9;
+  --cat-trait: #e3cfa9;
+}
+.categorie--conformite {
+  --cat: #6b4c9a;
+  --cat-soft: #efe9f7;
+  --cat-trait: #d2c5e6;
+}
+.categories {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin: 2rem 0 0.5rem;
+}
+.categories__lien {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius);
+  border-left: 4px solid var(--cat);
+  background: var(--cat-soft);
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: box-shadow 0.15s ease;
+}
+.categories__lien:hover,
+.categories__lien:focus-visible {
+  box-shadow: 0 4px 14px -6px rgba(13, 36, 33, 0.3);
+}
+.categories__lien:focus-visible {
+  outline: 2px solid var(--cat);
+  outline-offset: 2px;
+}
+.categories__etape,
+.categorie__etape {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cat);
+}
+.categories__titre {
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+.categories__nombre {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.categorie {
+  margin-top: 2.75rem;
+  scroll-margin-top: 1rem;
+}
+.categorie__entete {
+  margin-bottom: 1.25rem;
+  padding: 0.9rem 1.1rem;
+  border-left: 4px solid var(--cat);
+  background: var(--cat-soft);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.categorie__titre {
+  margin: 0.15rem 0 0.3rem;
+  font-size: clamp(1.35rem, 1.15rem + 0.8vw, 1.8rem);
+}
+.categorie__texte {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+@media (max-width: 900px) {
+  .categories {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .categories {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Conditions de la nappe: summary of the field parameters. */
+.recap-terrain__synthese {
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-section);
+  padding: 0.7rem 0.9rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 0.92rem;
+}
+.recap-terrain__synthese p {
+  margin: 0 0 0.45rem;
+}
+.recap-terrain__synthese p:last-child {
+  margin-bottom: 0;
 }
 
 /* ---- Zones de texte ---- */

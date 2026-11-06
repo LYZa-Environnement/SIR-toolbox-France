@@ -24,6 +24,7 @@ import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../lib/nappe
 import { SOURCES } from '../lib/nappe/sources'
 import { synthetiser, type Synthese } from '../lib/nappe/synthese'
 import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../lib/nappe/transport'
+import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../lib/nappe/recap'
 
 type Feuille = { nom: string; grille: Cell[][] }
 
@@ -111,6 +112,8 @@ export default function ConditionsNappe() {
   const [projet, setProjet] = useState('')
   const [export_, setExport] = useState(false)
   const [hydro, setHydro] = useState<SaisieHydro>(HYDRO_DEFAUT)
+  const [exportRecap, setExportRecap] = useState(false)
+  const [copie, setCopie] = useState(false)
   const [avecBiochlor, setAvecBiochlor] = useState(false)
 
   async function chargerFiches(fs: File[]) {
@@ -162,6 +165,9 @@ export default function ConditionsNappe() {
   const options = useMemo(() => ({ decalage: dec, fond, statuts }), [dec, fond, statuts])
   const site = useMemo(() => lireSite(jeu.valeurs, fond), [jeu, fond])
   const evaluations = useMemo(() => jeu.ouvrages.map((o) => evaluer(o, jeu.valeurs[o.cle] ?? {}, site, options)), [jeu, site, options])
+
+  const recap = useMemo(() => recapTerrain(jeu, evaluations, dec), [jeu, evaluations, dec])
+  const syntheseRecap = useMemo(() => syntheseTerrain(recap, evaluations), [recap, evaluations])
 
   const plusContamine = evaluations.reduce<Evaluation | null>((m, e) => (e.cohvMolaire > (m?.cohvMolaire ?? 0) ? e : m), null)
   const comptes = new Map<Classe, number>()
@@ -217,11 +223,37 @@ export default function ConditionsNappe() {
           options,
           synthese,
           transport: avecBiochlor && transport.vx !== null ? transport : undefined,
+          recap: recap.ouvrages ? { recap, synthese: syntheseRecap } : undefined,
         },
         `Conditions nappe${projet ? ` - ${projet}` : ''} - ${date}.xlsx`,
       )
     } finally {
       setExport(false)
+    }
+  }
+
+  async function exporterRecap() {
+    setExportRecap(true)
+    try {
+      const { telechargerRecap } = await import('../lib/nappe/export')
+      const date = new Date().toISOString().slice(0, 10)
+      await telechargerRecap(
+        `Récapitulatif des paramètres de terrain${projet ? ` — ${projet}` : ''}`,
+        { recap, synthese: syntheseRecap },
+        `Recap parametres terrain${projet ? ` - ${projet}` : ''} - ${date}.xlsx`,
+      )
+    } finally {
+      setExportRecap(false)
+    }
+  }
+
+  async function copierSynthese() {
+    try {
+      await navigator.clipboard.writeText(syntheseRecap.join(' '))
+      setCopie(true)
+      setTimeout(() => setCopie(false), 2000)
+    } catch {
+      setCopie(false)
     }
   }
 
@@ -452,6 +484,67 @@ export default function ConditionsNappe() {
               <span>4</span> Synthèse générale
             </h2>
             <SyntheseGenerale s={synthese} />
+            {recap.ouvrages > 0 && (
+              <div className="card recap-terrain" style={{ marginTop: '1.5rem' }}>
+                <span className="eyebrow">Récapitulatif des paramètres de terrain</span>
+                <p style={{ margin: '0.3rem 0 0.75rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                  Fin de purge, {recap.ouvrages} ouvrage{recap.ouvrages > 1 ? 's' : ''} ; entre parenthèses, l'ouvrage où la valeur est relevée.
+                </p>
+                <div className="tableau-defile">
+                  <table className="tableau">
+                    <thead>
+                      <tr>
+                        <th>Paramètre</th>
+                        <th>Unité</th>
+                        <th>Ouvrages</th>
+                        <th>Minimum (ouvrage)</th>
+                        <th>Maximum (ouvrage)</th>
+                        <th>Moyenne</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recap.lignes.map((l) => (
+                        <tr key={l.id}>
+                          <td>
+                            <strong>{l.libelle}</strong>
+                          </td>
+                          <td>{l.unite}</td>
+                          <td style={{ textAlign: 'center' }}>{l.n}</td>
+                          <td>{formatExtreme(l.min, l.id)}</td>
+                          <td>{formatExtreme(l.max, l.id)}</td>
+                          <td>{formatMoyenne(l)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {syntheseRecap.length > 0 && (
+                  <>
+                    <h3 style={{ fontSize: '1rem', margin: '1.25rem 0 0.4rem' }}>Synthèse des conditions physico-chimiques</h3>
+                    <div className="recap-terrain__synthese">
+                      {syntheseRecap.map((p) => (
+                        <p key={p}>{p}</p>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {recap.exclus.length > 0 && (
+                  <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)', margin: '0.5rem 0 0' }}>
+                    Mesures du laboratoire non comptées comme mesures de terrain : {recap.exclus.join(', ')}.
+                  </p>
+                )}
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+                  <button type="button" className="btn btn--petit" onClick={() => void exporterRecap()} disabled={exportRecap}>
+                    {exportRecap ? 'Préparation…' : 'Télécharger le tableau récapitulatif (Excel)'}
+                  </button>
+                  {syntheseRecap.length > 0 && (
+                    <button type="button" className="btn btn--ghost btn--petit" onClick={() => void copierSynthese()}>
+                      {copie ? 'Synthèse copiée' : 'Copier la synthèse'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -692,7 +785,7 @@ export default function ConditionsNappe() {
               {export_ ? 'Préparation…' : 'Télécharger le rapport Excel'}
             </button>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-              Onglets : synthèse générale et classement, synthèse par ouvrage, score USEPA critère par critère, paramètres de terrain et
+              Onglets : synthèse générale et classement, récapitulatif des paramètres de terrain (min, max, moyenne et synthèse), synthèse par ouvrage, score USEPA critère par critère, paramètres de terrain et
               stabilisation, données utilisées{avecBiochlor && transport.vx !== null ? ', transport et saisies BIOCHLOR' : ''}, méthode et sources.
             </p>
           </div>

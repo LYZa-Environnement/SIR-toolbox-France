@@ -13,6 +13,7 @@ import type { Jeu } from './donnees.ts'
 import { BAREME_CLASSES, COMPOSES_FILIATION, LIBELLES_CLASSE, LIBELLES_FAVORABILITE, type Classe, type Evaluation, type Favorabilite, type Options } from './evaluation.ts'
 import { PARAMS_TERRAIN } from './fiches.ts'
 import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from './parametres.ts'
+import { formatExtreme, formatMoyenne, type Recap } from './recap.ts'
 import { SOURCES } from './sources.ts'
 import type { Synthese } from './synthese.ts'
 import type { Transport } from './transport.ts'
@@ -27,6 +28,13 @@ export interface Rapport {
   limites: string[]
   synthese: Synthese
   transport?: Transport
+  /** Summary of the field parameters and its reading. */
+  recap?: RecapTerrain
+}
+
+export interface RecapTerrain {
+  recap: Recap
+  synthese: string[]
 }
 
 const COULEUR_CONDITIONS: Record<Favorabilite, { fond: string; texte: string }> = {
@@ -428,6 +436,48 @@ function feuilleTransport(wb: Workbook, rp: Rapport) {
   texte(ws, r, 'Les deux ouvrages doivent être sur une même ligne d’écoulement, dans le panache. Les valeurs types par lithologie (USEPA 1998, tableaux C.3.1 et C.3.2) sont à remplacer par des mesures dès que possible.', { italique: true })
 }
 
+/** Min, max (well in brackets) and mean of each field parameter, then a short reading. */
+function feuilleRecap(wb: Workbook, titre: string, { recap, synthese }: RecapTerrain) {
+  const ws = wb.addWorksheet('Récapitulatif terrain', { views: [{ showGridLines: false }] })
+  ecrire(ws, 1, 1, titre, { gras: true, taille: 12, bord: false })
+  let r = texte(ws, 2, `Paramètres physico-chimiques mesurés sur le terrain en fin de purge — ${recap.ouvrages} ouvrage${recap.ouvrages > 1 ? 's' : ''}. Entre parenthèses : ouvrage où la valeur est relevée.`, { italique: true })
+  r++
+  r = entetes(ws, r, [
+    ['Paramètre', 34],
+    ['Unité', 10],
+    ["Nombre d'ouvrages", 10],
+    ['Minimum (ouvrage)', 24],
+    ['Maximum (ouvrage)', 24],
+    ['Moyenne', 12],
+  ])
+  for (const l of recap.lignes) {
+    const v: (string | number)[] = [l.libelle, l.unite, l.n, formatExtreme(l.min, l.id), formatExtreme(l.max, l.id), formatMoyenne(l)]
+    v.forEach((x, j) => ecrire(ws, r, j + 1, x, { taille: 9, h: j === 0 ? 'left' : 'center', gras: j === 0, wrap: j === 3 || j === 4 }))
+    r++
+  }
+  r++
+  r = bandeau(ws, r, 'Synthèse des conditions physico-chimiques de la nappe', 6)
+  for (const p of synthese) {
+    ws.mergeCells(r, 1, r, 6)
+    ecrire(ws, r, 1, p, { taille: 9, wrap: true, bord: false })
+    ws.getRow(r).height = Math.ceil(p.length / 120) * 13 + 3
+    r++
+  }
+  r++
+  const notes = [
+    'Valeurs retenues : dernière lecture complète de la purge (fiches de prélèvement) ou valeur saisie dans l’outil. Moyenne arithmétique des ouvrages.',
+    'pH : acide < 5,5, légèrement acide 5,5 à 6,5, proche de la neutralité 6,5 à 7,5, légèrement basique 7,5 à 8,5, basique au-delà. Minéralisation d’après la conductivité (Rodier) : < 100 µS/cm très faible, 100–200 faible, 200–333 moyenne accentuée, 333–666 moyenne, 666–1 000 importante, > 1 000 élevée. Conditions redox (USEPA, 1998 ; redox mesuré contre Ag/AgCl) : réductrices si O₂ < 0,5 mg/l et redox < −100 mV, anoxiques faiblement réductrices si O₂ < 0,5 mg/l et redox < 50 mV, peu réductrices si O₂ de 0,5 à 5 mg/l ou redox ≥ 50 mV, oxydantes si O₂ > 5 mg/l.',
+  ]
+  if (recap.lignes.some((l) => l.avecInferieurs)) notes.push('« ≤ » : moyenne comptant les valeurs inférieures à la limite de quantification à cette limite.')
+  if (recap.exclus.length) notes.push(`Mesures du laboratoire non prises en compte (paramètres de terrain) : ${recap.exclus.join(', ')}.`)
+  for (const n of notes) {
+    ws.mergeCells(r, 1, r, 6)
+    ecrire(ws, r, 1, n, { taille: 8, italique: true, wrap: true, bord: false })
+    ws.getRow(r).height = Math.ceil(n.length / 130) * 12 + 2
+    r++
+  }
+}
+
 function feuilleMethode(wb: Workbook) {
   const ws = wb.addWorksheet('Méthode et sources', { views: [{ showGridLines: false }] })
   ws.getColumn(1).width = 130
@@ -454,17 +504,34 @@ function feuilleMethode(wb: Workbook) {
   }
 }
 
-export async function telechargerRapport(rp: Rapport, nomFichier: string) {
+async function classeur(): Promise<Workbook> {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
   wb.creator = 'ERM SIR Toolbox France'
+  return wb
+}
+
+/** The summary table of the field parameters on its own. */
+export async function telechargerRecap(titre: string, rt: RecapTerrain, nomFichier: string) {
+  const wb = await classeur()
+  feuilleRecap(wb, titre, rt)
+  await telecharger(wb, nomFichier)
+}
+
+export async function telechargerRapport(rp: Rapport, nomFichier: string) {
+  const wb = await classeur()
   feuilleGenerale(wb, rp)
+  if (rp.recap) feuilleRecap(wb, `${rp.titre} — récapitulatif des paramètres de terrain`, rp.recap)
   feuilleSynthese(wb, rp)
   feuilleScore(wb, rp)
   feuilleTerrain(wb, rp)
   feuilleDonnees(wb, rp)
   feuilleTransport(wb, rp)
   feuilleMethode(wb)
+  await telecharger(wb, nomFichier)
+}
+
+async function telecharger(wb: Workbook, nomFichier: string) {
   const buffer = await wb.xlsx.writeBuffer()
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const url = URL.createObjectURL(blob)
