@@ -271,8 +271,9 @@ export function scorer(t: Table, site: Site, opts: Options): Score {
     const v = t[id]
     const max = Math.max(0, ...regles.map((r) => r.points), sinon.points)
     const critere = regles.map((r) => r.critere).join(' ; ')
-    const base = { id, analyse, requis: !!PAR_ID.get(id)!.requis, critere, max, valeur: ecrireValeur(v, unite), note: v?.note }
-    if (!v) return ajouter({ ...base, points: null, interpretation: 'Non analysé' })
+    const terrain = PAR_ID.get(id)!.groupe === 'terrain'
+    const base = { id, analyse, requis: !!PAR_ID.get(id)!.requis, critere, max, valeur: v ? ecrireValeur(v, unite) : terrain ? 'non mesuré' : 'non analysé', note: v?.note }
+    if (!v) return ajouter({ ...base, points: null, interpretation: terrain ? 'Non mesuré sur le terrain (absent de la fiche)' : 'Non analysé' })
     for (const r of regles) {
       const ok = r.test(v)
       if (ok === null) return ajouter({ ...base, points: null, interpretation: `LQ supérieure au seuil (${r.critere}) : non concluant` })
@@ -436,7 +437,7 @@ export function scorer(t: Table, site: Site, opts: Options): Score {
   const total = criteres.reduce((s, c) => s + (c.points ?? 0), 0)
   const potentiel = criteres.filter((c) => c.points === null).reduce((s, c) => s + c.max, 0)
   const accessible = criteres.filter((c) => c.points !== null).reduce((s, c) => s + c.max, 0)
-  const requisManquants = criteres.filter((c) => c.requis && c.points === null && c.interpretation === 'Non analysé').map((c) => c.analyse)
+  const requisManquants = criteres.filter((c) => c.requis && c.points === null && /^Non (analysé|mesuré)/.test(c.interpretation)).map((c) => c.analyse)
   const geochimieManquante = GEOCHIMIE.filter(([id]) => !t[id]).map(([, l]) => l)
   return {
     total,
