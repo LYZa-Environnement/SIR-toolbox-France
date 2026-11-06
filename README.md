@@ -7,6 +7,15 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
 
 ## Les outils
 
+Sur la page d'accueil (`frontend/src/pages/Accueil.tsx`), les outils sont
+regroupés en quatre catégories, une couleur chacune, dans l'ordre d'une
+étude : **1. Contexte du site et plan d'investigation** (Site Setting,
+données environnementales publiques, création maillage), **2. Données de
+terrain** (logs de forage, conditions de la nappe), **3. Résultats
+d'analyses et interprétation** (résultats labo, interprétation PFAS) et
+**4. Contrôle de conformité** (conformité des rejets, vérification des
+livrables).
+
 - **Assistant Site Setting** (`frontend/src/pages/SiteSetting.tsx`) — saisie d'une adresse,
   délimitation du site par ses parcelles cadastrales, puis six lectures
   cartographiées : eau, air, sols, faune et flore, climat, risques.
@@ -91,6 +100,12 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   Chapelle 2008, classeur USGS 2009, rapport Fe/H₂S), le devenir du chlorure
   de vinyle, Eh, la saturation en oxygène et les contrôles des mesures
   (sursaturation, OD nul avec redox élevé, purge non stabilisée, odeur H₂S…).
+  Récapitulatif des paramètres de terrain (`recap.ts`) : minimum et maximum
+  (ouvrage concerné entre parenthèses) et moyenne du pH, du redox, d'Eh, de
+  l'oxygène dissous, de la conductivité et de la température, avec une
+  synthèse de cinq phrases au plus sur les conditions physico-chimiques de
+  la nappe (pH, minéralisation, oxygène et redox, température, qualité des
+  mesures) ; téléchargeable seul en Excel ou inclus dans le rapport.
   Prépare les données d'entrée de BIOCHLOR (`biochlor.ts`, `transport.ts`,
   `src/components/nappe/TransportBiochlor.tsx`) : vitesse de l'eau depuis la
   vitesse de Darcy, K × gradient (gradient proposé d'après les cotes NGF des
