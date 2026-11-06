@@ -7,6 +7,15 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
 
 ## Les outils
 
+Sur la page d'accueil (`frontend/src/pages/Accueil.tsx`), les outils sont
+regroupés en quatre catégories, une couleur chacune, dans l'ordre d'une
+étude : **1. Contexte du site et plan d'investigation** (Site Setting,
+données environnementales publiques, création maillage), **2. Données de
+terrain** (logs de forage, conditions de la nappe), **3. Résultats
+d'analyses et interprétation** (résultats labo, interprétation PFAS) et
+**4. Contrôle de conformité** (conformité des rejets, vérification des
+livrables).
+
 - **Assistant Site Setting** (`frontend/src/pages/SiteSetting.tsx`) — saisie d'une adresse,
   délimitation du site par ses parcelles cadastrales, puis six lectures
   cartographiées : eau, air, sols, faune et flore, climat, risques.
@@ -47,6 +56,73 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   lors d'au moins deux campagnes, et « Statistiques campagnes » sur
   l'ensemble des données (distribution, par campagne, par régime, par
   ouvrage, corrélations de rang) dans l'export.
+- **Interprétation PFAS** (`frontend/src/pages/InterpretationPfas.tsx`) —
+  lecture des résultats PFAS en eaux souterraines ou en sols, depuis le
+  fichier du laboratoire (plusieurs fichiers réunis, par exemple le TFA
+  rendu à part) : les 20 PFAS de la directive (UE) 2020/2184, le TFA et le
+  6:2 FTS reconnus par n° CAS, abréviation ou nom (`src/lib/pfas/lecture.ts`),
+  isomères linéaires et ramifiés, AOF / EOF. Somme des 20 du laboratoire
+  comparée aux seuils (0,1 µg/l eau du robinet, 2 µg/l eaux brutes) et
+  située sur des échelles logarithmiques avec les valeurs publiées
+  (`src/lib/pfas/reperes.ts` : ANSES, RIVM, Dauchy et al. 2019, Brusseau et
+  al. 2020…), comparaison de tous les échantillons (profils, indicateurs et pistes côte à
+  côte, profil de l'ensemble), profil par longueur de chaîne, indicateurs de
+  composition lus d'après leur valeur et
+  bilan du fluor (`src/lib/pfas/indicateurs.ts`, fractions de fluor
+  calculées d'après les formules, `src/lib/pfas/substances.ts`), pistes de
+  sources critère par critère (`src/lib/pfas/sources.ts`), contrôles (somme
+  du laboratoire, blancs). Chaque valeur et chaque lecture renvoient à la
+  bibliographie de `src/lib/pfas/references.ts` (39 références vérifiées,
+  sources secondaires signalées), avec une explication des deux procédés de
+  fabrication (électrochimique, télomérisation). Ouvrages classés par nom
+  (Pz1, Pz2, Pz10). Exemple fictif intégré.
+- **Conditions de la nappe** (`frontend/src/pages/ConditionsNappe.tsx`) —
+  interprétation des paramètres physico-chimiques au regard du devenir des
+  solvants chlorés (`src/lib/nappe/`). Lit le classeur des fiches de
+  prélèvement, une fiche par onglet (`fiches.ts` : tableau de purge repéré
+  par ses en-têtes, valeur de la dernière lecture complète, stabilisation sur
+  les trois dernières lectures avec les critères de la fiche, écart du redox
+  corrigé, observations), et en option les fichiers du laboratoire, lus comme
+  dans Résultats labo et rapprochés des ouvrages par leur nom (corrigeable).
+  Ouvre sur une synthèse générale tirée des mesures de terrain
+  (`synthese.ts`) : le site (plages et médianes de pH, conductivité,
+  température, répartition de l'oxygène et du redox, mesures à vérifier),
+  le classement des ouvrages du plus réducteur au plus oxygéné avec une
+  description de leur eau en une phrase, les profils verticaux des ouvrages
+  multi-niveaux et les ouvrages singuliers.
+  Avec les seules données usuelles (paramètres de terrain, COHV, BTEX,
+  hydrocarbures), une lecture simplifiée par faisceau d'indices : conditions
+  pour la déchloration réductrice d'après l'oxygène et le redox (seuils
+  USEPA), produits de dégradation (part molaire, cis-DCE > 80 %, CV),
+  sources de carbone, avec les limites que l'absence de nitrates, fer,
+  sulfates et méthane implique et les analyses qui les lèveraient ; le score
+  USEPA est alors donné comme partiel (« x / y » points accessibles), sans
+  les classes du tableau 2.4.
+  Calcule aussi, ouvrage par ouvrage (`evaluation.ts`) : le criblage de la
+  déchloration réductrice du protocole USEPA 1998 (tableaux 2.3 et 2.4,
+  repris par BIOCHLOR ; redox contre Ag/AgCl, composés filles selon le
+  produit rejeté, critères « > 2 × le fond » sur les ouvrages amont désignés,
+  points non évalués signalés), le processus redox dominant (McMahon et
+  Chapelle 2008, classeur USGS 2009, rapport Fe/H₂S), le devenir du chlorure
+  de vinyle, Eh, la saturation en oxygène et les contrôles des mesures
+  (sursaturation, OD nul avec redox élevé, purge non stabilisée, odeur H₂S…).
+  Récapitulatif des paramètres de terrain (`recap.ts`) : minimum et maximum
+  (ouvrage concerné entre parenthèses) et moyenne du pH, du redox, d'Eh, de
+  l'oxygène dissous, de la conductivité et de la température, avec une
+  synthèse de cinq phrases au plus sur les conditions physico-chimiques de
+  la nappe (pH, minéralisation, oxygène et redox, température, qualité des
+  mesures) ; téléchargeable seul en Excel ou inclus dans le rapport.
+  En option à cocher (usage expert), prépare les données d'entrée de BIOCHLOR (`biochlor.ts`, `transport.ts`,
+  `src/components/nappe/TransportBiochlor.tsx`) : vitesse de l'eau depuis la
+  vitesse de Darcy, K × gradient (gradient proposé d'après les cotes NGF des
+  fiches) ou une vitesse réelle connue, porosités et masse volumique types par
+  lithologie (USEPA 1998, tableaux C.3.1 et C.3.2), foc depuis le COT d'un
+  sol, dispersivité d'après la longueur du panache (Xu et Eckstein, 1995),
+  constantes de biodégradation entre deux ouvrages (normalisées par les
+  chlorures si disponibles, USEPA 1998 annexe C) et tableau des valeurs à
+  saisir dans BIOCHLOR, en unités SI et US ; chaque champ explique où
+  trouver la valeur. Inscrit le tout dans la démarche par
+  lignes de preuve (USEPA, MACAOH) et exporte un rapport Excel (`export.ts`).
 - **Conformité des rejets** (`frontend/src/pages/ConformiteRejets.tsx`) —
   rejets d'une unité de traitement d'air ou d'eau comparés aux valeurs
   limites générales de l'arrêté du 2 février 1998 modifié
