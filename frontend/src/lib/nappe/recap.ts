@@ -15,6 +15,7 @@
 import type { Jeu } from './donnees.ts'
 import type { Evaluation, Favorabilite } from './evaluation.ts'
 import type { ParamId, Valeur } from './parametres.ts'
+import { qualifierCE, qualifierPH } from './synthese.ts'
 
 export type IdRecap = 'ph' | 'orp' | 'eh' | 'od' | 'ce' | 't'
 
@@ -142,24 +143,6 @@ function etendue(l: LigneRecap, unite: string, moyenne = true): string {
 
 // ---- Reading ---------------------------------------------------------------------------
 
-function classePh(ph: number): string {
-  if (ph < 5.5) return 'acides'
-  if (ph < 6.5) return 'légèrement acides'
-  if (ph <= 8.5) return 'proches de la neutralité'
-  if (ph <= 9.5) return 'basiques'
-  return 'très basiques'
-}
-
-/** Mineralisation from the conductivity (Rodier, L'analyse de l'eau). */
-function classeCe(ce: number): string {
-  if (ce < 100) return 'très faible'
-  if (ce < 200) return 'faible'
-  if (ce < 333) return 'moyenne'
-  if (ce < 666) return 'moyenne accentuée'
-  if (ce < 1000) return 'importante'
-  return 'élevée'
-}
-
 const deA = (a: string, b: string) => (a === b ? a : `${a} à ${b}`)
 
 /** Seuils USEPA (1998) : O₂ 0,5 et 5 mg/l, redox −100 et 50 mV (Ag/AgCl). */
@@ -183,14 +166,14 @@ export function syntheseTerrain(recap: Recap, evaluations: Evaluation[]): string
   const ph = l('ph')
   if (ph) {
     let p = `Le pH ${etendue(ph, '')}`
-    p += ` : eaux ${deA(classePh(ph.min!.valeur), classePh(ph.max!.valeur))}`
+    p += ` : eau ${deA(qualifierPH(ph.min!.valeur), qualifierPH(ph.max!.valeur))}`
     if (ph.max!.valeur > 9.5) p += ' ; un pH supérieur à 9,5 évoque l’influence d’un ciment (cimentation de l’ouvrage), de remblais ou de chaux'
     phrases.push(`${p}.`)
   }
 
   const ce = l('ce')
   if (ce) {
-    let p = `La conductivité ${etendue(ce, 'µS/cm')}, soit une minéralisation ${deA(classeCe(ce.min!.valeur), classeCe(ce.max!.valeur))}`
+    let p = `La conductivité ${etendue(ce, 'µS/cm')}, soit une minéralisation ${deA(qualifierCE(ce.min!.valeur), qualifierCE(ce.max!.valeur))}`
     const facteur = ce.min!.valeur > 0 ? ce.max!.valeur / ce.min!.valeur : 0
     if (ce.n > 1 && facteur >= 2) p += ` ; le contraste entre ouvrages (facteur ${nombreFr(facteur, 1)}) traduit des eaux d’origine ou d’influence différentes (apports latéraux, infiltration, panache) à rapprocher du schéma conceptuel`
     phrases.push(`${p}.`)

@@ -84,6 +84,12 @@ livrables).
   les trois dernières lectures avec les critères de la fiche, écart du redox
   corrigé, observations), et en option les fichiers du laboratoire, lus comme
   dans Résultats labo et rapprochés des ouvrages par leur nom (corrigeable).
+  Ouvre sur une synthèse générale tirée des mesures de terrain
+  (`synthese.ts`) : le site (plages et médianes de pH, conductivité,
+  température, répartition de l'oxygène et du redox, mesures à vérifier),
+  le classement des ouvrages du plus réducteur au plus oxygéné avec une
+  description de leur eau en une phrase, les profils verticaux des ouvrages
+  multi-niveaux et les ouvrages singuliers.
   Avec les seules données usuelles (paramètres de terrain, COHV, BTEX,
   hydrocarbures), une lecture simplifiée par faisceau d'indices : conditions
   pour la déchloration réductrice d'après l'oxygène et le redox (seuils
@@ -106,7 +112,7 @@ livrables).
   synthèse de cinq phrases au plus sur les conditions physico-chimiques de
   la nappe (pH, minéralisation, oxygène et redox, température, qualité des
   mesures) ; téléchargeable seul en Excel ou inclus dans le rapport.
-  Prépare les données d'entrée de BIOCHLOR (`biochlor.ts`, `transport.ts`,
+  En option à cocher (usage expert), prépare les données d'entrée de BIOCHLOR (`biochlor.ts`, `transport.ts`,
   `src/components/nappe/TransportBiochlor.tsx`) : vitesse de l'eau depuis la
   vitesse de Darcy, K × gradient (gradient proposé d'après les cotes NGF des
   fiches) ou une vitesse réelle connue, porosités et masse volumique types par

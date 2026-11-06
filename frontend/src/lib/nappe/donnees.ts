@@ -41,11 +41,35 @@ export interface Entrees {
   ajouts: string[]
 }
 
-/** The automatic match of a lab sample: the sheet with the same key, else itself. */
+const DATES = /\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b/g
+
+/** Lowercase, no accents, "5-9 m" → "5-9": the form the sample names are matched on. */
+const aplatir = (nom: string) =>
+  nom
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(DATES, ' ')
+    .replace(/(\d)\s*m\b/g, '$1')
+
+/**
+ * The automatic match of a lab sample: the sheet with the same key
+ * (ignoring a date in the sample name), else the sheet whose name begins the
+ * sample name ("PzC11 - ESO 1" → PzC11, but not PzC1), else itself.
+ */
 export function associationAuto(nomEchantillon: string, fiches: FicheTerrain[]): string {
-  const cle = cleOuvrage(nomEchantillon)
+  const echantillon = aplatir(nomEchantillon)
+  const cle = cleOuvrage(echantillon)
   const f = fiches.find((x) => cleOuvrage(x.ouvrage) === cle) ?? fiches.find((x) => cleOuvrage(x.onglet) === cle)
-  return f ? cleOuvrage(f.ouvrage) : cle
+  if (f) return cleOuvrage(f.ouvrage)
+  let meilleure: string | null = null
+  for (const x of fiches) {
+    const k = cleOuvrage(x.ouvrage)
+    if (!k || (meilleure && meilleure.length >= k.length)) continue
+    const motif = new RegExp(`^[^a-z0-9]*${k.split('').join('[^a-z0-9]*')}(?![a-z0-9])`)
+    if (motif.test(echantillon)) meilleure = k
+  }
+  return meilleure ?? cleOuvrage(nomEchantillon)
 }
 
 const PRIORITE_FER: Reconnu[] = ['fe2', 'fe-dissous', 'fe-total']
