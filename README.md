@@ -47,6 +47,26 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   lors d'au moins deux campagnes, et « Statistiques campagnes » sur
   l'ensemble des données (distribution, par campagne, par régime, par
   ouvrage, corrélations de rang) dans l'export.
+- **Conditions de la nappe** (`frontend/src/pages/ConditionsNappe.tsx`) —
+  interprétation des paramètres physico-chimiques au regard du devenir des
+  solvants chlorés (`src/lib/nappe/`). Lit le classeur des fiches de
+  prélèvement, une fiche par onglet (`fiches.ts` : tableau de purge repéré
+  par ses en-têtes, valeur de la dernière lecture complète, stabilisation sur
+  les trois dernières lectures avec les critères de la fiche, écart du redox
+  corrigé, observations), et en option les fichiers du laboratoire, lus comme
+  dans Résultats labo et rapprochés des ouvrages par leur nom (corrigeable).
+  Calcule, ouvrage par ouvrage (`evaluation.ts`) : le criblage de la
+  déchloration réductrice du protocole USEPA 1998 (tableaux 2.3 et 2.4,
+  repris par BIOCHLOR ; redox contre Ag/AgCl, composés filles selon le
+  produit rejeté, critères « > 2 × le fond » sur les ouvrages amont désignés,
+  points non évalués signalés), le processus redox dominant (McMahon et
+  Chapelle 2008, classeur USGS 2009, rapport Fe/H₂S), le devenir du chlorure
+  de vinyle, Eh, la saturation en oxygène et les contrôles des mesures
+  (sursaturation, OD nul avec redox élevé, purge non stabilisée, odeur H₂S…).
+  Prépare les données d'entrée de BIOCHLOR (`biochlor.ts` : vitesse réelle,
+  retard, constantes de biodégradation entre deux ouvrages normalisées par
+  les chlorures, USEPA 1998 annexe C), inscrit le tout dans la démarche par
+  lignes de preuve (USEPA, MACAOH) et exporte un rapport Excel (`export.ts`).
 - **Conformité des rejets** (`frontend/src/pages/ConformiteRejets.tsx`) —
   rejets d'une unité de traitement d'air ou d'eau comparés aux valeurs
   limites générales de l'arrêté du 2 février 1998 modifié

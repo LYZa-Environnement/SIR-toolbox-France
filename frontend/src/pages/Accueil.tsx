@@ -28,6 +28,14 @@ const OUTILS: Outil[] = [
     route: '/resultats-labo',
   },
   {
+    titre: 'Conditions de la nappe',
+    accroche: 'Atténuation naturelle des COHV',
+    description:
+      'Chargez les fiches de prélèvement et, si vous les avez, les résultats du laboratoire : processus redox, criblage USEPA 1998 de la déchloration réductrice, devenir du chlorure de vinyle et données d’entrée BIOCHLOR.',
+    points: ['pH, redox, O₂, conductivité, température en fin de purge', 'Contrôle des mesures, rapport Excel'],
+    route: '/conditions-nappe',
+  },
+  {
     titre: 'Conformité des rejets',
     accroche: 'Arrêté du 2 février 1998',
     description:
@@ -104,8 +112,8 @@ export default function Accueil() {
         <p className="eyebrow">ERM — boîte à outils</p>
         <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
         <p className="lede">
-          Sept outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
-          d'analyses et au contrôle des rejets.
+          Huit outils pour préparer une étude de site, de la lecture des données publiques à la mise en forme des résultats
+          d'analyses, à l'interprétation des conditions de la nappe et au contrôle des rejets.
         </p>
         <div className="grid grid--2" style={{ marginTop: '2.5rem', gap: '1.25rem' }}>
           {OUTILS.map((outil, i) => (
