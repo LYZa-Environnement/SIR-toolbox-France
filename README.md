@@ -67,6 +67,41 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   sources secondaires signalées), avec une explication des deux procédés de
   fabrication (électrochimique, télomérisation). Ouvrages classés par nom
   (Pz1, Pz2, Pz10). Exemple fictif intégré.
+- **Conditions de la nappe** (`frontend/src/pages/ConditionsNappe.tsx`) —
+  interprétation des paramètres physico-chimiques au regard du devenir des
+  solvants chlorés (`src/lib/nappe/`). Lit le classeur des fiches de
+  prélèvement, une fiche par onglet (`fiches.ts` : tableau de purge repéré
+  par ses en-têtes, valeur de la dernière lecture complète, stabilisation sur
+  les trois dernières lectures avec les critères de la fiche, écart du redox
+  corrigé, observations), et en option les fichiers du laboratoire, lus comme
+  dans Résultats labo et rapprochés des ouvrages par leur nom (corrigeable).
+  Avec les seules données usuelles (paramètres de terrain, COHV, BTEX,
+  hydrocarbures), une lecture simplifiée par faisceau d'indices : conditions
+  pour la déchloration réductrice d'après l'oxygène et le redox (seuils
+  USEPA), produits de dégradation (part molaire, cis-DCE > 80 %, CV),
+  sources de carbone, avec les limites que l'absence de nitrates, fer,
+  sulfates et méthane implique et les analyses qui les lèveraient ; le score
+  USEPA est alors donné comme partiel (« x / y » points accessibles), sans
+  les classes du tableau 2.4.
+  Calcule aussi, ouvrage par ouvrage (`evaluation.ts`) : le criblage de la
+  déchloration réductrice du protocole USEPA 1998 (tableaux 2.3 et 2.4,
+  repris par BIOCHLOR ; redox contre Ag/AgCl, composés filles selon le
+  produit rejeté, critères « > 2 × le fond » sur les ouvrages amont désignés,
+  points non évalués signalés), le processus redox dominant (McMahon et
+  Chapelle 2008, classeur USGS 2009, rapport Fe/H₂S), le devenir du chlorure
+  de vinyle, Eh, la saturation en oxygène et les contrôles des mesures
+  (sursaturation, OD nul avec redox élevé, purge non stabilisée, odeur H₂S…).
+  Prépare les données d'entrée de BIOCHLOR (`biochlor.ts`, `transport.ts`,
+  `src/components/nappe/TransportBiochlor.tsx`) : vitesse de l'eau depuis la
+  vitesse de Darcy, K × gradient (gradient proposé d'après les cotes NGF des
+  fiches) ou une vitesse réelle connue, porosités et masse volumique types par
+  lithologie (USEPA 1998, tableaux C.3.1 et C.3.2), foc depuis le COT d'un
+  sol, dispersivité d'après la longueur du panache (Xu et Eckstein, 1995),
+  constantes de biodégradation entre deux ouvrages (normalisées par les
+  chlorures si disponibles, USEPA 1998 annexe C) et tableau des valeurs à
+  saisir dans BIOCHLOR, en unités SI et US ; chaque champ explique où
+  trouver la valeur. Inscrit le tout dans la démarche par
+  lignes de preuve (USEPA, MACAOH) et exporte un rapport Excel (`export.ts`).
 - **Conformité des rejets** (`frontend/src/pages/ConformiteRejets.tsx`) —
   rejets d'une unité de traitement d'air ou d'eau comparés aux valeurs
   limites générales de l'arrêté du 2 février 1998 modifié
