@@ -30,7 +30,7 @@ import {
 } from './qualite.ts'
 import { argb, BANDEAU, barre, ETAT, echelle, GROUPES, TEINTES_FAMILLES } from './couleurs.ts'
 import { statistiques, valeursCompose } from './stats.ts'
-import { dessinerCamembert, HAUTEUR, LARGEUR } from './camembert.ts'
+import { dessinerCamembert, dessinerEchelle, HAUTEUR, LARGEUR } from './camembert.ts'
 import { signatures } from './signatures.ts'
 import type { Position } from './expert/amontAval.ts'
 import type { DonneesCampagnes } from './feuillesCampagnes.ts'
@@ -655,7 +655,7 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
     ws,
     2,
     1,
-    'Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés. Les échantillons sont ordonnés par similarité de composition : classification hiérarchique (lien moyen) sur la distance de Bray-Curtis entre profils, 0 pour deux profils identiques, 1 pour deux profils sans composé commun.',
+    'Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés ; le diamètre de chaque camembert est proportionnel au total de l’échantillon, sur une échelle commune à la famille (le plus fort total au plus grand diamètre), pour comparer les ouvrages entre eux ou sur une carte. Les échantillons sont ordonnés par similarité de composition : classification hiérarchique (lien moyen) sur la distance de Bray-Curtis entre profils, 0 pour deux profils identiques, 1 pour deux profils sans composé commun.',
     { italique: true, taille: 9, bord: false },
   )
   if (!familles.length) {
@@ -690,12 +690,19 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
     barre(ws, premiere, r - 2, largeur, teinte)
     r++
 
-    // Pies: all samples together first, then one per sample, three per row.
-    const pies = [f.ensemble, ...f.echantillons]
+    // Pies: all samples together first (full size), the scale of the
+    // family, then one per sample with its diameter proportional to its
+    // total — three per row.
+    const totalMax = Math.max(...f.echantillons.map((s) => s.total))
+    const images = [
+      dessinerCamembert(f.ensemble, ordre, f.unite, `${f.famille} — ensemble des échantillons`),
+      dessinerEchelle(totalMax, f.unite, `${f.famille} — échelle des diamètres`),
+      ...f.echantillons.map((s) => dessinerCamembert(s, ordre, f.unite, s.echantillon, totalMax)),
+    ]
+    const pies = images
     const lignes = Math.ceil(HAUTEUR / 20) + 1
     let dessinees = 0
-    pies.forEach((s, k) => {
-      const image = dessinerCamembert(s, ordre, f.unite, s === f.ensemble ? `${f.famille} — ensemble des échantillons` : s.echantillon)
+    images.forEach((image, k) => {
       if (!image) return
       const id = wb.addImage({ base64: image, extension: 'png' })
       const ligne = r + Math.floor(k / 3) * lignes
