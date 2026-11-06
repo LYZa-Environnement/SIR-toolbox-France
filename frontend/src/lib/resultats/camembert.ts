@@ -3,12 +3,14 @@
  * for the Excel "Signatures" sheet — ExcelJS cannot write native charts, so
  * the pies are inserted as images — and for the preview on the page.
  *
- * The pies of one family share a scale: the diameter is proportional to the
- * sample's total, the largest total of the family drawn at the full size,
- * so that pies of several wells can be set side by side, or on a map, and
- * compared.
+ * The pies of one family share a scale: the area is proportional to the
+ * sample's total (the cartographic convention for proportional symbols),
+ * the largest total of the family drawn at the full size, so that pies of
+ * several wells can be set side by side, or on a map, and compared.
+ * Compounds are named by their usual short form (PCE, cis-DCE, BaP…).
  */
 
+import { acronyme } from './acronymes.ts'
 import { preparerParts, type Signature } from './signatures.ts'
 
 export const LARGEUR = 380
@@ -18,11 +20,13 @@ export const RAYON_MAX = 72
 /** Below this, a pie would not show: drawn at this radius, and said so. */
 const RAYON_MIN = 3
 
-/** Radius for a total, the diameter proportional to it on the family's scale. */
+/** Radius for a total: the area proportional to it on the family's scale. */
 export function rayonPour(total: number, totalMax: number): number {
   if (!(totalMax > 0)) return RAYON_MAX
-  return Math.max(RAYON_MIN, (RAYON_MAX * total) / totalMax)
+  return Math.max(RAYON_MIN, RAYON_MAX * Math.sqrt(Math.max(0, total) / totalMax))
 }
+
+const tropPetit = (total: number, totalMax: number) => RAYON_MAX * Math.sqrt(Math.max(0, total) / totalMax) < RAYON_MIN
 
 const fr = (x: number) => Number(x.toPrecision(3)).toLocaleString('fr-FR')
 
@@ -77,7 +81,7 @@ export function dessinerCamembert(signature: Signature, ordre: string[], unite: 
   const r = totalMax === undefined ? RAYON_MAX : rayonPour(signature.total, totalMax)
   if (totalMax !== undefined) {
     ctx.font = '8.5px Verdana, sans-serif'
-    ctx.fillText(r === RAYON_MIN && (RAYON_MAX * signature.total) / totalMax < RAYON_MIN ? 'Ø agrandi (total trop faible pour l’échelle)' : 'Ø proportionnel au total', 10, 45)
+    ctx.fillText(tropPetit(signature.total, totalMax) ? 'Agrandi (total trop faible pour l’échelle)' : 'Surface proportionnelle au total', 10, 45)
   }
   tracer(ctx, signature, ordre, 90, 135, r)
 
@@ -92,9 +96,10 @@ export function dessinerCamembert(signature: Signature, ordre: string[], unite: 
     ctx.fillRect(x0, y - 8, 10, 10)
     ctx.fillStyle = '#1c1c1c'
     const pct = `${(p.part * 100).toLocaleString('fr-FR', { maximumFractionDigits: p.part < 0.1 ? 1 : 0 })} %`
-    let nom = p.nom
+    let nom = acronyme(p.nom)
+    const complet = nom
     while (ctx.measureText(`${nom} ${pct}`).width > LARGEUR - x0 - 22 && nom.length > 4) nom = nom.slice(0, -2)
-    if (nom !== p.nom) nom = `${nom.trimEnd()}…`
+    if (nom !== complet) nom = `${nom.trimEnd()}…`
     ctx.fillText(`${nom} ${pct}`, x0 + 15, y + 1)
   })
   return canvas.toDataURL('image/png')
@@ -129,7 +134,7 @@ export function dessinerEchelle(totalMax: number, unite: string, titre: string, 
   ctx.fillText(titre, 10, 18)
   ctx.font = '10px Verdana, sans-serif'
   ctx.fillStyle = '#5a5a5a'
-  ctx.fillText('Diamètre des camemberts proportionnel au total', 10, 33)
+  ctx.fillText('Surface des camemberts proportionnelle au total', 10, 33)
   const base = 210
   const cx = 95
   for (const v of reperes(totalMax)) {

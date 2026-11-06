@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { acronyme } from '../lib/resultats/acronymes'
 import { dessinerCamembert, dessinerEchelle, dessinerPastille, rayonPour } from '../lib/resultats/camembert'
 import type { Lecture } from '../lib/resultats/parse'
 import { estControle, type Qualification } from '../lib/resultats/qualite'
@@ -38,7 +39,7 @@ export function SignaturesApercu({ lecture, qualifications }: { lecture: Lecture
     try {
       const { default: JSZip } = await import('jszip')
       const zip = new JSZip()
-      const csv = ['famille;echantillon;total;unite;diametre_px;diametre_relatif']
+      const csv = ['famille;echantillon;total;unite;diametre_px;surface_relative']
       for (const f of familles) {
         const ordre = f.composes.map((c) => c.nom)
         const totalMax = Math.max(...f.echantillons.map((s) => s.total))
@@ -50,6 +51,8 @@ export function SignaturesApercu({ lecture, qualifications }: { lecture: Lecture
           const d = 2 * rayonPour(s.total, totalMax) * FACTEUR_CARTE
           csv.push([f.famille, s.echantillon, String(Number(s.total.toPrecision(4))).replace('.', ','), f.unite, d.toFixed(1).replace('.', ','), (s.total / totalMax).toFixed(4).replace('.', ',')].join(';'))
         }
+        const abreges = f.composes.filter((c) => acronyme(c.nom) !== c.nom)
+        if (abreges.length) dossier.file('_abreviations.txt', abreges.map((c) => `${acronyme(c.nom)} : ${c.nom}`).join('\r\n'))
       }
       zip.file('totaux_et_diametres.csv', '﻿' + csv.join('\r\n'))
       zip.file(
@@ -58,10 +61,11 @@ export function SignaturesApercu({ lecture, qualifications }: { lecture: Lecture
           'Camemberts de signature pour une carte — SIR Toolbox France',
           '',
           'Un dossier par famille de composés : un PNG transparent par échantillon et la légende des diamètres (_echelle.png).',
-          'Le diamètre de chaque camembert est proportionnel au total de l’échantillon ; le plus fort total de la famille a le plus grand diamètre.',
+          'La surface de chaque camembert est proportionnelle au total de l’échantillon (convention des symboles proportionnels) ; le plus fort total de la famille a le plus grand camembert.',
           'Pour garder l’échelle, insérez toutes les images d’une même famille avec le même facteur d’agrandissement (taille d’origine de préférence).',
           `Un total trop faible pour l’échelle est dessiné au diamètre minimal (${6 * FACTEUR_CARTE} px), plus grand que sa valeur.`,
-          'totaux_et_diametres.csv donne, par échantillon, le total et le diamètre (en pixels de l’image, et relatif au plus fort total), pour des symboles proportionnels dans un SIG.',
+          'totaux_et_diametres.csv donne, par échantillon, le total, le diamètre en pixels de l’image et la surface relative au plus fort total, pour des symboles proportionnels dans un SIG.',
+          'Les composés sont désignés par leur abréviation usuelle (PCE, cis-DCE, BaP…) : voir _abreviations.txt dans chaque dossier.',
         ].join('\r\n'),
       )
       const blob = await zip.generateAsync({ type: 'blob' })
@@ -93,8 +97,9 @@ export function SignaturesApercu({ lecture, qualifications }: { lecture: Lecture
         ))}
       </div>
       <p style={{ fontSize: '0.85rem', margin: '0.75rem 0 0.5rem' }}>
-        Par échantillon, le diamètre du camembert est proportionnel au total de la famille, sur une échelle commune à tous les
-        échantillons : les graphiques se comparent d’un ouvrage à l’autre et se placent sur une carte.
+        Par échantillon, la surface du camembert est proportionnelle au total de la famille, sur une échelle commune à tous les
+        échantillons : les graphiques se comparent d’un ouvrage à l’autre et se placent sur une carte. Les composés y sont
+        désignés par leur abréviation usuelle (PCE, cis-DCE, BaP…).
       </p>
       <button type="button" className="btn btn--petit" onClick={() => void telechargerCarte()} disabled={preparation}>
         {preparation ? 'Préparation…' : 'Télécharger les camemberts pour une carte (PNG transparents, échelle commune)'}

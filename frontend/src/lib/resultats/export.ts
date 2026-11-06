@@ -30,6 +30,7 @@ import {
 } from './qualite.ts'
 import { argb, BANDEAU, barre, ETAT, echelle, GROUPES, TEINTES_FAMILLES } from './couleurs.ts'
 import { statistiques, valeursCompose } from './stats.ts'
+import { acronyme } from './acronymes.ts'
 import { dessinerCamembert, dessinerEchelle, HAUTEUR, LARGEUR } from './camembert.ts'
 import { signatures } from './signatures.ts'
 import type { Position } from './expert/amontAval.ts'
@@ -655,7 +656,7 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
     ws,
     2,
     1,
-    'Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés ; le diamètre de chaque camembert est proportionnel au total de l’échantillon, sur une échelle commune à la famille (le plus fort total au plus grand diamètre), pour comparer les ouvrages entre eux ou sur une carte. Les échantillons sont ordonnés par similarité de composition : classification hiérarchique (lien moyen) sur la distance de Bray-Curtis entre profils, 0 pour deux profils identiques, 1 pour deux profils sans composé commun.',
+    'Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés ; la surface de chaque camembert est proportionnelle au total de l’échantillon, sur une échelle commune à la famille (le plus fort total au plus grand camembert), pour comparer les ouvrages entre eux ou sur une carte ; les composés y sont désignés par leur abréviation usuelle, rappelée sous chaque tableau. Les échantillons sont ordonnés par similarité de composition : classification hiérarchique (lien moyen) sur la distance de Bray-Curtis entre profils, 0 pour deux profils identiques, 1 pour deux profils sans composé commun.',
     { italique: true, taille: 9, bord: false },
   )
   if (!familles.length) {
@@ -688,15 +689,17 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
     // The heavier a compound in a sample, the deeper its cell; totals as bars.
     echelle(ws, premiere, r - 1, 2, teinte, largeur - 1)
     barre(ws, premiere, r - 2, largeur, teinte)
+    const abreges = f.composes.filter((c) => acronyme(c.nom) !== c.nom).map((c) => `${acronyme(c.nom)} : ${c.nom}`)
+    if (abreges.length) ecrire(ws, r++, 1, `Abréviations des graphiques — ${abreges.join(' ; ')}.`, { italique: true, taille: 8, bord: false })
     r++
 
     // Pies: all samples together first (full size), the scale of the
-    // family, then one per sample with its diameter proportional to its
-    // total — three per row.
+    // family, then one per sample with its area proportional to its total
+    // — three per row.
     const totalMax = Math.max(...f.echantillons.map((s) => s.total))
     const images = [
       dessinerCamembert(f.ensemble, ordre, f.unite, `${f.famille} — ensemble des échantillons`),
-      dessinerEchelle(totalMax, f.unite, `${f.famille} — échelle des diamètres`),
+      dessinerEchelle(totalMax, f.unite, `${f.famille} — échelle des surfaces`),
       ...f.echantillons.map((s) => dessinerCamembert(s, ordre, f.unite, s.echantillon, totalMax)),
     ]
     const pies = images
