@@ -5,25 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Logs de forage · SIR Toolbox</title>
 <script src="vendor/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400&display=swap" rel="stylesheet">
 <style>
+/* Charte ERM : titres en serif, texte en sans-serif géométrique (Figtree),
+   encre vert-noir, accent vert ERM, menthe pour l'action principale. */
 :root{
-  --bg:#e7e9e3; --panel:#f7f7f3; --ink:#22271f; --muted:#5f665a; --line:#cdd2c5;
-  --accent:#2f6b3a; --accent-ink:#ffffff; --warn:#9a4f16; --err:#ad2a20; --chip:#dfe4d8; --field:#ffffff;
+  --bg:#f2f5f5; --panel:#ffffff; --ink:#0d2421; --muted:#4f625f; --line:#d3dcda;
+  --accent:#00756a; --accent-ink:#ffffff; --mint:#00ffbe; --mint-ink:#0d2421; --warn:#a3671a; --err:#c34a35; --chip:#e2f8f2; --field:#ffffff;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#191c17; --panel:#22261f; --ink:#e5e8df; --muted:#a2a99b; --line:#3a4135;
-    --accent:#86bf88; --accent-ink:#0f140e; --warn:#e3a464; --err:#f0857a; --chip:#2d3328; --field:#1b1f18;
+    --bg:#0b1d1b; --panel:#102a27; --ink:#e6efed; --muted:#9fb3af; --line:#2a4541;
+    --accent:#00ffbe; --accent-ink:#0d2421; --mint:#00ffbe; --mint-ink:#0d2421; --warn:#e3a464; --err:#f0857a; --chip:#1a3a36; --field:#0d2421;
     color-scheme: dark;
   }
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:390px 1fr;height:100vh}
+body{font:14px/1.45 'Figtree','Segoe UI',system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:390px 1fr;height:100vh}
 aside{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:22px 22px 40px}
 main{overflow:auto;display:flex;flex-direction:column}
-h1{font-size:20px;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
+h1{font-family:'Source Serif 4',Georgia,serif;font-size:24px;margin:0 0 4px;font-weight:500;letter-spacing:-.015em}
 .lede{color:var(--muted);margin:0 0 20px;font-size:13px}
 section.step{border-top:1px solid var(--line);padding:16px 0 18px}
 section.step h2{font-size:14.5px;margin:0 0 4px;font-weight:650;display:flex;align-items:baseline;gap:8px}
@@ -36,7 +41,8 @@ section.step.off{opacity:.5;pointer-events:none}
 .drop input{display:none}
 .file-ok{font-size:12.5px;margin-top:8px;color:var(--accent)}
 button,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:7px 12px;border-radius:6px;cursor:pointer}
-button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.primary{background:var(--mint);color:var(--mint-ink);border-color:var(--mint);font-weight:700}
+button.primary:hover{background:#00e0a7;border-color:#00e0a7}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;font-size:12.5px;cursor:pointer}
 label.row{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
@@ -59,6 +65,17 @@ textarea{resize:vertical;min-height:72px}
 .param .opts input{padding:3px 6px;font-size:12px}
 .summary{font-size:12.5px;margin:8px 0}
 .summary .bad{color:var(--warn)}
+.param .vg{grid-column:2/4;font-size:11px;color:var(--muted)}
+.param .fam{font-size:11px;color:var(--muted)}
+details.match{margin:10px 0;border:1px solid var(--line);border-radius:6px;background:var(--field)}
+details.match summary{cursor:pointer;padding:7px 9px;font-size:12.5px}
+details.match .rows{max-height:320px;overflow:auto;border-top:1px solid var(--line)}
+.mrow{display:grid;gap:4px;padding:6px 9px;border-bottom:1px solid var(--line);font-size:12px}
+.mrow:last-child{border-bottom:0}
+.mrow .why{color:var(--muted);font-size:11px}
+.mrow .tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.mrow .tag.approx{color:var(--warn)} .mrow .tag.none{color:var(--err)} .mrow .tag.manual{color:var(--accent)}
+.mrow select{font-size:12px;padding:3px 5px}
 .toolbar{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 22px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .toolbar .sp{flex:1}
 .toolbar{padding-right:140px} /* room for the « Accueil » button */
@@ -106,16 +123,28 @@ textarea{resize:vertical;min-height:72px}
 
   <section class="step off" id="step2">
     <h2><span class="n">2</span>Résultats d'analyses <span class="lvl" style="font-weight:400;color:var(--muted);font-size:12px">facultatif</span></h2>
-    <p class="hint">Fichier du laboratoire ou tableau de résultats. Les échantillons sont rattachés aux forages par leur nom, par exemple « MW6 (3,4-4 m) », ou via l'onglet Samples.</p>
+    <p class="hint">Fichier du laboratoire ou tableau de résultats. Les échantillons sont rattachés aux forages par leur nom, même écrit autrement que dans l'onglet Samples (« API17-1-SO-0.5-1.0 » pour « API17-1-SO-0,5-1 », « PZ01 » pour « PZ1 »), puis par leur profondeur.</p>
     <label class="drop" id="dropLab"><input type="file" id="fileLab" accept=".xlsx,.xlsm,.xls,.csv"><strong>Joindre les résultats</strong> ou les déposer ici</label>
     <div id="labPanel" hidden>
       <div class="summary" id="labSummary"></div>
+      <details class="match" id="matchBox" hidden><summary id="matchSum"></summary><div class="rows" id="matchRows"></div></details>
+      <label class="row"><input type="checkbox" id="vgOn"> Comparer aux valeurs guides ERM (sols)</label>
+      <div id="vgOpts" hidden>
+        <div class="field">Métaux
+          <select id="vgMetaux">
+            <option value="sur site">Sur site (bruit de fond)</option>
+            <option value="hors site">Hors site (seuil de vigilance)</option>
+          </select>
+        </div>
+        <p class="hint" id="vgInfo"></p>
+        <p class="hint"><button class="linkbtn" id="btnVgPick" type="button">Cocher les paramètres dotés d'une valeur guide ERM</button></p>
+      </div>
       <input type="text" id="paramSearch" placeholder="Filtrer les paramètres (ex. C10-C40, benzène)" aria-label="Filtrer les paramètres">
-      <p class="hint" style="margin:8px 0 6px">Cochez jusqu'à 8 paramètres à reporter sur les logs. Le seuil est facultatif : les valeurs au-dessus s'affichent en rouge gras.</p>
+      <p class="hint" style="margin:8px 0 6px">Cochez jusqu'à 8 paramètres à reporter sur les logs. Ils sont convertis dans une même unité, indiquée en tête de colonne. Une valeur au-dessus de la valeur guide ERM ou du seuil saisi (prioritaire) s'affiche en rouge gras.</p>
       <div class="params" id="paramList"></div>
       <label class="row"><input type="checkbox" id="hideLQ"> Masquer les valeurs inférieures à la LQ</label>
-      <div class="field">Référence des seuils (reportée en note)
-        <input type="text" id="thrSource" placeholder="ex. Valeurs guides ERM – sols, 2026">
+      <div class="field">Référence des seuils saisis (reportée en note)
+        <input type="text" id="thrSource" placeholder="ex. Valeurs de fond géochimique locales">
       </div>
       <button class="linkbtn" id="btnClearLab" type="button">Retirer les résultats d'analyses</button>
     </div>
@@ -136,10 +165,11 @@ textarea{resize:vertical;min-height:72px}
         <option value="landscape">Paysage</option>
       </select>
     </div>
-    <div class="field">Profondeur représentée par page
+    <div class="field">Échelle verticale (chaque log tient sur une page)
       <select id="optDepth">
-        <option value="auto">Automatique (tout le forage, jusqu'à 30 m)</option>
-        <option value="10">10 m</option><option value="15">15 m</option><option value="20">20 m</option><option value="25">25 m</option><option value="30">30 m</option>
+        <option value="auto">Automatique (profondeur du forage)</option>
+        <option value="common">Identique pour tous les logs (forage le plus profond)</option>
+        <option value="5">5 m au moins</option><option value="10">10 m au moins</option><option value="15">15 m au moins</option><option value="20">20 m au moins</option><option value="30">30 m au moins</option>
       </select>
     </div>
     <label class="row"><input type="checkbox" id="optCoords"> Ajouter coordonnées, cote du terrain et niveau d'eau en m NGF</label>
@@ -185,7 +215,7 @@ Tel: 01.53.24.10.30</textarea>
         <tr><td>PID</td><td>Hole ID, From, To, PID (ppm)</td></tr>
         <tr><td>Water Level</td><td>Hole ID, Depth</td></tr>
         <tr><td>Comments</td><td>Hole ID, From, To, Remarks, Organoleptic Observations, Moisture Indication</td></tr>
-        <tr><td>Samples</td><td>Hole ID, From, To, Sample ID, Date, Time (facultatif), Analysed (facultatif : Oui / Non ; à défaut, d'après le fichier de résultats)</td></tr>
+        <tr><td>Samples</td><td>Hole ID, From, To, Sample ID (ou Sample Name), Date, Time (facultatif), Analysed (facultatif : Oui / Non ; à défaut, d'après le fichier de résultats)</td></tr>
       </table>
     </div>
   </div>
@@ -240,7 +270,8 @@ function tw(t, size){
   return w*size;
 }
 function wrap(text, maxW, size){
-  const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
+  // Ordinary spaces only: a no-break space keeps « 30 000 » or « 25 (a) » whole.
+  const words = String(text ?? '').trim().split(/[ \t\n\r]+/).filter(Boolean);
   const lines = []; let cur = '';
   for (const w of words){
     const t = cur ? cur + ' ' + w : w;
@@ -284,7 +315,7 @@ const SYN = {
   key:['lithologykeyword','motcle','motclelithologie','keyword'], desc:['lithologydescription','description','descriptionlithologique'],
   rem:['remarks','remarques','remarque'], org:['organolepticobservations','observationsorganoleptiques','organoleptique'],
   moist:['moistureindication','indicationhumidite','humidite','moisture'],
-  sid:['sampleid','echantillon','sample','idechantillon','nomechantillon'], sdate:['date','datedeprelevement','dateprelevement','samplingdate'],
+  sid:['sampleid','samplename','samplenumber','echantillon','sample','idechantillon','nomechantillon','nomdelechantillon','referenceechantillon'], sdate:['date','datedeprelevement','dateprelevement','samplingdate'],
   stime:['time','heure','heuredeprelevement','heureprelevement','samplingtime'], wdate:['date','datemesure'],
   analysed:['analysed','analyzed','analyse','analysee','analyses','analysis','aanalyser','statut','status']
 };
@@ -341,6 +372,8 @@ function itemKey(v){
 const state = {
   holes: new Map(), listLitho: null, fileName:'', warnings:[],
   lab: null, sel: [], hideLQ:false, thrSource:'',
+  labMap: {},            // choix manuels : nom au laboratoire → « forage\u0001échantillon » ou '' (non rattaché)
+  vg: null, vgOn:false, vgMetaux:'sur site',   // valeurs guides ERM (public/data/valeurs-guides.json)
   include: new Set(),
   opt: { orient:'auto', depth:'auto', coords:false, company:'', logo:null }
 };
@@ -404,7 +437,7 @@ function loadSheets(sheets, fileName){
   }
   state.holes = holes; state.fileName = fileName;
   state.include = new Set(holes.keys());
-  if (state.lab) attachLab();
+  if (state.lab){ attachLab(); renderLabPanel(); }
   validate(); renderAll();
 }
 
@@ -472,8 +505,15 @@ function validate(){
     for (const s of h.samples) if (s.analysed === false && s.labIdx != null) add(h.id,'warn',`Échantillon ${s.id} indiqué non analysé, mais présent dans le fichier de résultats.`);
   }
   if (state.lab){
-    const un = state.lab.samples.filter(s => !s.hole);
-    if (un.length) W.push({hole:'Analyses', lvl:'warn', msg:`${un.length} échantillon(s) non rattaché(s) à un forage du classeur : ${un.map(s => s.rawId).join(', ')}.`});
+    const L = state.lab.samples;
+    const un = L.filter(s => !s.hole && s.match?.how !== 'ignore');
+    if (un.length) W.push({hole:'Analyses', lvl:'warn', msg:`${un.length} échantillon(s) du laboratoire non rattaché(s) à un forage du classeur : ${un.map(s => s.rawId).join(', ')}. Rattachement possible à l'étape 2.`});
+    for (const s of L.filter(s => s.match?.how === 'approx'))
+      W.push({hole:s.hole, lvl:'warn', msg:`Résultats de « ${s.rawId} » reportés sur l'échantillon « ${s.match.target} » (${s.match.why}). À confirmer à l'étape 2.`});
+    for (const s of L.filter(s => s.match?.how === 'lab')){
+      const h = state.holes.get(s.hole);
+      if (h && h.samples.some(x => x.fromSheet)) W.push({hole:s.hole, lvl:'info', msg:`Échantillon « ${s.rawId} » absent de l'onglet Samples : placé sur le log d'après son nom.`});
+    }
   }
   state.warnings = W;
   renderChecks();
@@ -492,13 +532,51 @@ function renderChecks(){
 /* ============================================================
    Résultats d'analyses
    ============================================================ */
-function parseSampleId(s){
-  const t = String(s ?? '').trim();
-  let m = t.match(/^(.+?)\s*[\(\[_\s]\s*(\d+(?:[.,]\d+)?)\s*m?\s*[-–—\/à]\s*(\d+(?:[.,]\d+)?)\s*m?\s*[\)\]]?$/i);
-  if (m) return { hole:m[1].trim().replace(/[_\-\s]+$/,''), from:num(m[2]), to:num(m[3]) };
-  m = t.match(/^(.+?)\s*[\(\[_\s]\s*(\d+(?:[.,]\d+)?)\s*m\s*[\)\]]?$/i);
-  if (m){ const d = num(m[2]); return { hole:m[1].trim(), from:Math.max(0,d-.05), to:d+.05 }; }
-  return null;
+/* Sample names: the laboratory seldom writes them as the field sheet does —
+   « API17-1-SO-0.5-1.0 » for « API17-1-SO-0,5-1 », « PZ01 » for « PZ1 »,
+   « GSI-1 » for « GSI ». A name is read as its tokens: runs of letters, and
+   numbers by their value, so that separators, the decimal mark, leading and
+   trailing zeros and the « m » of a depth no longer count. */
+function tokens(s){
+  const t = String(s ?? '').replace(/(\d)\s*(?:à|\sa\s|\sto\s)\s*(?=\d)/gi, '$1-')
+    .normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase()
+    .replace(/(\d)\s*M\b/g, '$1');
+  return (t.match(/\d+(?:[.,]\d+)?|[A-Z]+/g) || []).map(x => /\d/.test(x) ? String(parseFloat(x.replace(',', '.'))) : x);
+}
+const tkey = s => tokens(s).join('-');
+const isNumTok = x => /^\d/.test(x);
+// Matrix codes written between the borehole and the depths (« -SO- », « _SOL_ »).
+const MATRIX = /^(SO|SOL|SOLS|SOIL|S|SED|ECH|EC|E|SAMPLE)$/;
+const startsWith = (a, b) => a.length <= b.length && a.every((x, i) => x === b[i]);
+/** The borehole of the workbook a laboratory name starts with, and the
+ *  depths that end it. `variant`: the borehole is written otherwise (« GSI-1 »
+ *  for « GSI »), so that only the same depths will do. */
+function readLabName(tok, holes){
+  let best = null;
+  for (const H of holes){
+    let ht = H.tok, trimmed = false;
+    if (!startsWith(ht, tok)){
+      if (ht.length > 1 && ht[ht.length - 1] === '1' && startsWith(ht.slice(0, -1), tok)){ ht = ht.slice(0, -1); trimmed = true; }
+      else continue;
+    }
+    if (!best || ht.length > best.n || (ht.length === best.n && best.trimmed && !trimmed)) best = { h:H.h, n:ht.length, trimmed };
+  }
+  if (!best) return null;
+  const rest = tok.slice(best.n); let k = rest.length, from = null, to = null, point = false;
+  if (k >= 2 && isNumTok(rest[k-1]) && isNumTok(rest[k-2])){ from = +rest[k-2]; to = +rest[k-1]; k -= 2; if (from > to) [from, to] = [to, from]; }
+  else if (k >= 1 && isNumTok(rest[k-1])){ const d = +rest[k-1]; from = Math.max(0, d - .05); to = d + .05; point = true; k -= 1; }
+  const extra = rest.slice(0, k).filter(x => !MATRIX.test(x));
+  // « GSI-1-SO-… » for the « GSI » of the workbook; any other word or number
+  // between the borehole and the depths is another borehole (« API1-8 » is not « API1 »).
+  const suffix1 = extra.length === 1 && extra[0] === '1' && !best.trimmed;
+  if (extra.length && !suffix1) return { h:null, guess:best.h };
+  return { h:best.h, from, to, point, variant: best.trimmed || suffix1 };
+}
+/** Without the workbook's boreholes: a name ending in one or two depths. */
+function looseSample(v){
+  if (typeof v !== 'string') return false;
+  const t = tokens(v); const n = t.length;
+  return n >= 3 && isNumTok(t[n-1]) && isNumTok(t[n-2]) && t.slice(0, n-2).some(x => !isNumTok(x)) && !/^[<>≤≥]/.test(v.trim());
 }
 function parseVal(v){
   if (v == null || v === '') return null;
@@ -506,59 +584,82 @@ function parseVal(v){
   if (typeof v === 'number') return { num:v, lt:false };
   const s = String(v).trim();
   if (/^(n\.?d\.?|<\s*lq|<\s*ld|nd|<\s*l\.q\.?)$/i.test(s)) return { num:null, lt:true };
-  const m = s.replace(/\u202f|\u00a0/g,'').match(/^(<|<=|≤|>)?\s*([-+]?\d[\d ]*(?:[.,]\d+)?(?:e[-+]?\d+)?)/i);
+  const m = s.replace(/ | /g,'').match(/^(<|<=|≤|>)?\s*([-+]?\d[\d ]*(?:[.,]\d+)?(?:e[-+]?\d+)?)/i);
   if (m){ const n = parseFloat(m[2].replace(/ /g,'').replace(',','.')); if (isFinite(n)) return { num:n, lt:m[1] === '<' || m[1] === '<=' || m[1] === '≤', gt:m[1] === '>' }; }
   if (/^[-–—]$/.test(s)) return null;
   return { num:null, lt:false, txt:s };
 }
 const UNIT_RE = /^(mg|µg|ug|μg|ng|g|%|ppm|ppb)\s*\/?\s*(kg|l|m3|m³|ms)?|^(mg|µg|μg|ug)\/(kg|l|m3|m³)/i;
+const CAS_RE = /^\d{2,7}-\d{2}-\d$/;
+const ELUAT = /[ée]luat|lixiv/i;
+// Header cells beside the samples that are not samples.
+const NOT_SAMPLE = /^(unit|unite|cas|ncas|lq|ld|seuil|valeur|vle|vlc|reference|ref|source|methode|norme|considered|comparison|parametre|parameter)/;
 
 function loadLab(sheets, fileName){
   const known = new Set();
-  for (const h of state.holes.values()) for (const s of h.samples) known.add(norm(s.id));
-  const isSample = v => typeof v === 'string' && (known.has(norm(v)) || !!parseSampleId(v));
-  let best = null;
-  for (const [name, grid] of Object.entries(sheets)){
-    const rowCount = grid.map(r => (r || []).filter(isSample).length);
-    const nCols = Math.max(0, ...grid.map(r => (r || []).length));
-    const colCount = Array.from({length:nCols}, (_,c) => grid.filter(r => r && isSample(r[c])).length);
-    const rBest = Math.max(0, ...rowCount), cBest = Math.max(0, ...colCount);
-    const score = Math.max(rBest, cBest);
-    if (!best || score > best.score) best = { name, grid, score, inCols: rBest >= cBest, line: rBest >= cBest ? rowCount.indexOf(rBest) : colCount.indexOf(cBest) };
-  }
-  if (!best || !best.score) throw new Error('Aucun échantillon reconnu. Les noms doivent contenir le forage et la profondeur, par exemple « MW6 (3,4-4 m) », ou correspondre à l\'onglet Samples.');
+  for (const h of state.holes.values()) for (const s of h.samples) known.add(tkey(s.id));
+  const holes = [...state.holes.values()].map(h => ({ h, tok:tokens(h.id) }));
+  const strict = v => { if (typeof v !== 'string' || !v.trim()) return false; const t = tokens(v);
+    if (known.has(t.join('-'))) return true; const r = readLabName(t, holes); return !!(r && r.h && r.from != null); };
+  const pick = isSample => {
+    let best = null;
+    for (const [name, grid] of Object.entries(sheets)){
+      const rowCount = grid.map(r => (r || []).filter(isSample).length);
+      const nCols = Math.max(0, ...grid.map(r => (r || []).length));
+      const colCount = Array.from({length:nCols}, (_,c) => grid.filter(r => r && isSample(r[c])).length);
+      const rBest = Math.max(0, ...rowCount), cBest = Math.max(0, ...colCount);
+      const score = Math.max(rBest, cBest);
+      if (!best || score > best.score) best = { name, grid, score, inCols: rBest >= cBest, line: rBest >= cBest ? rowCount.indexOf(rBest) : colCount.indexOf(cBest) };
+    }
+    return best;
+  };
+  let best = pick(strict);
+  if (!best || !best.score) best = pick(looseSample);
+  if (!best || !best.score) throw new Error('Aucun échantillon reconnu. Les noms doivent commencer par un forage du classeur et finir par la profondeur, par exemple « MW6 (3,4-4 m) » ou « API1-1-SO-0.4-1.4 », ou correspondre à l\'onglet Samples.');
+  // On the line of the samples, every other name is a sample too: the ones
+  // matching no borehole are listed as not attached.
+  const other = v => typeof v === 'string' && v.trim() && !NOT_SAMPLE.test(norm(v)) && num(v) == null;
   const g = best.grid; const params = []; const samples = [];
   const isText = v => typeof v === 'string' && v.trim() && num(v) == null && !parseVal(v)?.lt && !/^[<>]/.test(v.trim());
   if (best.inCols){
-    const r0 = best.line; const sCols = [];
-    (g[r0] || []).forEach((v,c) => { if (isSample(v)) sCols.push(c); });
-    sCols.forEach(c => samples.push({ rawId:str(g[r0][c]), col:c }));
+    const r0 = best.line; const row0 = g[r0] || [];
+    const first = row0.findIndex(v => strict(v) || looseSample(v));
+    const sCols = [];
+    row0.forEach((v,c) => { if (c >= first && (strict(v) || looseSample(v) || other(v))) sCols.push(c); });
+    sCols.forEach(c => samples.push({ rawId:str(row0[c]), col:c }));
     const left = Math.min(...sCols);
-    let pCol = 0, pScore = -1, uCol = -1, uScore = 0;
+    let pCol = 0, pScore = -1, uCol = -1, uScore = 0, casCol = -1, casScore = 2;
     for (let c = 0; c < left; c++){
-      let sc = 0, us = 0;
-      for (let r = r0+1; r < g.length; r++){ const v = g[r]?.[c]; if (isText(v)) sc++; if (typeof v === 'string' && UNIT_RE.test(v.trim())) us++; }
+      let sc = 0, us = 0, cs = 0;
+      for (let r = r0+1; r < g.length; r++){ const v = g[r]?.[c]; if (isText(v)) sc++; if (typeof v === 'string' && UNIT_RE.test(v.trim())) us++; if (CAS_RE.test(str(v))) cs++; }
       for (let r = 0; r <= r0; r++){ if (/^unit|^unite/.test(norm(g[r]?.[c]))) us += 5; }
       if (us > uScore){ uScore = us; uCol = c; }
-      if (sc > pScore && us < sc){ pScore = sc; pCol = c; }
+      if (cs > casScore){ casScore = cs; casCol = c; }
+      if (sc > pScore && us < sc && cs < sc / 2){ pScore = sc; pCol = c; }
     }
     if (uCol === pCol) uCol = -1;
+    let fam = '';
     for (let r = r0+1; r < g.length; r++){
       const row = g[r] || []; const name = str(row[pCol]);
       if (!name) continue;
       const vals = samples.map(s => parseVal(row[s.col]));
-      if (!vals.some(v => v && (v.num != null || v.lt))) continue;
-      params.push({ name, unit: uCol >= 0 ? str(row[uCol]) : '', vals });
+      if (!vals.some(v => v && (v.num != null || v.lt))){
+        // A line with a name and nothing under the samples: a section (« METAUX », « ELUAT METAUX »).
+        if (samples.every(s => row[s.col] == null || row[s.col] === '')) fam = name;
+        continue;
+      }
+      params.push({ name, unit: uCol >= 0 ? str(row[uCol]) : '', cas: casCol >= 0 && CAS_RE.test(str(row[casCol])) ? str(row[casCol]) : '', fam, vals });
     }
   } else {
     const c0 = best.line; const sRows = [];
-    g.forEach((r,i) => { if (r && isSample(r[c0])) sRows.push(i); });
+    const firstRow = g.findIndex(r => r && (strict(r[c0]) || looseSample(r[c0])));
+    g.forEach((r,i) => { if (r && i >= firstRow && (strict(r[c0]) || looseSample(r[c0]) || other(r[c0]))) sRows.push(i); });
     sRows.forEach(i => samples.push({ rawId:str(g[i][c0]), row:i }));
     const top = Math.min(...sRows);
     let hr = 0, hs = -1;
     for (let r = 0; r < top; r++){ const n = (g[r] || []).filter((v,c) => c !== c0 && isText(v)).length; if (n > hs){ hs = n; hr = r; } }
-    let ur = -1;
-    for (let r = hr+1; r < top; r++){ if ((g[r] || []).some(v => typeof v === 'string' && UNIT_RE.test(v.trim()))) { ur = r; break; } }
+    let ur = -1, cr = -1;
+    for (let r = hr+1; r < top; r++){ if (ur < 0 && (g[r] || []).some(v => typeof v === 'string' && UNIT_RE.test(v.trim()))) ur = r; if (cr < 0 && (g[r] || []).filter(v => CAS_RE.test(str(v))).length >= 3) cr = r; }
     const nCols = Math.max(...g.map(r => (r || []).length));
     for (let c = 0; c < nCols; c++){
       if (c === c0) continue;
@@ -566,27 +667,29 @@ function loadLab(sheets, fileName){
       if (/^(date|heure|time|matrice|matrix|laboratoire|lab|reference|ref|code|commentaire|profondeur|depth)/.test(norm(name))) continue;
       const vals = samples.map(s => parseVal(g[s.row]?.[c]));
       if (!vals.some(v => v && (v.num != null || v.lt))) continue;
-      params.push({ name, unit: ur >= 0 ? str(g[ur][c]) : '', vals });
+      params.push({ name, unit: ur >= 0 ? str(g[ur][c]) : '', cas: cr >= 0 && CAS_RE.test(str(g[cr][c])) ? str(g[cr][c]) : '', fam:'', vals });
     }
   }
   if (!params.length) throw new Error('Échantillons reconnus, mais aucun résultat chiffré associé.');
   // The same sample on several columns (a second analytical programme, such
   // as asbestos, reported alongside): one sample, its results merged.
-  const groupe = samples.map(s => norm(s.rawId));
+  const groupe = samples.map(s => tkey(s.rawId));
   const uniques = samples.filter((s, i) => groupe.indexOf(groupe[i]) === i);
   if (uniques.length < samples.length){
     for (const p of params){
       const v = uniques.map(() => null);
-      p.vals.forEach((x, i) => { const k = uniques.findIndex(u => norm(u.rawId) === groupe[i]); if (x && (!v[k] || (v[k].num == null && !v[k].lt))) v[k] = x; });
+      p.vals.forEach((x, i) => { const k = uniques.findIndex(u => tkey(u.rawId) === groupe[i]); if (x && (!v[k] || (v[k].num == null && !v[k].lt))) v[k] = x; });
       p.vals = v;
     }
     samples.splice(0, samples.length, ...uniques);
   }
-  // Clés uniques
+  // Clés uniques ; un résultat sur éluat n'est pas celui du sol brut
   const seen = {};
-  params.forEach(p => { const k = norm(p.name) + '|' + norm(p.unit); seen[k] = (seen[k] || 0) + 1; p.key = seen[k] > 1 ? `${k}#${seen[k]}` : k; p.computed = false; });
+  params.forEach(p => { p.eluat = ELUAT.test(p.fam) || ELUAT.test(p.name);
+    const k = (p.eluat ? 'eluat:' : '') + norm(p.name) + '|' + norm(p.unit); seen[k] = (seen[k] || 0) + 1; p.key = seen[k] > 1 ? `${k}#${seen[k]}` : k; p.computed = false; });
   addFamilySums(params, samples.length);
   state.lab = { fileName, sheet:best.name, samples, params };
+  state.labMap = {};
   state.sel = defaultSelection(params);
   attachLab(); validate(); renderLabPanel(); renderAll();
 }
@@ -599,8 +702,8 @@ const FAMILIES = [
 function addFamilySums(params, nS){
   const isSum = n => /somme|total|sum|^σ/.test(n);
   for (const f of FAMILIES){
-    if (params.some(p => isSum(norm(p.name)) && f.already.test(norm(p.name)))) continue;
-    let mem = params.filter(p => !isSum(norm(p.name)) && f.test(norm(p.name)));
+    if (params.some(p => !p.eluat && isSum(norm(p.name)) && f.already.test(norm(p.name)))) continue;
+    let mem = params.filter(p => !p.eluat && !isSum(norm(p.name)) && f.test(norm(p.name)));
     if (f.key === 'btex'){
       const parts = mem.filter(p => /xylene/.test(norm(p.name)) && /(mp|op|^o|^m|^p|ortho|meta|para)/.test(norm(p.name).replace('xylene','')));
       const tot = mem.filter(p => /^xylenes?$/.test(norm(p.name)));
@@ -616,70 +719,286 @@ function addFamilySums(params, nS){
       if (q.length) return { num:q.reduce((a,v) => a + v.num, 0), lt:false };
       return { num:null, lt:true };
     });
-    params.unshift({ name:f.label, unit:mem[0].unit, vals, key:'sum-'+f.key, computed:true, members:mem.length });
+    params.unshift({ name:f.label, unit:mem[0].unit, cas:'', fam:'', eluat:false, vals, key:'sum-'+f.key, computed:true, members:mem.length });
   }
 }
 function defaultSelection(params){
   const pick = [];
   const want = [/^sum-/, /c10c40|hct|hydrocarburestotaux|indicehydrocarbure/];
-  for (const re of want) for (const p of params){ if (pick.length >= 4) break; if ((re.test(p.key) || re.test(norm(p.name))) && !pick.some(s => s.key === p.key)) pick.push({ key:p.key, label:shortLabel(p.name), thr:'' }); }
+  for (const re of want) for (const p of params){ if (pick.length >= 4) break; if (!p.eluat && (re.test(p.key) || re.test(norm(p.name))) && !pick.some(s => s.key === p.key)) pick.push({ key:p.key, label:shortLabel(p), thr:'' }); }
   return pick;
 }
-function shortLabel(n){
-  let s = String(n).replace(/\(calculée\)/,'').replace(/^Hydrocarbures totaux\s*/i,'HCT ').replace(/^Indice hydrocarbures?\s*/i,'HCT ').trim();
+function shortLabel(p){
+  let s = String(p.name).replace(/\(calculée\)/,'').replace(/^Hydrocarbures totaux\s*/i,'HCT ').replace(/^Indice hydrocarbures?\s*/i,'HCT ')
+    .replace(/^Somme des\s+/i,'Σ ').replace(/\s*-\s*EPA$/i,'').trim();
+  s = s.charAt(0).toUpperCase() + s.slice(1);
+  if (p.eluat && !ELUAT.test(s)) s += ' (éluat)';
   return s.length > 22 ? s.slice(0,21) + '…' : s;
 }
+
+/* Attaching the laboratory samples to the boreholes, in order of confidence:
+   the user's own choices; the same name, however written; the same borehole
+   and the same depths; the same borehole and the closest interval (or the
+   borehole written otherwise, with the same depths) — these two to be
+   confirmed; failing all, a sample of the laboratory only, placed on the log
+   from its name. */
 function attachLab(){
   const lab = state.lab; if (!lab) return;
-  for (const h of state.holes.values()){ h.samples = h.samples.filter(s => s.fromSheet); h.samples.forEach(s => s.labIdx = null); }
-  const byNorm = new Map([...state.holes.values()].map(h => [norm(h.id), h]));
+  for (const h of state.holes.values()){ h.samples = h.samples.filter(s => s.fromSheet); h.samples.forEach(s => { s.labIdx = null; }); }
+  const holes = [...state.holes.values()].map(h => ({ h, tok:tokens(h.id) }));
+  const taken = new Set();
+  const link = (ls, i, h, s, how, why = '') => { s.labIdx = i; ls.hole = h.id; ls.match = { how, why, target:s.id }; taken.add(s); };
+  const free = h => h.samples.filter(s => !taken.has(s));
+  const near = (a, b) => a != null && b != null && Math.abs(a - b) < .015;
+  const iou = (s, r) => { const i = Math.min(s.to, r.to) - Math.max(s.from, r.from); return i <= 0 ? 0 : i / (Math.max(s.to, r.to) - Math.min(s.from, r.from)); };
+  const range = (a, b) => `${fmtM(a)}–${fmtM(b)} m`;
+  lab.samples.forEach(ls => { ls.hole = null; ls.match = null; ls.read = readLabName(tokens(ls.rawId), holes); });
+  const todo = () => lab.samples.map((ls, i) => [ls, i]).filter(([ls]) => !ls.match);
+  // 1. Choix manuels
   lab.samples.forEach((ls, i) => {
-    ls.hole = null;
-    for (const h of state.holes.values()){
-      const s = h.samples.find(s => norm(s.id) === norm(ls.rawId));
-      if (s){ s.labIdx = i; ls.hole = h.id; return; }
-    }
-    const p = parseSampleId(ls.rawId); if (!p) return;
-    const h = byNorm.get(norm(p.hole)); if (!h) return;
-    const ex = h.samples.find(s => s.labIdx == null && Math.abs(s.from - p.from) < .01 && Math.abs(s.to - p.to) < .01);
-    if (ex){ ex.labIdx = i; ls.hole = h.id; return; }
-    h.samples.push({ id:ls.rawId, from:p.from, to:p.to, date:'', time:'', labIdx:i, fromSheet:false, analysed:null });
-    ls.hole = h.id;
+    const m = state.labMap[ls.rawId]; if (m == null) return;
+    if (m === ''){ ls.match = { how:'ignore' }; return; }
+    let hid, sid; try { [hid, sid] = JSON.parse(m); } catch { return; }
+    const h = state.holes.get(hid); const s = h && free(h).find(x => x.id === sid);
+    if (s) link(ls, i, h, s, 'manual');
   });
-  for (const h of state.holes.values()) h.samples.sort((a,b) => a.from - b.from);
+  // 2. Même nom, quelle qu'en soit l'écriture
+  for (const [ls, i] of todo()){
+    const k = tkey(ls.rawId);
+    for (const h of state.holes.values()){ const s = free(h).find(s => tkey(s.id) === k); if (s){ link(ls, i, h, s, 'exact'); break; } }
+  }
+  // 3. Même forage, mêmes profondeurs
+  for (const [ls, i] of todo()){ const r = ls.read; if (!r?.h || r.from == null || r.point) continue;
+    const s = free(r.h).find(s => near(s.from, r.from) && near(s.to, r.to));
+    if (s) link(ls, i, r.h, s, r.variant ? 'approx' : 'exact', r.variant ? 'forage écrit autrement, mêmes profondeurs' : '');
+  }
+  // 4. Même forage, intervalle le plus proche (nettement)
+  for (const [ls, i] of todo()){ const r = ls.read; if (!r?.h || r.from == null || r.variant) continue;
+    const c = free(r.h).filter(s => s.from != null && s.to != null)
+      .map(s => ({ s, o: r.point ? (s.from <= r.from + .05 && s.to >= r.to - .05 ? 1 : 0) : iou(s, r) }))
+      .filter(x => x.o >= .5).sort((a, b) => b.o - a.o);
+    if (!c.length || (c[1] && c[1].o > c[0].o - .1)) continue;
+    const at = r.point ? `${fmtM(Math.round((r.from + r.to) * 50) / 100)} m` : range(r.from, r.to);
+    link(ls, i, r.h, c[0].s, 'approx', `profondeurs différentes : ${at} au laboratoire, ${range(c[0].s.from, c[0].s.to)} dans le classeur`);
+  }
+  // 5. Échantillon du seul laboratoire, placé d'après son nom
+  for (const [ls, i] of todo()){ const r = ls.read; if (!r?.h || r.from == null || r.variant) continue;
+    // Its field sample given to another result by hand: left unattached, not drawn twice.
+    if (r.h.samples.some(s => near(s.from, r.from) && near(s.to, r.to))) continue;
+    const s = { id:ls.rawId, from:r.from, to:r.to, date:'', time:'', labIdx:null, fromSheet:false, analysed:null };
+    r.h.samples.push(s); link(ls, i, r.h, s, 'lab');
+  }
+  for (const h of state.holes.values()) h.samples.sort((a,b) => (a.from ?? 0) - (b.from ?? 0));
+}
+
+/* ---------- Unités ----------
+   The selected results are shown in one unit, written at the head of the
+   column: the most frequent among them (mg/kg first on a tie, the unit of the
+   ERM soil values); a result in another unit of the same kind is converted,
+   one that cannot be (%, pH) keeps its unit beside its name. */
+const MASSE = { ng:1e-9, 'µg':1e-6, ug:1e-6, mcg:1e-6, mg:1e-3, g:1 };
+const BASE = { l:1, ml:1e-3, kg:1, g:1e-3, m3:1 };
+function lireUnite(u){
+  const m = String(u ?? '').trim().toLowerCase().replace(/μ/g, 'µ').match(/^(ng|µg|ug|mcg|mg|g)\s*\/\s*(ml|l|kg|g|m3|m³)(?![a-z0-9])/);
+  return m ? { masse:MASSE[m[1]], base: m[2] === 'm³' ? 'm3' : m[2] } : null;
+}
+/** Factor f such that a value in `de` × f is in `vers`; null if unrelated. */
+function facteurUnite(de, vers){
+  if (norm(de) === norm(vers)) return 1;
+  const a = lireUnite(de), b = lireUnite(vers);
+  if (!a || !b) return null;
+  const famille = x => x === 'l' || x === 'ml' ? 'v' : x === 'm3' ? 'a' : 'm';
+  if (famille(a.base) !== famille(b.base)) return null;
+  return a.masse / BASE[a.base] / (b.masse / BASE[b.base]);
+}
+function uniteCommune(ps){
+  const count = {};
+  for (const p of ps){ const u = String(p.unit || '').trim(); if (lireUnite(u)) count[u] = (count[u] || 0) + 1; }
+  const mgkg = u => /^mg\s*\/\s*kg/i.test(u) ? 1 : 0;
+  return Object.keys(count).sort((a, b) => count[b] - count[a] || mgkg(b) - mgkg(a))[0] || null;
+}
+
+/* ---------- Valeurs guides ERM (sols) ----------
+   Read as the « Résultats labo » tool reads them (src/lib/resultats/guides.ts):
+   by CAS number, else by name, with the usual spellings. */
+const VG_SYN = [
+  [/\bethene\b/g, 'ethylene'],
+  [/\bchloroforme\b/g, 'trichloromethane'],
+  [/\btetrachlorure de carbone\b/g, 'tetrachloromethane'],
+  [/\bchlorure de methylene\b/g, 'dichloromethane'],
+  [/\b(perchloroethylene|pce)\b/g, 'tetrachloroethylene'],
+  [/\btce\b/g, 'trichloroethylene'],
+  [/^(somme des |total )?xylenes( totaux| m p et o| m p o| o m p)?$/, 'xylenes'],
+  [/^btex( totaux)?$/, 'btex'],
+  [/^(somme (de |des )?(16 )?hap( 15| 16)?( et naphtalene)?( volatil)?( epa)?|hap totaux|hap (16 )?somme|somme hap)$/, 'somme des hap'],
+  [/^(indice |indice d )?hydrocarbures?( totaux)? c10 (a )?c40$/, 'hydrocarbures c10 c40'],
+  [/^chrome total$/, 'chrome'],
+  [/^mercure et composes$/, 'mercure'],
+  [/^(pcb 7 congeneres|somme des 7 pcb|pcb totaux 7|somme des pcb 7|pcb somme des 7 congeneres)$/, 'pcb 7'],
+  [/^cot$/, 'cot sur sol brut'],
+  [/^(cod )?cot (sur )?eluat$/, 'cot sur eluat'],
+];
+function vgNorm(nom){
+  let n = String(nom).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  for (const [m, r] of VG_SYN) n = n.replace(m, r);
+  return n;
+}
+const LOCANT = /^[a-z0-9,\-\s]{1,8}$/i;
+function vgCles(nom){
+  const dedans = [...String(nom).matchAll(/\(([^)]*)\)/g)].map(m => m[1]).filter(d => !LOCANT.test(d.trim()));
+  const sans = String(nom).replace(/\(([^)]*)\)/g, (m, d) => LOCANT.test(d.trim()) ? m : ' ');
+  return [...new Set([vgNorm(nom), vgNorm(sans), ...dedans.map(vgNorm)].filter(k => k.length > 1))];
+}
+function vgTrouver(liste, p){
+  if (p.cas){ const c = liste.find(e => e.cas === p.cas); if (c) return c; }
+  const v = vgCles(p.name);
+  return liste.find(e => vgCles(e.nom).some(k => v.includes(k)));
+}
+/** ERM guide value for soils of a lab parameter, in the reference's unit. */
+function guideSol(p){
+  const d = state.vg?.sol; if (!d || !p) return null;
+  const out = (valeur, source) => valeur == null ? null : { valeur, unite:d.unite, source };
+  // A leachate result is compared with the leachate criteria only.
+  if (p.eluat){ const e = vgTrouver(d.organiques.filter(x => ELUAT.test(x.nom)), p); return e ? out(e.valeur, e.source) : null; }
+  if (p.computed){
+    const re = { 'sum-btex':/^btex/i, 'sum-hap':/somme des hap/i }[p.key];
+    const e = re && d.organiques.find(x => re.test(x.nom)); return e ? out(e.valeur, e.source) : null;
+  }
+  const m = vgTrouver(d.metaux, p);
+  if (m){
+    // Sur site, le bruit de fond prime ; hors site, le seuil de vigilance.
+    const c = state.vgMetaux === 'sur site' ? [[m.inra, '(a)'], [m.seuilVigilance, '(b)']] : [[m.seuilVigilance, '(b)'], [m.inra, '(a)']];
+    const r = c.find(([v]) => v != null); return r ? out(r[0], r[1]) : null;
+  }
+  const o = vgTrouver(d.organiques.filter(x => !ELUAT.test(x.nom)), p);
+  return o ? out(o.valeur, o.source) : null;
+}
+// Short wording of the ERM soil references, for the note of the log.
+const VG_SRC = {
+  '(a)': 'teneurs habituelles des sols français, INRA-ASPITET (Baize, 2000)',
+  '(b)': 'valeurs repères HCSP (note d\'information du 5 octobre 2023)',
+  '(c)': 'critères d\'admission en ISDI (arrêté du 12 décembre 2014)'
+};
+function vgDate(){ const iso = state.vg?.sol?.miseAJour || ''; const [a, m, j] = iso.split('-'); return j ? `${j}/${m}/${a}` : iso; }
+
+/** The selected parameters, with their unit on the log, factor and threshold
+ *  (in that unit): the one typed in, else the ERM guide value. */
+function selParams(){
+  if (!state.lab) return Object.assign([], { unit:null });
+  const sp = state.sel.map(s => ({ ...s, p: state.lab.params.find(p => p.key === s.key) })).filter(s => s.p);
+  const U = uniteCommune(sp.map(q => q.p));
+  for (const q of sp){
+    const f = U ? facteurUnite(q.p.unit, U) : null;
+    q.f = f ?? 1; q.u = f != null ? U : q.p.unit; q.own = f == null;
+    q.shown = q.own && q.p.unit && !/^[-–—]$/.test(q.p.unit.trim()) ? `${q.label} (${q.p.unit})` : q.label;
+    const g = state.vgOn ? guideSol(q.p) : null;
+    const k = g ? facteurUnite(g.unite, q.u) : null;
+    q.g = g && k != null ? { ...g, v:Number((g.valeur * k).toPrecision(12)) } : null;
+    const manual = num(q.thr);
+    q.t = manual ?? q.g?.v ?? null;
+    q.tSrc = manual != null ? 'manual' : q.g ? 'erm' : null;
+  }
+  sp.unit = U;
+  return sp;
 }
 function renderLabPanel(){
   const lab = state.lab; $('#labPanel').hidden = !lab;
   if (!lab) return;
   const ok = lab.samples.filter(s => s.hole).length, ko = lab.samples.length - ok;
   $('#labSummary').innerHTML = `<b>${esc(lab.fileName)}</b> (onglet ${esc(lab.sheet)}) : ${lab.samples.length} échantillons, ${lab.params.filter(p=>!p.computed).length} paramètres. ${ok} rattachés à un forage` + (ko ? `, <span class="bad">${ko} non rattachés</span>` : '') + '.';
+  renderMatch();
+  renderVgInfo();
   drawParamList();
+}
+/* Laboratory samples attached by approximation, by hand, or not at all:
+   each with the field sample it goes with, which the user can change. */
+function renderMatch(){
+  const lab = state.lab, box = $('#matchBox');
+  if (!lab || !state.holes.size){ box.hidden = true; return; }
+  const L = lab.samples;
+  const how = s => s.match?.how ?? 'none';
+  const cnt = k => L.filter(s => how(s) === k).length;
+  const nOk = cnt('exact') + cnt('lab'), nAp = cnt('approx'), nMan = cnt('manual'), nNo = L.filter(s => !s.hole).length;
+  box.hidden = false;
+  $('#matchSum').innerHTML = `Rapprochement des échantillons : ${nOk} par leur nom ou leur profondeur`
+    + (nAp ? `, <span class="bad">${nAp} approché${nAp > 1 ? 's' : ''} à confirmer</span>` : '')
+    + (nMan ? `, ${nMan} choisi${nMan > 1 ? 's' : ''} à la main` : '')
+    + (nNo ? `, <span class="bad">${nNo} non rattaché${nNo > 1 ? 's' : ''}</span>` : '');
+  const order = { approx:0, none:1, ignore:2, manual:3 };
+  const rows = L.map((s, i) => ({ s, i, k:how(s) })).filter(r => r.k in order)
+    .sort((a, b) => order[a.k] - order[b.k] || natSort(a.s.rawId, b.s.rawId));
+  const ids = [...state.holes.keys()].sort(natSort);
+  const opts = '<option value="">— Non rattaché —</option>' + ids.map(id => {
+    const h = state.holes.get(id); const ss = h.samples.filter(s => s.fromSheet);
+    if (!ss.length) return '';
+    return `<optgroup label="${esc(id)}">` + ss.map(s => {
+      const by = s.labIdx != null ? L[s.labIdx]?.rawId : null;
+      const at = s.from != null && s.to != null ? `${fmtM(s.from)}–${fmtM(s.to)} m · ` : '';
+      return `<option value="${esc(JSON.stringify([id, s.id]))}">${esc(at + s.id)}${by ? ' (résultats de ' + esc(by) + ')' : ''}</option>`;
+    }).join('') + '</optgroup>';
+  }).join('');
+  const tag = { approx:'<span class="tag approx">À confirmer</span>', none:'<span class="tag none">Non rattaché</span>', ignore:'<span class="tag none">Écarté</span>', manual:'<span class="tag manual">Choix manuel</span>' };
+  const box2 = $('#matchRows');
+  box2.innerHTML = (rows.length ? rows.map(({ s, i, k }) => {
+    const why = k === 'approx' ? `→ ${esc(s.match.target)} : ${esc(s.match.why)}`
+      : k === 'manual' ? `→ ${esc(s.match.target)}`
+      : k === 'ignore' ? 'Résultats non reportés sur les logs.'
+      : s.read?.guess ? `Aucun forage du classeur ne porte ce nom (le plus proche : ${esc(s.read.guess.id)}).` : 'Aucun forage du classeur ne correspond à ce nom.';
+    return `<div class="mrow"><div>${tag[k]} <b>${esc(s.rawId)}</b></div><div class="why">${why}</div><select data-i="${i}" aria-label="Échantillon du classeur pour ${esc(s.rawId)}">${opts}</select></div>`;
+  }).join('') : '<div class="mrow">Tous les échantillons sont rattachés par leur nom ou leur profondeur.</div>')
+    + (Object.keys(state.labMap).length ? '<div class="mrow"><button class="linkbtn" type="button" id="btnMatchReset">Rétablir le rapprochement automatique</button></div>' : '');
+  box2.querySelectorAll('select').forEach(sel => {
+    const s = L[+sel.dataset.i];
+    sel.value = s.hole && s.match?.target ? JSON.stringify([s.hole, s.match.target]) : '';
+    sel.addEventListener('change', () => { state.labMap[s.rawId] = sel.value; relink(); });
+  });
+  $('#btnMatchReset')?.addEventListener('click', () => { state.labMap = {}; relink(); });
+}
+function relink(){
+  const open = $('#matchBox').open;
+  attachLab(); validate(); renderLabPanel(); renderAll();
+  $('#matchBox').open = open;
+}
+function renderVgInfo(){
+  const info = $('#vgInfo');
+  if (!state.vg){ info.textContent = state.vgError || 'Chargement des valeurs guides ERM…'; return; }
+  const sp = selParams(), n = sp.filter(q => q.g).length;
+  info.textContent = `Valeurs indicatives de comparaison ERM pour les sols (version du ${vgDate()}) : métaux, HCT C10-C40, BTEX, HAP, PCB, COT. `
+    + (state.vgOn ? `${n} des ${sp.length} paramètres cochés en ont une. Un seuil saisi la remplace.` : '');
 }
 function drawParamList(){
   const lab = state.lab; const q = norm($('#paramSearch').value);
   const box = $('#paramList'); box.innerHTML = '';
   const nS = lab.samples.length;
-  lab.params.filter(p => !q || norm(p.name).includes(q) || state.sel.some(s => s.key === p.key)).forEach(p => {
+  const sp = selParams();
+  lab.params.filter(p => !q || norm(p.name).includes(q) || norm(p.fam).includes(q) || state.sel.some(s => s.key === p.key)).forEach(p => {
     const sel = state.sel.find(s => s.key === p.key);
+    const sq = sp.find(s => s.key === p.key);
     const nq = p.vals.filter(v => v && v.num != null && !v.lt).length;
     const d = document.createElement('div'); d.className = 'param';
+    const fam = p.eluat ? 'éluat' : '';
     d.innerHTML = `<input type="checkbox" ${sel ? 'checked' : ''} aria-label="Afficher ${esc(p.name)}">
-      <span>${esc(p.name)} ${p.unit ? `<span class="u">${esc(p.unit)}</span>` : ''}${p.computed ? ` <span class="calc">somme de ${p.members} composés</span>` : ''}</span>
+      <span>${esc(p.name)} ${p.unit ? `<span class="u">${esc(p.unit)}</span>` : ''}${fam ? ` <span class="fam">· ${fam}</span>` : ''}${p.computed ? ` <span class="calc">somme de ${p.members} composés</span>` : ''}</span>
       <span class="u" title="échantillons quantifiés">${nq}/${nS}</span>`;
-    if (sel){
+    if (sel && sq){
       const o = document.createElement('div'); o.className = 'opts';
-      o.innerHTML = `<input type="text" value="${esc(sel.label)}" aria-label="Libellé sur le log"><input type="text" inputmode="decimal" placeholder="Seuil" value="${esc(sel.thr)}" aria-label="Seuil">`;
+      const ph = sq.g ? `VG ${fmtNum(sq.g.v)}` : 'Seuil';
+      o.innerHTML = `<input type="text" value="${esc(sel.label)}" aria-label="Libellé sur le log"><input type="text" inputmode="decimal" placeholder="${esc(ph)}" value="${esc(sel.thr)}" aria-label="Seuil en ${esc(sq.u || 'unité du paramètre')}" title="Seuil en ${esc(sq.u || 'unité du paramètre')}">`;
       const [l, th] = o.querySelectorAll('input');
       l.addEventListener('input', () => { sel.label = l.value; renderAllSoon(); });
       th.addEventListener('input', () => { sel.thr = th.value; renderAllSoon(); });
       d.appendChild(o);
+      const info = [];
+      if (sq.u && sp.unit && !sq.own && norm(p.unit) !== norm(sp.unit)) info.push(`converti en ${sq.u}`);
+      if (state.vgOn) info.push(sq.g ? `valeur guide ERM : ${fmtNum(sq.g.v)} ${sq.u} ${sq.g.source}` : 'pas de valeur guide ERM');
+      if (info.length){ const v = document.createElement('div'); v.className = 'vg'; v.textContent = info.join(' · '); d.appendChild(v); }
     }
     d.querySelector('input[type=checkbox]').addEventListener('change', e => {
       if (e.target.checked){
         if (state.sel.length >= 8){ e.target.checked = false; alert('8 paramètres au maximum par log.'); return; }
-        state.sel.push({ key:p.key, label:shortLabel(p.name), thr:'' });
+        state.sel.push({ key:p.key, label:shortLabel(p), thr:'' });
       } else state.sel = state.sel.filter(s => s.key !== p.key);
-      drawParamList(); renderAll();
+      drawParamList(); renderVgInfo(); renderAll();
     });
     box.appendChild(d);
   });
@@ -740,9 +1059,10 @@ function litPatternBody(key){
   return (tint ? `<rect width="24" height="24" fill="${tint}"/>` : '') + cs.map((c,i) => comp(c, i === 0)).join('');
 }
 const CONSTR_PAT = {
-  'BENTONITE': `<rect width="10" height="10" fill="#e3ecdc"/><circle cx="2.6" cy="2.8" r="1.35" fill="none" stroke="#000" stroke-width=".5"/><circle cx="7.6" cy="7.6" r="1.35" fill="none" stroke="#000" stroke-width=".5"/>`,
+  // Bentonite: a dense grey fill of pellets, read at a glance as the impermeable plug.
+  'BENTONITE': `<rect width="10" height="10" fill="#8f8f8f"/><path d="M0 2.5 H10 M0 7.5 H10" stroke="#6b6b6b" stroke-width=".45"/><circle cx="2.5" cy="5" r="1.25" fill="#2e2e2e"/><circle cx="7.5" cy="0" r="1.25" fill="#2e2e2e"/><circle cx="7.5" cy="10" r="1.25" fill="#2e2e2e"/>`,
   'CIMENT': `<rect width="10" height="10" fill="#e4e4e4"/><path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".55"/>`,
-  'BENTO/CIMENT': `<rect width="10" height="10" fill="#e4e8df"/><path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".4"/><circle cx="5" cy="1.6" r="1" fill="#fff" stroke="#000" stroke-width=".4"/>`,
+  'BENTO/CIMENT': `<rect width="10" height="10" fill="#b8b8b8"/><path d="M0 0 L10 10 M10 0 L0 10" stroke="#000" stroke-width=".4"/><circle cx="5" cy="1.6" r="1.1" fill="#2e2e2e"/><circle cx="5" cy="8.4" r="1.1" fill="#2e2e2e"/>`,
   'CUTTINGS': `<rect width="10" height="10" fill="#e4e4e4"/><circle cx="2" cy="3" r=".6"/><circle cx="7" cy="2" r=".6"/><circle cx="4.5" cy="7.5" r=".6"/><path d="M6 6 l2 1" stroke="#000" stroke-width=".4"/>`,
   'BETON': `<rect width="10" height="10" fill="#dadada"/><path d="M0 10 L10 0" stroke="#000" stroke-width=".55"/>`,
   'MASSIF FILTRANT': `<rect width="10" height="10" fill="#f8edc6"/><path d="M1.5 4.5 l1.6 -3 l1.6 3Z M6 9.5 l1.6 -3 l1.6 3Z" fill="none" stroke="#000" stroke-width=".45"/><circle cx="7.5" cy="2.5" r=".45"/><circle cx="2.5" cy="7.8" r=".45"/>`,
@@ -764,53 +1084,74 @@ function pidMax(){
   return m;
 }
 const pidFrac = (v, max) => Math.log10(1 + v) / Math.log10(1 + max);
+/* One page per log, whatever its depth: the vertical scale stretches to the
+   borehole, rounded to the metre up to 10 m, to 5 m up to 30 m, then to 10 m. */
+function holeDepth(h){
+  return Math.max(h.depth || 0, ...h.litho.map(l => l.to || 0), ...h.construction.map(c => c.to || 0), ...h.samples.map(s => s.to || 0), .5);
+}
+function niceDepth(D){
+  const step = D <= 10 ? 1 : D <= 30 ? 5 : 10;
+  return Math.max(5, Math.ceil((D + .3) / step) * step);
+}
 function pageDepthFor(h){
-  if (state.opt.depth !== 'auto') return +state.opt.depth;
-  const D = Math.max(h.depth || 0, ...h.litho.map(l => l.to || 0), ...h.construction.map(c => c.to || 0), 1);
-  return D <= 30 ? Math.max(5, Math.ceil((D + .3) / 5) * 5) : 20;
+  const o = state.opt.depth, own = niceDepth(holeDepth(h));
+  if (o === 'auto') return own;
+  if (o === 'common') return Math.max(own, ...[...state.holes.values()].filter(x => state.include.has(x.id)).map(x => niceDepth(holeDepth(x))));
+  return Math.max(+o || 0, own);
 }
 /* Results column: the normal layout while it fits; when the column is
    crowded, the results below the LQ are gathered on one line, then the
-   type gets smaller; failing that, the page covers less depth. A log with
-   few results keeps the normal layout. */
+   type gets smaller, and last a table (one line per sample, one column per
+   parameter). The log stays on one page. */
 const LAB_MODES = [
   { head:9, row:9, gap:4, fs:7.5, fsId:6.5, group:false },
   { head:9, row:9, gap:3, fs:7.5, fsId:6.5, group:true },
   { head:7.6, row:7.6, gap:2.5, fs:6.6, fsId:5.8, group:true },
+  { head:6.6, row:6.3, gap:2, fs:5.7, fsId:5.2, group:true },
+  { table:true, row:7.4, gap:.6, fs:5.6, fsId:5 },
 ];
 function labContent(s, sp){
   if (s.labIdx == null) return sampleStatus(s) === false ? { kept:true, rows:[] } : null;
   const rows = [];
   for (const q of sp){
-    const v = q.p.vals[s.labIdx]; if (!v) continue;
-    if (state.hideLQ && v.lt) continue;
-    const txt = v.lt ? (v.num != null ? '<' + fmtNum(v.num) : '<LQ') : v.num != null ? (v.gt ? '>' : '') + fmtNum(v.num) : v.txt;
-    const over = q.t != null && !v.lt && v.num != null && v.num > q.t;
-    rows.push({ label:q.label, txt, over, lt:v.lt });
+    const v = q.p.vals[s.labIdx];
+    if (!v || (state.hideLQ && v.lt)){ rows.push({ q, label:q.shown, txt:'', none:true }); continue; }
+    const n = v.num != null ? v.num * q.f : null;
+    const txt = v.lt ? (n != null ? '<' + fmtNum(n) : '<LQ') : n != null ? (v.gt ? '>' : '') + fmtNum(n) : v.txt;
+    const over = q.t != null && !v.lt && n != null && (v.gt ? n >= q.t : n > q.t);
+    rows.push({ q, label:q.shown, txt, over, lt:v.lt });
   }
-  return rows.length ? { kept:false, rows } : null;
+  return rows.some(r => !r.none) ? { kept:false, rows } : null;
 }
+/** Header band of the table layout: the parameter names, upright. */
+function labTableHead(sp){ return Math.min(58, Math.max(30, ...sp.map(q => tw(q.shown, 5.6) + 8))); }
 function labLayout(ct, mode, w, nSel){
   const m = LAB_MODES[mode];
+  if (m.table) return { h: m.row + m.gap };
   if (ct.kept) return { shown:[], lq:[], h: m.head + m.row + m.gap - 1 };
-  const shown = m.group ? ct.rows.filter(r => !r.lt) : ct.rows;
-  const lt = m.group ? ct.rows.filter(r => r.lt) : [];
+  const rows = ct.rows.filter(r => !r.none);
+  const shown = m.group ? rows.filter(r => !r.lt) : rows;
+  const lt = m.group ? rows.filter(r => r.lt) : [];
   const txt = !lt.length ? '' : !shown.length && lt.length === nSel ? 'Tous les paramètres < LQ' : '< LQ : ' + lt.map(r => r.label).join(', ');
   const lq = txt ? wrap(txt, w - 12, m.fs - .5) : [];
   return { shown, lq, h: m.head + shown.length * m.row + lq.length * (m.row - .8) + m.gap };
 }
 function labNeed(h, sp, mode, p0, p1, w){
-  let t = 0;
+  let t = LAB_MODES[mode].table ? labTableHead(sp) + 2 : 0;
   for (const s of h.samples){ if (s.from == null || s.to == null || !(s.to > p0 && s.from < p1)) continue;
     const ct = labContent(s, sp); if (ct) t += labLayout(ct, mode, w, sp.length).h; }
   return t;
 }
-function selParams(){
-  if (!state.lab) return [];
-  return state.sel.map(s => ({ ...s, p: state.lab.params.find(p => p.key === s.key), t: num(s.thr) })).filter(s => s.p);
-}
 function holeHasLab(h){ return !!state.lab && selParams().length > 0 && h.samples.some(s => s.labIdx != null); }
 function isLandscape(h){ return state.opt.orient === 'landscape' || (state.opt.orient === 'auto' && holeHasLab(h)); }
+/* Labels of a text column at the largest size, from s0 down to sMin, whose
+   stacked height fits the column: a deep or busy log stays on its page. */
+function fitLabels(make, s0, sMin, avail){
+  for (let s = s0; ; s -= .5){
+    const items = make(s);
+    if (items.reduce((a, it) => a + it.h, 0) <= avail || s - .5 < sMin) return items;
+  }
+}
 
 function buildPages(h){
   const land = isLandscape(h);
@@ -839,18 +1180,12 @@ function buildPages(h){
   cols.find(c => c.k === 'desc').w = avail - fixed;
   let x = M; for (const c of cols){ c.x = x; x += c.w; }
   const C = Object.fromEntries(cols.map(c => [c.k, c]));
-  let pd = pageDepthFor(h);
-  const D = Math.max(h.depth || 0, ...h.litho.map(l => l.to || 0), ...h.construction.map(c => c.to || 0), .5);
-  // Results column: the first layout that fits every page; when even the
-  // most compact does not, less depth per page (automatic depth only).
+  const pd = pageDepthFor(h);
+  // Results column: the first layout that fits the page.
   const hauteur = bodyBot - bodyTop - 2, sp = hasLab ? selParams() : [];
-  const pagesOf = d => Array.from({ length: Math.max(1, Math.ceil((D - 1e-6) / d)) }, (_, p) => [p * d, (p + 1) * d]);
-  const fits = (d, mode) => pagesOf(d).every(([a, b]) => labNeed(h, sp, mode, a, b, C.lab.w) <= hauteur);
-  if (hasLab && state.opt.depth === 'auto') while (pd > 5 && !fits(pd, 2)) pd -= 5;
-  const labMode = !hasLab ? 0 : [0, 1, 2].find(mo => fits(pd, mo)) ?? 2;
-  const nPages = pagesOf(pd).length;
-  const pages = [];
-  for (let p = 0; p < nPages; p++) pages.push(drawPage(h, { land, W, Hh, M, headH, footH, bodyTop, bodyBot, cols, C, pd, p0:p*pd, p1:(p+1)*pd, pageNo:p+1, nPages, hasSamples, hasLab, isWell, labMode }));
+  const last = LAB_MODES.length - 1;
+  const labMode = !hasLab ? 0 : (i => i < 0 ? last : i)(LAB_MODES.findIndex((_, mo) => labNeed(h, sp, mo, 0, pd, C.lab.w) <= hauteur));
+  const pages = [drawPage(h, { land, W, Hh, M, headH, footH, bodyTop, bodyBot, cols, C, pd, p0:0, p1:pd, pageNo:1, nPages:1, hasSamples, hasLab, isWell, labMode })];
   return { land, pages };
 }
 
@@ -911,7 +1246,8 @@ function drawPage(h, L){
     B.push(`<rect x="${cx-15}" y="${y-12}" width="30" height="10" fill="#fff" opacity=".85"/>` + T(cx, y - 3.5, fmtD(wl.depth).replace(/\.?0+$/,''), 8.5, 'text-anchor="middle" font-weight="bold" fill="#1a3fd1"'));
   }
   // PID
-  { const c = C.pid; const items = [];
+  const room = bodyBot - bodyTop - 2;
+  { const c = C.pid;
     const pmax = pidMax();
     for (const r of h.pid){
       const pv = pidNum(r.value);
@@ -921,17 +1257,20 @@ function drawPage(h, L){
         B.push(`<rect x="${c.x + 1}" y="${(y0 + .8).toFixed(1)}" width="${((c.w - 2) * f).toFixed(1)}" height="${Math.max(1, y1 - y0 - 1.6).toFixed(1)}" fill="#f6cdc8"/>`);
       } if (r.from == null || r.to == null || !inPage(r.from, r.to)) continue;
       B.push(line(c.x, Y(r.from), c.x + c.w, Y(r.from), .5)); B.push(line(c.x, Y(r.to), c.x + c.w, Y(r.to), .5));
+    }
+    const items = fitLabels(sz => h.pid.filter(r => r.from != null && r.to != null && inPage(r.from, r.to)).map(r => {
       const v = num(r.value); const t = v != null ? fmtNum(v) : str(r.value);
-      const lines = wrap(t, c.w - 6, 8.5);
-      const hh = lines.length * 9.5;
-      items.push({ y: (cl(Y(r.from)) + cl(Y(r.to))) / 2 - hh/2, h: hh, lines }); }
-    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((l,i) => B.push(T(c.x + c.w/2, it.ty + 8 + i*9.5, l, 8.5, 'text-anchor="middle" font-weight="bold" fill="#d00"'))));
+      const lines = wrap(t, c.w - 6, sz), lh = sz * 1.12, hh = lines.length * lh;
+      return { y: (cl(Y(r.from)) + cl(Y(r.to))) / 2 - hh/2, h: hh, lines, sz, lh };
+    }), 8.5, 6, room);
+    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((l,i) => B.push(T(c.x + c.w/2, it.ty + it.sz * .94 + i*it.lh, l, it.sz, 'text-anchor="middle" font-weight="bold" fill="#d00"'))));
   }
   // Description lithologique
-  { const c = C.desc, items = [];
-    for (const l of h.litho){ if (l.from == null || l.to == null || !inPage(l.from, l.to)) continue;
-      const lines = wrap(l.desc || l.key, c.w - 10, 9); const yb = Y(l.from);
-      items.push({ y: Math.max(yb, bodyTop) + 2, h: lines.length * 10.4 + 3, lines, yb, top: l.from >= p0 }); }
+  { const c = C.desc;
+    const items = fitLabels(sz => h.litho.filter(l => l.from != null && l.to != null && inPage(l.from, l.to)).map(l => {
+      const lines = wrap(l.desc || l.key, c.w - 10, sz), lh = sz * 1.155, yb = Y(l.from);
+      return { y: Math.max(yb, bodyTop) + 2, h: lines.length * lh + 3 * sz / 9, lines, yb, top: l.from >= p0, sz, lh };
+    }), 9, 6, room);
     stack(items, bodyTop + 1, bodyBot - 1);
     for (const it of items){
       if (it.top){
@@ -940,76 +1279,108 @@ function drawPage(h, L){
         if (!shifted) B.push(line(c.x, it.yb, c.x + c.w, it.yb, .6));
         else B.push(`<polyline points="${c.x},${it.yb} ${c.x+16},${it.ty} ${c.x+c.w},${it.ty}" fill="none" stroke="#000" stroke-width=".6"/>`);
       }
-      it.lines.forEach((t,i) => B.push(T(c.x + 6, it.ty + 9.5 + i*10.4, t, 9)));
+      it.lines.forEach((t,i) => B.push(T(c.x + 6, it.ty + it.sz * 1.055 + i*it.lh, t, it.sz)));
     }
     const last = Math.max(...h.litho.map(l => l.to ?? 0), 0);
     if (last > p0 && last <= p1) B.push(line(C.litho.x, Y(last), c.x + c.w, Y(last), .7));
   }
   // Remarques, observations, humidité
   for (const [k, field, color] of [['rem','rem','#000'],['org','org','#d00'],['moist','moist','#0033cc']]){
-    const c = C[k], items = [];
-    for (const r of h.comments){ if (!r[field] || r.from == null || !inPage(r.from, r.to ?? r.from + .01)) continue;
-      const lines = wrap(r[field], c.w - 12, 8);
-      const y0 = cl(Y(r.from)), y1 = cl(Y(r.to ?? r.from));
-      if (y1 - y0 > 2) B.push(`<path d="M${c.x+5} ${y0} h-2.5 V${y1} h2.5" fill="none" stroke="#9a9a9a" stroke-width=".6"/>`);
-      items.push({ y: y0 + 1, h: lines.length * 9 + 3, lines }); }
-    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((t,i) => B.push(T(c.x + c.w/2 + 2, it.ty + 8 + i*9, t, 8, `text-anchor="middle" fill="${color}"`))));
+    const c = C[k];
+    const rows = h.comments.filter(r => r[field] && r.from != null && inPage(r.from, r.to ?? r.from + .01));
+    for (const r of rows){ const y0 = cl(Y(r.from)), y1 = cl(Y(r.to ?? r.from));
+      if (y1 - y0 > 2) B.push(`<path d="M${c.x+5} ${y0} h-2.5 V${y1} h2.5" fill="none" stroke="#9a9a9a" stroke-width=".6"/>`); }
+    const items = fitLabels(sz => rows.map(r => {
+      const lines = wrap(r[field], c.w - 12, sz), lh = sz * 1.125;
+      return { y: cl(Y(r.from)) + 1, h: lines.length * lh + 3, lines, sz, lh };
+    }), 8, 5.5, room);
+    stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((t,i) => B.push(T(c.x + c.w/2 + 2, it.ty + it.sz + i*it.lh, t, it.sz, `text-anchor="middle" fill="${color}"`))));
   }
   // Échantillons
   if (L.hasSamples){
-    const c = C.sample, items = [];
-    for (const s of h.samples){ if (s.from == null || s.to == null || !inPage(s.from, s.to)) continue;
+    const c = C.sample;
+    const shown = h.samples.filter(s => s.from != null && s.to != null && inPage(s.from, s.to));
+    for (const s of shown){
       const st = sampleStatus(s);
-      const look = st === true ? 'fill="#a9d8a9" stroke="#3f8a3f" stroke-width=".8"'
+      const look = st === true ? 'fill="#9fe8d3" stroke="#00756a" stroke-width=".8"'
         : st === false ? `fill="url(#${id}-kept)" stroke="#8a8a8a" stroke-width=".7" stroke-dasharray="2.5 1.5"`
-        : 'fill="#dff0df" stroke="#6aa86a" stroke-width=".6"';
+        : 'fill="#e2f8f2" stroke="#5fb3a6" stroke-width=".6"';
       B.push(`<rect x="${c.x+1}" y="${Y(s.from)}" width="${c.w-2}" height="${Math.max(1.5, Y(s.to)-Y(s.from))}" ${look}/>`);
+    }
+    const items = fitLabels(k7 => { const k = k7 / 7.5, lh = 8.6 * k; return shown.map(s => {
+      const st = sampleStatus(s);
       const lines = [s.id]; const dt = [s.date, s.time].filter(Boolean).join(' ');
       if (dt) lines.push(dt);
       if (st === false) lines.push('non analysé');
       // A thin interval: the date goes first, then the « non analysé » line
       // (the hatching and the legend still say it).
       const bh = Math.max(1.5, Y(s.to) - Y(s.from));
-      if (lines.length > 1 && lines.length * 8.6 > bh + 6 && dt) lines.splice(1, 1);
-      if (lines.length > 1 && lines.length * 8.6 > bh + 6) lines.splice(1);
-      const sz = fit(s.id, c.w - 6, 7.5, 5.5);
-      items.push({ y: (cl(Y(s.from)) + cl(Y(s.to))) / 2 - lines.length * 4.5, h: lines.length * 8.6 + 1, lines, sz }); }
+      if (lines.length > 1 && lines.length * lh > bh + 6 && dt) lines.splice(1, 1);
+      if (lines.length > 1 && lines.length * lh > bh + 6) lines.splice(1);
+      const sz = fit(s.id, c.w - 6, 7.5 * k, 5 * Math.min(1, k + .1));
+      return { y: (cl(Y(s.from)) + cl(Y(s.to))) / 2 - lines.length * lh / 2, h: lines.length * lh + 1, lines, sz, k, lh };
+    }); }, 7.5, 5.5, room);
     stack(items, bodyTop + 1, bodyBot - 1).forEach(it => it.lines.forEach((t,i) => {
       const kept = t === 'non analysé' && i === it.lines.length - 1;
-      B.push(T(c.x + c.w/2, it.ty + 7.5 + i*8.6, t, i ? 6.5 : it.sz, `text-anchor="middle" ${kept ? 'fill="#777" font-style="italic"' : i ? 'fill="#333"' : ''}`));
+      B.push(T(c.x + c.w/2, it.ty + 7.5 * it.k + i*it.lh, t, i ? 6.5 * it.k : it.sz, `text-anchor="middle" ${kept ? 'fill="#777" font-style="italic"' : i ? 'fill="#333"' : ''}`));
     }));
   }
   // Résultats analytiques
   if (L.hasLab){
     const c = C.lab, sp = selParams(), m = LAB_MODES[L.labMode], items = [];
+    const style = r => r.over ? 'fill="#d00" font-weight="bold"' : r.lt ? 'fill="#777"' : '';
+    let top = bodyTop + 1, colX = null, idW = 0, vw = 0;
+    if (m.table){
+      // Table layout: the parameter names upright at the top, one line per sample.
+      const hb = labTableHead(sp), n = Math.max(1, sp.length);
+      // The depth of each line on its left when there is room (the name is in the sample column).
+      idW = (c.w - 8 - 34) / n >= 15 ? 34 : 0;
+      vw = (c.w - 8 - idW) / n;
+      colX = j => c.x + 6 + idW + vw * (j + 1) - 3;
+      sp.forEach((q, j) => {
+        const x = c.x + 6 + idW + vw * (j + .5) + 2, fs = fit(q.shown, hb - 6, 5.6, 4.5);
+        B.push(`<text transform="translate(${x.toFixed(1)} ${(bodyTop + hb - 3).toFixed(1)}) rotate(-90)" font-size="${fs}">${esc(q.shown)}</text>`);
+        if (j) B.push(line(c.x + 6 + idW + vw * j, bodyTop, c.x + 6 + idW + vw * j, bodyTop + hb, .3, '#bbb'));
+      });
+      B.push(line(c.x + 6, bodyTop + hb, c.x + c.w - 2, bodyTop + hb, .4, '#888'));
+      top = bodyTop + hb + 2;
+    }
     for (const s of h.samples){ if (!inPage(s.from, s.to)) continue;
       const ct = labContent(s, sp); if (!ct) continue;
       const lay = labLayout(ct, L.labMode, c.w, sp.length);
       const y0 = cl(Y(s.from)), y1 = cl(Y(s.to));
-      if (!ct.kept) B.push(`<path d="M${c.x+4} ${y0} h-2.5 V${y1} h2.5" fill="none" stroke="#6aa86a" stroke-width=".7"/>`);
-      items.push({ y: y0, h: lay.h, lay, kept: ct.kept, id: s.id });
+      if (!ct.kept) B.push(`<path d="M${c.x+4} ${y0} h-2.5 V${y1} h2.5" fill="none" stroke="#00756a" stroke-width=".7"/>`);
+      items.push({ y: m.table ? Math.max(top, (y0 + y1) / 2 - lay.h / 2) : y0, h: lay.h, lay, ct, kept: ct.kept, id: s.id, at: `${fmtM(s.from)}-${fmtM(s.to)}` });
     }
-    stack(items, bodyTop + 1, bodyBot - 1).forEach((it, n) => {
+    stack(items, top, bodyBot - 1).forEach((it, n) => {
+      if (m.table){
+        const yy = it.ty + m.row * .78;
+        if (idW) B.push(T(c.x + 6, yy, it.at, fit(it.at, idW - 2, m.fs, 4.5), `fill="${it.kept ? '#888' : '#00756a'}" font-style="italic"`));
+        if (it.kept){ B.push(T(c.x + 6 + idW, yy, 'Prélevé, non analysé', m.fs, 'fill="#888" font-style="italic"')); return; }
+        it.ct.rows.forEach((r, j) => { if (!r.none) B.push(T(colX(j), yy, r.txt, fit(r.txt, vw - 4, m.fs, 4), `text-anchor="end" ${style(r)}`)); });
+        return;
+      }
       if (n) B.push(line(c.x + 8, it.ty - 1.2, c.x + c.w - 4, it.ty - 1.2, .35, '#bbb'));
-      B.push(T(c.x + 8, it.ty + m.head * .78, it.id, m.fsId, `fill="${it.kept ? '#888' : '#4c7d4c'}" font-style="italic"`));
+      B.push(T(c.x + 8, it.ty + m.head * .78, it.id, m.fsId, `fill="${it.kept ? '#888' : '#00756a'}" font-style="italic"`));
       if (it.kept){ B.push(T(c.x + 8, it.ty + m.head + m.row * .78, 'Prélevé, non analysé', m.fs, 'fill="#888" font-style="italic"')); return; }
       it.lay.shown.forEach((r, i) => {
         const yy = it.ty + m.head + m.row * .78 + i * m.row;
-        B.push(T(c.x + 8, yy, r.label, m.fs, r.lt ? 'fill="#777"' : ''));
-        B.push(T(c.x + c.w - 4, yy, r.txt, m.fs, `text-anchor="end" ${r.over ? 'fill="#d00" font-weight="bold"' : r.lt ? 'fill="#777"' : ''}`));
+        B.push(T(c.x + 8, yy, r.label, fit(r.label, c.w - 14 - tw(r.txt, m.fs), m.fs, m.fs - 1.5), r.lt ? 'fill="#777"' : ''));
+        B.push(T(c.x + c.w - 4, yy, r.txt, m.fs, `text-anchor="end" ${style(r)}`));
       });
       it.lay.lq.forEach((t, j) => B.push(T(c.x + 8, it.ty + m.head + it.lay.shown.length * m.row + (m.row - .8) * (j + .78), t, m.fs - .5, 'fill="#777"')));
     });
   }
-  // Échelles
+  // Échelles : graduations et cotes espacées selon l'échelle verticale
+  const every = ppm >= 14 ? 1 : ppm >= 7 ? 2 : 5;
   for (const k of ['scale','scale2']){
     const c = C[k];
     for (let i = Math.round(p0*10); i <= Math.round(p1*10); i++){
       const d = i/10, y = Y(d), r = c.x + c.w;
       const major = i % 10 === 0, half = i % 5 === 0;
-      if (ppm < 22 && !half) continue;
+      if ((ppm < 22 && !half) || (ppm < 9 && !major)) continue;
       B.push(line(r - (major ? 7 : half ? 4.5 : 2.5), y, r, y, major ? .7 : .45));
-      if (major) B.push(T(c.x + 3, Math.min(Math.max(y + 3, bodyTop + 8), bodyBot - 2), fmtD(d), 7.5));
+      if (major && (i / 10) % every === 0) B.push(T(c.x + 3, Math.min(Math.max(y + 3, bodyTop + 8), bodyBot - 2), fmtD(d), 7.5));
     }
     B.push(line(c.x + c.w, bodyTop, c.x + c.w, bodyBot, .6));
   }
@@ -1020,7 +1391,7 @@ function drawPage(h, L){
 
   // ---------- pied ----------
   o.push(drawFooter(h, L, T, line, cId, cItems, id));
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${Hh}" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Log ${esc(h.id)}, page ${L.pageNo}"><rect width="${W}" height="${Hh}" fill="#fff"/><defs>${defs.join('')}</defs>${o.join('')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${Hh}" font-family="Figtree, Arial, Helvetica, sans-serif" role="img" aria-label="Log ${esc(h.id)}, page ${L.pageNo}"><rect width="${W}" height="${Hh}" fill="#fff"/><defs>${defs.join('')}</defs>${o.join('')}</svg>`;
 }
 
 function drawHeader(h, L, T, line){
@@ -1070,7 +1441,7 @@ function drawHeader(h, L, T, line){
     if (cc.z != null && h.water[0]) right.push(['Niveau d\'eau :', `${fmtM(h.water[0].depth)} m/TN – ${fmtM(Math.round((cc.z - h.water[0].depth)*100)/100)} m NGF`]);
   }
   const title = L.isWell ? 'Piézomètre n° :' : 'Sondage n° :';
-  o.push(`<rect x="${xr + .4}" y="${y0 + .4}" width="${w3 - .8}" height="30" fill="#e3efe6"/>`, line(xr, y0 + 30, xr + w3, y0 + 30, .5, '#9bbfa3'));
+  o.push(`<rect x="${xr + .4}" y="${y0 + .4}" width="${w3 - .8}" height="30" fill="#e2f8f2"/>`, line(xr, y0 + 30, xr + w3, y0 + 30, .8, '#00756a'));
   o.push(lab(xr + 8, y0 + 20, title, 9.5)); o.push(T(xr + w3 * .72, y0 + 21, h.id, 13, 'text-anchor="middle" font-weight="bold"'));
   const rh2 = Math.min(25, (hh - 40) / right.length), rs = rh2 < 17 ? 8.2 : 9.5;
   right.forEach(([l,v], i) => { const y = y0 + 38 + rh2 * .5 + i * rh2; o.push(lab(xr + 8, y, l, rs)); o.push(val(xr + w3 * .46, xr + w3 - 6, y, v || '', rs + .3)); });
@@ -1080,11 +1451,13 @@ function drawHeader(h, L, T, line){
 function drawFooter(h, L, T, line, cId, cItems, id){
   const { W, Hh, M, bodyBot, cols, C } = L; const o = [];
   const hdrH = 50, y0 = bodyBot, y1 = bodyBot + hdrH, yEnd = Hh - M;
-  o.push(`<rect x="${M}" y="${y0}" width="${W-2*M}" height="${hdrH}" fill="#eef4ef" stroke="#000" stroke-width=".8"/>`);
+  const sp = L.hasLab ? selParams() : Object.assign([], { unit:null });
+  o.push(`<rect x="${M}" y="${y0}" width="${W-2*M}" height="${hdrH}" fill="#f2f5f5" stroke="#000" stroke-width=".8"/>`);
   for (const c of cols){
     if (c !== cols[0]) o.push(line(c.x, y0, c.x, y1, .6));
     let title = c.t;
-    if (c.k === 'lab'){ const units = [...new Set(selParams().map(s => s.p.unit).filter(Boolean))]; if (units.length === 1) title += ` (${units[0]})`; }
+    // The one unit of the results, at the head of their column.
+    if (c.k === 'lab' && sp.unit) title += ` (${sp.unit})`;
     const color = c.color ? `fill="${c.color}"` : '';
     if (c.w < 46){
       const lines = wrap(title, hdrH - 8, 7.5).slice(0, 2);
@@ -1093,7 +1466,7 @@ function drawFooter(h, L, T, line, cId, cItems, id){
     } else {
       const fs = c.k === 'desc' ? 9.5 : 8.5;
       const lines = wrap(title, c.w - 8, fs).slice(0, 3);
-      lines.forEach((t,i) => o.push(T(c.x + c.w/2, y0 + hdrH/2 - (lines.length - 1) * (fs + 1)/2 + fs/3 + i * (fs + 1), t, fs, `text-anchor="middle" ${color}`)));
+      lines.forEach((t,i) => o.push(T(c.x + c.w/2, y0 + hdrH/2 - (lines.length - 1) * (fs + 1)/2 + fs/3 + i * (fs + 1), t, fs, `text-anchor="middle" ${color}${c.k === 'lab' && i === lines.length - 1 && sp.unit ? ' font-weight="bold"' : ''}`)));
     }
   }
   // Légende + note
@@ -1102,46 +1475,65 @@ function drawFooter(h, L, T, line, cId, cItems, id){
   const legW = xs - M;
   const sts = new Set(h.samples.map(sampleStatus));
   const sampleKeys = [...(sts.has(true) ? ['ECH_A'] : []), ...(sts.has(false) ? ['ECH_N'] : [])];
-  const SAMPLE_LABEL = { ECH_A:'Échantillon analysé', ECH_N:'Échantillon prélevé, non analysé' };
-  if ((L.isWell && cItems.length) || sampleKeys.length){
-    o.push(T(M + 6, y1 + 13, L.isWell && cItems.length ? 'Légende (construction du piézomètre, échantillons) :' : 'Légende (échantillons) :', 8.5, 'text-decoration="underline"'));
+  // Results: the bold red of a value above its threshold, the grey of a value below the LQ.
+  const src = new Set(sp.filter(q => q.t != null).map(q => q.tSrc));
+  const labKeys = L.hasLab ? [...(src.size ? ['DEP'] : []), ...(state.hideLQ ? [] : ['LQ'])] : [];
+  const WIDE_LABEL = { ECH_A:'Échantillon analysé', ECH_N:'Échantillon prélevé, non analysé',
+    DEP: src.size === 1 && src.has('erm') ? 'Dépassement de la valeur guide ERM' : src.size === 1 ? 'Dépassement du seuil retenu' : 'Dépassement de la valeur de comparaison',
+    LQ:'Inférieur à la limite de quantification' };
+  const LEG_LABEL = { BENTONITE:'Bentonite (bouchon étanche)' };
+  const wide = [...sampleKeys, ...labKeys];
+  if ((L.isWell && cItems.length) || wide.length){
+    o.push(T(M + 6, y1 + 13, 'Légende :', 8.5, 'text-decoration="underline"'));
     const per = legW > 300 ? 4 : 3, cw = (legW - 10) / per;
     const order = ['BENTONITE','CIMENT','CUTTINGS','BENTO/CIMENT','BETON','SABLE','MASSIF FILTRANT','TUBE PLEIN','CREPINE','BOUCHON','CAPOT'];
-    const used = (L.isWell ? order.filter(k => cItems.includes(k)).concat(cItems.filter(k => !order.includes(k))) : []).concat(sampleKeys);
-    // Construction items in a grid; sample entries after them, on rows of
-    // their own, each as many cells wide as its label needs — never past
-    // the legend box.
+    const items = L.isWell ? order.filter(k => cItems.includes(k)).concat(cItems.filter(k => !order.includes(k))) : [];
+    // Construction items in a grid; sample and result entries after them,
+    // each as many cells wide as its label needs — never past the legend box.
     const pos = {}; let row = 0, col = 0;
-    for (const k of used.filter(k => !k.startsWith('ECH_'))){ pos[k] = { col, row, span:1 }; if (++col === per){ col = 0; row++; } }
+    for (const k of items){ const span = Math.min(per, Math.ceil((tw(LEG_LABEL[k] || ITEM_LABEL[k] || k, 7.5) + 24) / cw)) > 1 && per > 3 ? 2 : 1;
+      if (col + span > per){ row++; col = 0; } pos[k] = { col, row, span }; col += span; if (col >= per){ col = 0; row++; } }
     if (col){ row++; col = 0; }
-    for (const k of sampleKeys){
-      const span = Math.min(per, Math.ceil((tw(SAMPLE_LABEL[k], 7.5) + 24) / cw));
+    for (const k of wide){
+      const span = Math.min(per, Math.ceil((tw(WIDE_LABEL[k], 7.5) + 24) / cw));
       if (col + span > per){ row++; col = 0; }
       pos[k] = { col, row, span }; col += span;
     }
-    used.forEach(k => {
-      const x = M + 6 + pos[k].col * cw, y = y1 + 22 + pos[k].row * 15;
+    const nRows = Math.max(...Object.values(pos).map(p => p.row)) + 1;
+    const pitch = Math.min(15, (yEnd - 4 - (y1 + 20)) / nRows), sh = Math.min(10, pitch - 2.5), fsL = Math.min(7.5, pitch - 2);
+    items.concat(wide).forEach(k => {
+      const x = M + 6 + pos[k].col * cw, y = y1 + 20 + pos[k].row * pitch + (pitch - sh) / 2 - 1;
       let sw;
-      if (k === 'CAPOT') sw = `<rect x="${x}" y="${y}" width="14" height="5" y-off="0" fill="#000" transform="translate(0 2.5)"/>`;
-      else if (k === 'CREPINE') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#fff" stroke="#000" stroke-width=".6"/>` + line(x+3, y+3.5, x+11, y+3.5, .6) + line(x+3, y+6.5, x+11, y+6.5, .6);
-      else if (k === 'TUBE PLEIN') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#fff" stroke="#000" stroke-width=".6"/>`;
-      else if (k === 'BOUCHON') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#555" stroke="#000" stroke-width=".6"/>`;
-      else if (k === 'ECH_A') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="#a9d8a9" stroke="#3f8a3f" stroke-width=".8"/>`;
-      else if (k === 'ECH_N') sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="url(#${id}-kept)" stroke="#8a8a8a" stroke-width=".7" stroke-dasharray="2.5 1.5"/>`;
-      else sw = `<rect x="${x}" y="${y}" width="14" height="10" fill="url(#${cId(k)})" stroke="#000" stroke-width=".6"/>`;
-      const lb = SAMPLE_LABEL[k] || ITEM_LABEL[k] || k;
-      o.push(sw + T(x + 17, y + 8, lb, fit(lb, pos[k].span * cw - 22, 7.5, 5.5)));
+      if (k === 'CAPOT') sw = `<rect x="${x}" y="${y + sh/4}" width="14" height="${sh/2}" fill="#000"/>`;
+      else if (k === 'CREPINE') sw = `<rect x="${x}" y="${y}" width="14" height="${sh}" fill="#fff" stroke="#000" stroke-width=".6"/>` + line(x+3, y+sh*.35, x+11, y+sh*.35, .6) + line(x+3, y+sh*.65, x+11, y+sh*.65, .6);
+      else if (k === 'TUBE PLEIN') sw = `<rect x="${x}" y="${y}" width="14" height="${sh}" fill="#fff" stroke="#000" stroke-width=".6"/>`;
+      else if (k === 'BOUCHON') sw = `<rect x="${x}" y="${y}" width="14" height="${sh}" fill="#555" stroke="#000" stroke-width=".6"/>`;
+      else if (k === 'ECH_A') sw = `<rect x="${x}" y="${y}" width="14" height="${sh}" fill="#9fe8d3" stroke="#00756a" stroke-width=".8"/>`;
+      else if (k === 'ECH_N') sw = `<rect x="${x}" y="${y}" width="14" height="${sh}" fill="url(#${id}-kept)" stroke="#8a8a8a" stroke-width=".7" stroke-dasharray="2.5 1.5"/>`;
+      else if (k === 'DEP') sw = T(x + 7, y + sh * .85, '12,3', 7.5, 'text-anchor="middle" fill="#d00" font-weight="bold"');
+      else if (k === 'LQ') sw = T(x + 7, y + sh * .85, '<0,5', 7.5, 'text-anchor="middle" fill="#777"');
+      else sw = `<rect x="${x}" y="${y}" width="14" height="${sh}" fill="url(#${cId(k)})" stroke="#000" stroke-width=".6"/>`;
+      const lb = WIDE_LABEL[k] || LEG_LABEL[k] || ITEM_LABEL[k] || k;
+      o.push(sw + T(x + 17, y + sh * .8, lb, fit(lb, pos[k].span * cw - 22, fsL, 5.5)));
     });
   }
   // Note
   const notes = [];
   if (h.info?.note) notes.push(h.info.note);
   if (L.hasLab){
-    const sp = selParams();
-    const thr = sp.filter(s => s.t != null).map(s => `${s.label} : ${fmtNum(s.t)}${s.p.unit ? ' ' + s.p.unit : ''}`);
-    if (thr.length) notes.push(`Résultats analytiques : valeurs en rouge gras supérieures au seuil retenu (${thr.join(' ; ')})${state.thrSource ? ', référence : ' + state.thrSource : ''}.`);
-    const units = [...new Set(sp.map(s => s.p.unit).filter(Boolean))];
-    if (units.length > 1) notes.push('Unités : ' + sp.map(s => `${s.label} en ${s.p.unit || '?'}`).join(' ; ') + '.');
+    const list = qs => qs.map(q => `${q.label} ${fmtNum(q.t)}${q.tSrc === 'erm' ? '\u00a0' + q.g.source : ''}${q.own && q.u ? '\u00a0' + q.u : ''}`).join(' ; ');
+    const inU = sp.unit ? ` en ${sp.unit}` : '';
+    if (sp.unit){
+      const conv = sp.filter(q => !q.own && norm(q.p.unit) !== norm(sp.unit));
+      notes.push(`Résultats analytiques${inU}${sp.some(q => q.own && q.shown !== q.label) ? ' (autre unité indiquée entre parenthèses)' : ''}${conv.length ? ` ; ${conv.map(q => q.label).join(', ')} converti${conv.length > 1 ? 's' : ''} de ${[...new Set(conv.map(q => q.p.unit))].join(', ')}` : ''}.`);
+    } else if (new Set(sp.map(q => q.p.unit).filter(Boolean)).size) notes.push('Résultats analytiques : unité entre parenthèses après chaque paramètre.');
+    const erm = sp.filter(q => q.tSrc === 'erm'), man = sp.filter(q => q.tSrc === 'manual');
+    if (erm.length){
+      const codes = [...new Set(erm.map(q => q.g.source))].sort();
+      const met = erm.some(q => q.g.source === '(a)' || q.g.source === '(b)') ? `, métaux ${state.vgMetaux === 'sur site' ? 'sur site (bruit de fond)' : 'hors site (seuil de vigilance)'}` : '';
+      notes.push(`En rouge gras : dépassement de la valeur guide ERM pour les sols (version du ${vgDate()}${met})${inU} : ${list(erm)}. ${codes.map(c => `${c} ${VG_SRC[c] || ''}`).join(' ; ')}.`);
+    }
+    if (man.length) notes.push(`En rouge gras : dépassement du seuil retenu${inU} : ${list(man)}${state.thrSource ? ' (référence : ' + state.thrSource + ')' : ''}.`);
     if (sp.some(s => s.p.computed)) notes.push('Sommes calculées sur les composés quantifiés ; <LQ si aucun composé quantifié.');
   }
   const nx = xs + 8, nw = W - M - nx - 70;
@@ -1169,10 +1561,13 @@ function drawFooter(h, L, T, line, cId, cItems, id){
     }
     ny = y1 + 46;
   }
-  for (const n of notes){
-    for (const t of wrap(n, nw, 8.5)){ if (ny > maxY) break; o.push(T(nx, ny, t, 8.5)); ny += 10.5; }
-    ny += 2;
-  }
+  // The notes at the largest size that fits the box.
+  const lines = fs => { const out = []; let y = ny;
+    for (const n of notes){ for (const t of wrap(n, nw, fs)){ out.push({ t, y }); y += fs * 1.24; } y += 2; }
+    return { out, end: y - 2 - fs * 1.24 }; };
+  let fsN = 8.5, ls = lines(fsN);
+  while (ls.end > maxY && fsN > 5.5){ fsN -= .5; ls = lines(fsN); }
+  for (const l of ls.out){ if (l.y > maxY) break; o.push(T(nx, l.y, l.t, fsN)); }
   // Pagination
   o.push(`<rect x="${W - M - 66}" y="${yEnd - 22}" width="66" height="22" fill="#fff" stroke="#000" stroke-width=".6"/>`);
   o.push(T(W - M - 33, yEnd - 7.5, `Page ${L.pageNo} de ${L.nPages}`, 9, 'text-anchor="middle"'));
@@ -1255,7 +1650,27 @@ wireDrop('#dropLab', '#fileLab', async f => {
 $('#paramSearch').addEventListener('input', drawParamList);
 $('#hideLQ').addEventListener('change', e => { state.hideLQ = e.target.checked; renderAll(); });
 $('#thrSource').addEventListener('input', e => { state.thrSource = e.target.value.trim(); renderAllSoon(); });
-$('#btnClearLab').addEventListener('click', () => { state.lab = null; state.sel = []; for (const h of state.holes.values()) h.samples = h.samples.filter(s => s.fromSheet).map(s => ({...s, labIdx:null})); $('#fileLab').value = ''; renderLabPanel(); validate(); renderAll(); });
+$('#btnClearLab').addEventListener('click', () => { state.lab = null; state.sel = []; state.labMap = {}; for (const h of state.holes.values()) h.samples = h.samples.filter(s => s.fromSheet).map(s => ({...s, labIdx:null})); $('#fileLab').value = ''; renderLabPanel(); validate(); renderAll(); });
+$('#vgOn').addEventListener('change', e => { state.vgOn = e.target.checked; $('#vgOpts').hidden = !state.vgOn; renderLabPanel(); renderAll(); });
+$('#vgMetaux').addEventListener('change', e => { state.vgMetaux = e.target.value; renderLabPanel(); renderAll(); });
+// Parameters with an ERM guide value and at least one quantified result
+// (exceedances first), up to eight.
+$('#btnVgPick').addEventListener('click', () => {
+  const lab = state.lab; if (!lab || !state.vg) return;
+  // Exceedances on the logs first, then sums, hydrocarbons and PCB, then metals, COT last.
+  const onLog = (v, i) => v && lab.samples[i]?.hole && v.num != null && !v.lt;
+  const over = p => { const g = guideSol(p), k = g && facteurUnite(p.unit, g.unite); return k != null && p.vals.some((v, i) => onLog(v, i) && v.num * k > g.valeur); };
+  const kind = p => p.computed || /c10c40|btex|hap|pcb/.test(norm(p.name)) ? 0 : /^cot/.test(norm(p.name)) ? 2 : 1;
+  const cand = lab.params.filter(p => !p.eluat && guideSol(p) && p.vals.some(onLog))
+    .map((p, i) => ({ p, r: (over(p) ? 0 : 3) + kind(p), i })).sort((a, b) => a.r - b.r || a.i - b.i).map(x => x.p);
+  if (!cand.length) return alert('Aucun paramètre quantifié sur les échantillons des logs n\'a de valeur guide ERM pour les sols.');
+  state.sel = cand.slice(0, 8).map(p => state.sel.find(s => s.key === p.key) || { key:p.key, label:shortLabel(p), thr:'' });
+  renderLabPanel(); renderAll();
+});
+// ERM guide values, copied to public/data by scripts/valeurs-guides.mjs.
+fetch('data/valeurs-guides.json').then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
+  .then(d => { state.vg = d; if (state.lab){ renderLabPanel(); renderAll(); } })
+  .catch(() => { state.vgError = 'Valeurs guides ERM indisponibles (data/valeurs-guides.json non trouvé) : seuls les seuils saisis s\'appliquent.'; $('#vgOn').disabled = true; if (state.lab) renderVgInfo(); });
 $('#optOrient').addEventListener('change', e => { state.opt.orient = e.target.value; renderAll(); });
 $('#optDepth').addEventListener('change', e => { state.opt.depth = e.target.value; renderAll(); });
 $('#optCoords').addEventListener('change', e => { state.opt.coords = e.target.checked; renderAll(); });
@@ -1292,7 +1707,7 @@ $('#btnTemplate').addEventListener('click', () => {
   XLSX.writeFile(wb, 'Modele_saisie_logs.xlsx');
 });
 // Point d'entrée pour tests ou intégration (sheets = {nom: tableau de lignes})
-window.LogTool = { loadSheets, loadLab, state, renderAll };
+window.LogTool = { loadSheets, loadLab, state, renderAll, tokens, attachLab, selParams };
 renderAll();
 </script>
 </body>
