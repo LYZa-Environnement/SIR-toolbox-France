@@ -132,7 +132,12 @@ livrables).
   référence), articles 31, 32 et 34 pour l'eau (pH, température, MES, DBO5,
   DCO, azote et phosphore, substances des 3° et 4°, raccordement à une
   station d'épuration). Résultats lus dans le fichier du laboratoire (tous
-  les onglets, un échantillon par onglet admis) ou saisis, bilan échantillon
+  les onglets, un échantillon par onglet admis) ou saisis ; pour l'air,
+  résultats en concentration repris tels quels ou résultats par échantillon
+  (µg/support, µg/tube) convertis avec la durée et le débit de prélèvement
+  saisis par échantillon, volume ramené aux conditions normales si la
+  température et la pression sont données (choix de la base quand le
+  laboratoire donne les deux) ; bilan échantillon
   par échantillon (entrée, intermédiaire, rejet), résultats <LQ en bornes basse et haute, tolérance de 10 % de
   l'autosurveillance permanente (article 21), rapport Excel.
 

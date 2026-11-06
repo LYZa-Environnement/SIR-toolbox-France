@@ -41,12 +41,14 @@ export interface Conversion {
   note?: string
 }
 
-/** Units of air results: mg/m³, µg/m³, mgC/m³, ppm, µg/support. */
+/** Units of air results: mg/m³, µg/m³, mgC/m³, ppm, µg/support (or µg per tube, per sample). */
 export function conversionAir(unite: string, s: Substance | null): Conversion {
   const u = compacte(unite)
   let m = u.match(/^(ng|µg|ug|mcg|mg|g)(c|eq\.?c|éq\.?c)?\/n?m3/)
   if (m) return { facteur: PREFIXES[m[1]] }
-  m = u.match(/^(ng|µg|ug|mcg|mg|g)\/(support|supp?\.?|[ée]ch\.?|[ée]chantillon|tube|cartouche|badge|filtre)/)
+  // A mass per sample (tube, cartridge, filter…), or a bare mass: the
+  // sampled volume turns it into a concentration.
+  m = u.match(/^(ng|µg|ug|mcg|mg|g)(?:\/(support|supp?\.?|[ée]ch\.?|[ée]chantillon|tube|cartouche|badge|filtre|t[êe]te|m[ée]dia|cassette)|$)/)
   if (m) return { facteur: PREFIXES[m[1]], support: true }
   m = u.match(/^(ppm|ppb)(v)?(?:[ée]q\.?)?(ch4|c3h8|c|propane|m[ée]thane)?/)
   if (m) {

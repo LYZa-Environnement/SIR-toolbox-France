@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from 'react'
-import { lireNombre } from '../lib/resultats/calc'
-import { LectureImpossible, type Cell, type Lecture } from '../lib/resultats/parse'
+import { debitMoyen, lireNombre, volumeLitres } from '../lib/resultats/calc'
+import { LectureImpossible, lireMesure, type Cell, type Lecture } from '../lib/resultats/parse'
 import {
   bilan,
   bilanParEchantillon,
@@ -12,7 +12,21 @@ import {
   type Donnees,
   type Statut,
 } from '../lib/rejets/conformite'
-import { collage, grilleDepuisLecture, ligneVide, lireGrilleSaisie, lireOnglets, nonVisees as lignesNonVisees, type Colonne, type Ligne } from '../lib/rejets/grille'
+import {
+  collage,
+  colonneVide,
+  facteurNormal,
+  grilleDepuisLecture,
+  ligneVide,
+  lireGrilleSaisie,
+  lireOnglets,
+  nonVisees as lignesNonVisees,
+  prelevement,
+  volumeColonne,
+  type Colonne,
+  type Conditions,
+  type Ligne,
+} from '../lib/rejets/grille'
 import { LIBELLES_CLASSE, PAR_ID, SUBSTANCES, type ClasseCov } from '../lib/rejets/substances'
 import { conversionAir, type Milieu } from '../lib/rejets/unites'
 
@@ -53,27 +67,53 @@ function borne(b: Borne | null): string {
   return b.bas === 0 ? `<${fr(b.haut)}` : `${fr(b.bas)} à ${fr(b.haut)}`
 }
 
-async function lireFichier(f: File, milieu: Milieu): Promise<{ lecture: Lecture; onglets: string[] }> {
+type Lu = { lecture: Lecture; onglets: string[] }
+type Variante = 'concentration' | 'echantillon'
+
+/** Air: results per sample (mass on the tube) or concentrations the lab
+ *  already gives (canister, bag, or computed by the lab). When the report
+ *  holds both, both are kept, the concentrations first — as in the
+ *  formatting tool —, and the user picks the basis of the evaluation. */
+async function lireFichier(f: File, milieu: Milieu): Promise<{ lu: Lu; variantes?: Record<Variante, Lu> }> {
   const XLSX = await import('xlsx')
   const classeur = XLSX.read(await f.arrayBuffer(), { type: 'array' })
   const feuilles = classeur.SheetNames.map((nom) => ({
     nom,
     grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
   }))
-  if (milieu === 'eau') return lireOnglets(feuilles, 'tout', 'eau')
-  // Air: concentrations given by the lab, else masses per tube.
-  const essais = (['concentration', 'support', 'tout'] as const).map((mode) => {
+  if (milieu === 'eau') return { lu: lireOnglets(feuilles, 'tout', 'eau') }
+  const essayer = (mode: 'concentration' | 'support' | 'tout') => {
     try {
-      return lireOnglets(feuilles, mode, 'air')
+      const x = lireOnglets(feuilles, mode, 'air')
+      return x.lecture.parametres.CM.length ? x : null
     } catch (e) {
       if (!(e instanceof LectureImpossible)) throw e
       return null
     }
-  })
-  const lu = essais.filter((x): x is { lecture: Lecture; onglets: string[] } => !!x)
-  if (!lu.length) return lireOnglets(feuilles, 'tout', 'air')
-  const taille = (x: { lecture: Lecture }) => x.lecture.points.length * x.lecture.parametres.CM.length
-  return lu.reduce((a, b) => (taille(b) > taille(a) ? b : a))
+  }
+  const concentration = essayer('concentration')
+  const echantillon = essayer('support')
+  if (concentration && echantillon) {
+    const variantes = { concentration, echantillon }
+    return { lu: concentration.lecture.parametres.CM.length >= echantillon.lecture.parametres.CM.length ? concentration : echantillon, variantes }
+  }
+  const lu = [concentration, echantillon, essayer('tout')].filter((x): x is Lu => !!x)
+  if (!lu.length) return { lu: lireOnglets(feuilles, 'tout', 'air') }
+  const taille = (x: Lu) => x.lecture.points.length * x.lecture.parametres.CM.length
+  return { lu: lu.reduce((a, b) => (taille(b) > taille(a) ? b : a)) }
+}
+
+type Champ = 'duree' | 'debitDebut' | 'debitFin'
+const CHAMPS: { champ: Champ; libelle: string; aide: string }[] = [
+  { champ: 'duree', libelle: 'Durée (min)', aide: 'Temps de prélèvement' },
+  { champ: 'debitDebut', libelle: 'Débit début (L/min)', aide: 'Débit mesuré en début de prélèvement' },
+  { champ: 'debitFin', libelle: 'Débit fin (L/min)', aide: 'Optionnel : le débit retenu est alors la moyenne début / fin' },
+]
+const SAISIE_VIDE: Record<Champ, string> = { duree: '', debitDebut: '', debitFin: '' }
+
+const UNITES: Record<Milieu, string[]> = {
+  air: ['mg/m³', 'µg/m³', 'mg C/m³', 'ppm', 'µg/support', 'µg/tube', 'mg/support'],
+  eau: ['mg/l', 'µg/l', 'mg O2/l', 'mg N/l', 'mg P/l', 'unité pH', '°C'],
 }
 
 const SUBSTANCES_TRIEES = (m: Milieu) => SUBSTANCES.filter((s) => s.milieu.includes(m)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
@@ -108,6 +148,12 @@ export default function ConformiteRejets() {
   const [survol, setSurvol] = useState(false)
   const [reconnuesSeules, setReconnuesSeules] = useState(false)
   const [export_, setExport] = useState(false)
+  // Air, results per sample
+  const [variantes, setVariantes] = useState<Record<Variante, Lu> | null>(null)
+  const [variante, setVariante] = useState<Variante>('concentration')
+  const [conditions, setConditions] = useState<Conditions>({ temperature: '', pression: '' })
+  const [selection, setSelection] = useState<Record<number, boolean>>({})
+  const [aAppliquer, setAAppliquer] = useState<Record<Champ, string>>(SAISIE_VIDE)
   const input = useRef<HTMLInputElement>(null)
 
   function choisir(m: Milieu) {
@@ -119,6 +165,28 @@ export default function ConformiteRejets() {
     setNotesLecture([])
     setFluxAutorises({})
     setErreur(null)
+    setVariantes(null)
+    setSelection({})
+  }
+
+  /** The grid from a reading; the sampling entries of samples of the same
+   *  name are kept (switching between masses and concentrations). */
+  function installer(lu: Lu, nom: string, garder: Colonne[] = []) {
+    if (!milieu) return
+    const g = grilleDepuisLecture(lu.lecture, milieu)
+    if (!g.lignes.length) throw new LectureImpossible('Aucun résultat lisible dans ce fichier.')
+    const avant = new Map(garder.map((c) => [c.nom, c]))
+    setColonnes(g.colonnes.map((c) => ({ ...c, ...avant.get(c.nom), nom: c.nom })))
+    setLignes(g.lignes)
+    const n = g.colonnes.length
+    const onglets = lu.onglets
+    setNotesLecture([
+      `${onglets.length > 1 ? `${onglets.length} onglets lus (${onglets.map((o) => `« ${o} »`).join(', ')})` : `Onglet « ${onglets[0] ?? '?'} »`} : ${n} échantillon${n > 1 ? 's' : ''} (${g.colonnes.map((c) => c.nom).join(', ')}), ${g.lignes.length} paramètres. Chaque échantillon est évalué.`,
+      ...g.notes,
+    ])
+    setFichier(nom)
+    setFluxAutorises({})
+    setSelection({})
   }
 
   async function charger(f: File | undefined) {
@@ -126,23 +194,21 @@ export default function ConformiteRejets() {
     setChargement(true)
     setErreur(null)
     try {
-      const { lecture: l, onglets } = await lireFichier(f, milieu)
-      const g = grilleDepuisLecture(l, milieu)
-      if (!g.lignes.length) throw new LectureImpossible('Aucun résultat lisible dans ce fichier.')
-      setColonnes(g.colonnes)
-      setLignes(g.lignes)
-      const n = g.colonnes.length
-      setNotesLecture([
-        `${onglets.length > 1 ? `${onglets.length} onglets lus (${onglets.map((o) => `« ${o} »`).join(', ')})` : `Onglet « ${onglets[0] ?? '?'} »`} : ${n} échantillon${n > 1 ? 's' : ''} (${g.colonnes.map((c) => c.nom).join(', ')}), ${g.lignes.length} paramètres. Chaque échantillon est évalué.`,
-        ...g.notes,
-      ])
-      setFichier(f.name)
-      setFluxAutorises({})
+      const { lu, variantes: v } = await lireFichier(f, milieu)
+      installer(lu, f.name)
+      setVariantes(v ?? null)
+      if (v) setVariante(lu === v.concentration ? 'concentration' : 'echantillon')
     } catch (e) {
       setErreur(e instanceof LectureImpossible ? e.message : `Lecture impossible : ${(e as Error).message}`)
     } finally {
       setChargement(false)
     }
+  }
+
+  function choisirVariante(v: Variante) {
+    if (!variantes || v === variante) return
+    setVariante(v)
+    installer(variantes[v], fichier, colonnes)
   }
 
   function deposer(e: DragEvent) {
@@ -153,10 +219,12 @@ export default function ConformiteRejets() {
 
   function saisieManuelle() {
     if (!milieu) return
-    setColonnes([{ nom: 'Mesure 1', date: '', volume: '' }])
+    setColonnes([colonneVide('Mesure 1')])
     setLignes([ligneVide(milieu, 1)])
     setFichier('')
     setNotesLecture([])
+    setVariantes(null)
+    setSelection({})
   }
 
   const majLigne = (id: string, p: Partial<Ligne>) => setLignes((ls) => ls.map((l) => (l.id === id ? { ...l, ...p } : l)))
@@ -164,11 +232,12 @@ export default function ConformiteRejets() {
   const majColonne = (j: number, p: Partial<Colonne>) => setColonnes((cs) => cs.map((c, k) => (k === j ? { ...c, ...p } : c)))
 
   function ajouterColonne() {
-    setColonnes((cs) => [...cs, { nom: `Mesure ${cs.length + 1}`, date: '', volume: '' }])
+    setColonnes((cs) => [...cs, colonneVide(`Mesure ${cs.length + 1}`)])
     setLignes((ls) => ls.map((l) => ({ ...l, valeurs: [...l.valeurs, ''] })))
   }
   function retirerColonne(j: number) {
     setColonnes((cs) => cs.filter((_, k) => k !== j))
+    setSelection({})
     setLignes((ls) => ls.map((l) => ({ ...l, valeurs: l.valeurs.filter((_, k) => k !== j) })))
   }
 
@@ -178,6 +247,33 @@ export default function ConformiteRejets() {
     if (vs.length < 2) return
     e.preventDefault()
     setLignes((ls) => ls.map((l, i) => (i >= ligne && i - ligne < vs.length ? { ...l, valeurs: l.valeurs.map((x, k) => (k === j ? vs[i - ligne] : x)) } : l)))
+  }
+
+  /** Duration and flows pasted from Excel (a column, or a block of the
+   *  three) fill the samples below. */
+  function collerPrelevement(e: ClipboardEvent, j: number, champ: Champ) {
+    const texte = e.clipboardData.getData('text')
+    if (!/[\n\t]/.test(texte.trim())) return
+    e.preventDefault()
+    const blocs = texte.replace(/\r/g, '').replace(/\n$/, '').split('\n').map((l) => l.split('\t'))
+    const debut = CHAMPS.findIndex((c) => c.champ === champ)
+    setColonnes((cs) =>
+      cs.map((c, k) => {
+        const cols = blocs[k - j]
+        if (k < j || !cols) return c
+        const suite = { ...c }
+        cols.forEach((v, i) => {
+          const x = CHAMPS[debut + i]
+          if (x) suite[x.champ] = v.trim()
+        })
+        return suite
+      }),
+    )
+  }
+
+  function appliquer(cibles: number[]) {
+    const valeurs = Object.fromEntries(CHAMPS.filter(({ champ }) => aAppliquer[champ].trim()).map(({ champ }) => [champ, aAppliquer[champ].trim()]))
+    setColonnes((cs) => cs.map((c, k) => (cibles.includes(k) ? { ...c, ...valeurs } : c)))
   }
 
   // Air flow from the actual conditions to normal, dry gas.
@@ -192,7 +288,13 @@ export default function ConformiteRejets() {
 
   const supports = milieu === 'air' && lignes.some((l) => conversionAir(l.unite, l.substance ? (PAR_ID.get(l.substance) ?? null) : null).support)
 
-  const lecture = useMemo(() => (milieu ? lireGrilleSaisie(milieu, lignes, colonnes) : null), [milieu, lignes, colonnes])
+  const lecture = useMemo(
+    () => (milieu ? lireGrilleSaisie(milieu, lignes, colonnes, supports ? conditions : undefined) : null),
+    [milieu, lignes, colonnes, supports, conditions],
+  )
+  const selectionnes = colonnes.map((_, j) => j).filter((j) => selection[j])
+  const sansVolume = supports ? colonnes.filter((c) => volumeColonne(c) === null).map((c, j) => c.nom || `Mesure ${j + 1}`) : []
+  const etapeTableau = supports ? 5 : 4
 
   const donnees: Donnees | null = useMemo(() => {
     if (!milieu || !lecture) return null
@@ -238,6 +340,14 @@ export default function ConformiteRejets() {
               ['pH', neutralisation ? 'neutralisation alcaline (pH ≤ 9,5)' : 'pH ≤ 8,5'],
             ] as [string, string][])),
         ['Surveillance', permanente ? 'autosurveillance permanente (tolérance de 10 %)' : 'mesures ponctuelles'],
+        ...(supports
+          ? ([
+              [
+                'Résultats',
+                `par échantillon, convertis en concentration (débit × durée${facteurNormal(conditions) !== 1 ? ', volume ramené aux conditions normales' : ''})`,
+              ],
+            ] as [string, string][])
+          : []),
         ['Fichier', fichier || 'saisie manuelle'],
       ]
 
@@ -257,6 +367,7 @@ export default function ConformiteRejets() {
           contexte,
           nonVisees,
           problemes: lecture.problemes.map((p) => `${p.ligne} : ${p.texte}`),
+          conditions: supports ? conditions : undefined,
         },
         `Conformité rejets ${milieu === 'air' ? 'air' : 'eau'} AM 1998${installation ? ` - ${installation}` : ''} - ${date}.xlsx`,
       )
@@ -466,7 +577,10 @@ export default function ConformiteRejets() {
                 <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture du fichier…' : 'Déposez ici le fichier du laboratoire'}</p>
                 <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
                   Une colonne par mesure (ou par point de prélèvement). Excel ou CSV, disposition reconnue automatiquement
-                  {milieu === 'air' ? ' ; concentrations en mg/m³ ou µg/m³, ou masses par tube avec le volume prélevé' : ' ; µg/l, mg/l, mg O2/l…'}.
+                  {milieu === 'air'
+                    ? ' ; résultats en concentration (mg/m³, µg/m³, ppm) repris tels quels, ou résultats par échantillon (µg/support, µg/tube) convertis avec la durée et le débit de prélèvement'
+                    : ' ; µg/l, mg/l, mg O2/l…'}
+                  .
                 </p>
                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                   <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
@@ -494,6 +608,28 @@ export default function ConformiteRejets() {
                     {reconnues} paramètre{reconnues > 1 ? 's' : ''} reconnu{reconnues > 1 ? 's' : ''} parmi les substances de l'arrêté. Vérifiez la
                     colonne « Substance de l'arrêté » et corrigez-la si besoin.
                   </p>
+                  {milieu === 'air' && variantes && (
+                    <fieldset style={{ margin: '0.75rem 0 0', border: 0, padding: 0 }}>
+                      <legend style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+                        Le laboratoire donne pour les composés à la fois la masse par échantillon et la concentration. Base de l'évaluation :
+                      </legend>
+                      <label style={{ display: 'block', fontSize: '0.88rem', marginTop: '0.3rem' }}>
+                        <input type="radio" name="variante" checked={variante === 'concentration'} onChange={() => choisirVariante('concentration')} /> Concentrations du
+                        laboratoire, reprises telles quelles
+                      </label>
+                      <label style={{ display: 'block', fontSize: '0.88rem', marginTop: '0.2rem' }}>
+                        <input type="radio" name="variante" checked={variante === 'echantillon'} onChange={() => choisirVariante('echantillon')} /> Masses par
+                        échantillon, converties en concentration avec la durée et le débit de prélèvement saisis
+                      </label>
+                    </fieldset>
+                  )}
+                  {milieu === 'air' && !variantes && (
+                    <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem' }}>
+                      {supports
+                        ? 'Résultats par échantillon (masse piégée sur le support) : saisissez la durée et le débit de prélèvement de chaque échantillon à l’étape 4, pour les convertir en concentration.'
+                        : 'Résultats fournis en concentration : repris tels quels, sans conversion.'}
+                    </p>
+                  )}
                 </div>
               )}
             </>
@@ -501,11 +637,137 @@ export default function ConformiteRejets() {
         </div>
       </section>
 
-      {milieu && colonnes.length > 0 && (
+      {milieu === 'air' && supports && colonnes.length > 0 && (
         <section className="section section--muted">
           <div className="container">
             <h2 className="etape">
-              <span>4</span> Tableau des résultats
+              <span>4</span> Conditions de prélèvement
+            </h2>
+            <p className="lede" style={{ marginBottom: '1.25rem' }}>
+              Les résultats par échantillon (masse piégée sur le tube, la cartouche ou le filtre) sont rapportés au volume d'air prélevé :
+              volume = débit × durée ; avec un débit de début et de fin, le débit retenu est leur moyenne. Cochez des échantillons, saisissez
+              durée et débit sur la ligne « Valeurs à appliquer », puis appliquez-les à la sélection. Une colonne copiée depuis Excel peut aussi
+              être collée directement dans la première case.
+            </p>
+
+            <Demarche lignes={lignes} colonnes={colonnes} conditions={conditions} />
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', margin: '0 0 1rem', alignItems: 'flex-end' }}>
+              <label className="champ" style={{ maxWidth: '16rem' }}>
+                <span>Température de l'air prélevé (°C)</span>
+                <input inputMode="decimal" value={conditions.temperature} placeholder="ex. 20" onChange={(e) => setConditions({ ...conditions, temperature: e.target.value })} />
+              </label>
+              <label className="champ" style={{ maxWidth: '16rem' }}>
+                <span>Pression (kPa)</span>
+                <input inputMode="decimal" value={conditions.pression} placeholder="ex. 101,3" onChange={(e) => setConditions({ ...conditions, pression: e.target.value })} />
+              </label>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-muted)', maxWidth: '34rem' }}>
+                Optionnel : l'article 24 rapporte les concentrations aux conditions normales (273,15 K, 101,325 kPa). Le volume pompé est alors
+                corrigé (× {facteurNormal(conditions).toLocaleString('fr-FR', { maximumFractionDigits: 4 })}) ; à laisser vide si le débit est déjà
+                exprimé aux conditions normales.
+              </p>
+            </div>
+
+            <div className="tableau-defile">
+              <table className="tableau">
+                <thead>
+                  <tr>
+                    <th style={{ width: '2.5rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={colonnes.length > 0 && selectionnes.length === colonnes.length}
+                        aria-label="Sélectionner tous les échantillons"
+                        onChange={(e) => setSelection(Object.fromEntries(colonnes.map((_, j) => [j, e.target.checked])))}
+                      />
+                    </th>
+                    <th>Échantillon</th>
+                    {CHAMPS.map((c) => (
+                      <th key={c.champ} title={c.aide}>
+                        {c.libelle}
+                      </th>
+                    ))}
+                    <th>Débit retenu (L/min)</th>
+                    <th>Volume (L)</th>
+                    {facteurNormal(conditions) !== 1 && <th>Volume normal (L)</th>}
+                    <th>Volume (m³)</th>
+                  </tr>
+                  <tr className="tableau__tous">
+                    <td />
+                    <td>Valeurs à appliquer</td>
+                    {CHAMPS.map((c) => (
+                      <td key={c.champ}>
+                        <input
+                          inputMode="decimal"
+                          value={aAppliquer[c.champ]}
+                          aria-label={`${c.libelle} à appliquer`}
+                          onChange={(e) => setAAppliquer({ ...aAppliquer, [c.champ]: e.target.value })}
+                        />
+                      </td>
+                    ))}
+                    <td colSpan={facteurNormal(conditions) !== 1 ? 4 : 3}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap' }}>
+                        <button type="button" className="btn btn--petit" disabled={!selectionnes.length} onClick={() => appliquer(selectionnes)}>
+                          Appliquer à la sélection ({selectionnes.length})
+                        </button>
+                        <button type="button" className="btn btn--petit btn--ghost" onClick={() => appliquer(colonnes.map((_, j) => j))}>
+                          Appliquer à tous
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {colonnes.map((c, j) => {
+                    const pr = prelevement(c)
+                    const debit = debitMoyen(pr)
+                    const vol = volumeLitres(pr)
+                    const volN = volumeColonne(c, conditions)
+                    const nom = c.nom || `Mesure ${j + 1}`
+                    return (
+                      <tr key={j} className={selection[j] ? 'tableau__selection' : undefined}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input type="checkbox" checked={!!selection[j]} aria-label={`Sélectionner ${nom}`} onChange={(e) => setSelection({ ...selection, [j]: e.target.checked })} />
+                        </td>
+                        <th scope="row">{nom}</th>
+                        {CHAMPS.map((x) => (
+                          <td key={x.champ}>
+                            <input
+                              inputMode="decimal"
+                              value={c[x.champ]}
+                              aria-label={`${x.libelle} — ${nom}`}
+                              aria-invalid={!!c[x.champ] && lireNombre(c[x.champ]) === null}
+                              onChange={(e) => majColonne(j, { [x.champ]: e.target.value })}
+                              onPaste={(e) => collerPrelevement(e, j, x.champ)}
+                            />
+                          </td>
+                        ))}
+                        <td className="tableau__calcule">{debit === null ? '—' : fr(debit)}</td>
+                        <td className="tableau__calcule">{vol === null ? '—' : vol.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}</td>
+                        {facteurNormal(conditions) !== 1 && (
+                          <td className="tableau__calcule">{volN === null ? '—' : volN.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}</td>
+                        )}
+                        <td className="tableau__calcule">{volN === null ? '—' : (volN / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 4 })}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {sansVolume.length > 0 && (
+              <p className="alerte" role="status" style={{ marginTop: '1rem' }}>
+                Durée ou débit manquant pour {sansVolume.map((n) => `« ${n} »`).join(', ')} : les résultats par échantillon de ces mesures ne
+                peuvent pas être convertis, ni évalués.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {milieu && colonnes.length > 0 && (
+        <section className={`section${supports ? '' : ' section--muted'}`}>
+          <div className="container">
+            <h2 className="etape">
+              <span>{etapeTableau}</span> Tableau des résultats
             </h2>
             <p className="lede" style={{ marginBottom: '1rem' }}>
               Chaque cellule se corrige ; « &lt;0,5 » pour un résultat inférieur à la LQ. Une colonne copiée depuis Excel se colle dans sa
@@ -514,7 +776,7 @@ export default function ConformiteRejets() {
                 "Un COV que l'arrêté ne nomme pas (fraction d'hydrocarbures…) entre dans les sommes une fois sa classe choisie ; sa part de carbone sert à la somme en carbone total."}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
-              <button type="button" className="btn btn--petit" onClick={() => setLignes((ls) => [...ls, ligneVide(milieu, colonnes.length)])}>
+              <button type="button" className="btn btn--petit" onClick={() => setLignes((ls) => [...ls, ligneVide(milieu, colonnes.length, ls.at(-1)?.unite)])}>
                 Ajouter un paramètre
               </button>
               <button type="button" className="btn btn--petit" onClick={ajouterColonne}>
@@ -538,14 +800,12 @@ export default function ConformiteRejets() {
                         <input value={c.nom} aria-label={`Nom de la mesure ${j + 1}`} onChange={(e) => majColonne(j, { nom: e.target.value })} />
                         <input type="date" value={c.date} aria-label={`Date de la mesure ${j + 1}`} onChange={(e) => majColonne(j, { date: e.target.value })} style={{ marginTop: '0.25rem' }} />
                         {supports && (
-                          <input
-                            inputMode="decimal"
-                            value={c.volume}
-                            placeholder="Volume (l)"
-                            aria-label={`Volume prélevé de la mesure ${j + 1}, en litres`}
-                            onChange={(e) => majColonne(j, { volume: e.target.value })}
-                            style={{ marginTop: '0.25rem' }}
-                          />
+                          <div style={{ fontSize: '0.75rem', fontWeight: 400, marginTop: '0.25rem', color: volumeColonne(c) === null ? 'var(--color-alerte, #b3261e)' : 'var(--color-muted)' }}>
+                            {(() => {
+                              const v = volumeColonne(c, conditions)
+                              return v === null ? 'Durée et débit à saisir (étape 4)' : `V = ${v.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} L`
+                            })()}
+                          </div>
                         )}
                         {colonnes.length > 1 && (
                           <button type="button" className="btn btn--ghost btn--petit" style={{ marginTop: '0.25rem' }} onClick={() => retirerColonne(j)}>
@@ -567,7 +827,13 @@ export default function ConformiteRejets() {
                           <input value={l.libelle} aria-label="Paramètre" onChange={(e) => majLigne(l.id, { libelle: e.target.value })} style={{ minWidth: '12rem' }} />
                         </td>
                         <td>
-                          <input value={l.unite} aria-label={`Unité de ${l.libelle}`} onChange={(e) => majLigne(l.id, { unite: e.target.value })} style={{ width: '6.5rem' }} />
+                          <input
+                            value={l.unite}
+                            list={`unites-${milieu}`}
+                            aria-label={`Unité de ${l.libelle}`}
+                            onChange={(e) => majLigne(l.id, { unite: e.target.value })}
+                            style={{ width: '6.5rem' }}
+                          />
                         </td>
                         <td>
                           <select
@@ -637,6 +903,11 @@ export default function ConformiteRejets() {
                   })}
                 </tbody>
               </table>
+              <datalist id={`unites-${milieu}`}>
+                {UNITES[milieu].map((u) => (
+                  <option key={u} value={u} />
+                ))}
+              </datalist>
             </div>
             {lecture && lecture.problemes.length > 0 && (
               <div className="alerte" role="status" style={{ marginTop: '1rem' }}>
@@ -652,10 +923,10 @@ export default function ConformiteRejets() {
       )}
 
       {milieu && donnees && colonnes.length > 0 && (
-        <section className="section">
+        <section className={`section${supports ? ' section--muted' : ''}`}>
           <div className="container">
             <h2 className="etape">
-              <span>5</span> Conformité
+              <span>{etapeTableau + 1}</span> Conformité
             </h2>
             {controles.length > 0 && (
               <>
@@ -818,3 +1089,45 @@ function LigneControle({ c, flux, onFlux, uniteFlux }: { c: Controle; flux: stri
   )
 }
 
+/** The calculation, worked on one quantified result of the grid — as in the
+ *  formatting tool. */
+function Demarche({ lignes, colonnes, conditions }: { lignes: Ligne[]; colonnes: Colonne[]; conditions: Conditions }) {
+  const candidats = lignes.flatMap((l) => {
+    const conv = conversionAir(l.unite, l.substance ? (PAR_ID.get(l.substance) ?? null) : null)
+    if (!conv.support || conv.facteur === null) return []
+    return l.valeurs.flatMap((v, j) => {
+      const m = lireMesure(v)
+      return m && m.valeur !== null && !m.inferieur ? [{ l, j, microgrammes: m.valeur * conv.facteur! * 1000 }] : []
+    })
+  })
+  const choisi = candidats.find((c) => volumeColonne(colonnes[c.j]) !== null) ?? candidats[0]
+  if (!choisi) return null
+  const c = colonnes[choisi.j]
+  const p = prelevement(c)
+  const v = volumeLitres(p)
+  const debit = v === null ? 1 : debitMoyen(p)!
+  const duree = v === null ? 60 : p.duree!
+  const brut = debit * duree
+  const f = facteurNormal(conditions)
+  const vn = brut * f
+  const n = (x: number, ch = 4) => x.toLocaleString('fr-FR', { maximumFractionDigits: ch })
+  return (
+    <div className="card exemple">
+      <strong>Démarche</strong>
+      <p>
+        Le laboratoire restitue une masse de composé piégée sur le support (µg/support, µg/tube). Rapportée au volume d'air pompé au
+        travers du support — débit × durée de prélèvement — elle donne la concentration dans l'air rejeté, comparée aux valeurs limites
+        de l'arrêté en mg/m³.
+      </p>
+      <p className="exemple__formule">
+        C (mg/m³) = m (µg) / [Q (L/min) × t (min)]{f !== 1 ? ' × (273,15 + T) / 273,15 × 101,325 / P' : ''} — 1 µg/L = 1 mg/m³
+      </p>
+      <p>
+        Exemple — {c.nom || `Mesure ${choisi.j + 1}`}, {choisi.l.libelle} : m = {n(choisi.microgrammes)} µg
+        {v === null && ' (durée et débit non encore renseignés : exemple avec 1 L/min pendant 60 min)'} ; V = {n(debit)} L/min × {n(duree)} min ={' '}
+        {n(brut, 2)} L{f !== 1 && <> × {n(f)} = {n(vn, 2)} L aux conditions normales</>} ; C = {n(choisi.microgrammes)} / {n(vn, 2)} ={' '}
+        <strong>{fr(choisi.microgrammes / vn)} mg/m³</strong>.
+      </p>
+    </div>
+  )
+}

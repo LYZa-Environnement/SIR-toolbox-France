@@ -8,7 +8,8 @@ import type { Workbook, Worksheet } from 'exceljs'
 import { BANDEAU, ETAT } from '../resultats/couleurs.ts'
 import { ecrire, VERT_ENTETE } from '../resultats/export.ts'
 import { bilanParEchantillon, LIBELLES_STATUT, type Borne, type Controle, type Donnees, type Statut } from './conformite.ts'
-import type { Colonne, Ligne } from './grille.ts'
+import { debitMoyen, volumeLitres } from '../resultats/calc.ts'
+import { facteurNormal, prelevement, volumeColonne, type Colonne, type Conditions, type Ligne } from './grille.ts'
 import { PAR_ID } from './substances.ts'
 
 export interface Rapport {
@@ -21,7 +22,12 @@ export interface Rapport {
   contexte: [string, string][]
   nonVisees: string[]
   problemes: string[]
+  /** Air results per sample: the volume's conditions, and the sampling
+   *  table is written under the data. */
+  conditions?: Conditions
 }
+
+const nbF = (x: number, chiffres: number) => x.toLocaleString('fr-FR', { maximumFractionDigits: chiffres })
 
 const COULEURS: Record<Statut, { fond: string; texte: string }> = {
   conforme: ETAT.ok,
@@ -212,7 +218,8 @@ function feuilleDonnees(wb: Workbook, rp: Rapport) {
   ]
   let r = 3
   rp.colonnes.forEach((c, j) => {
-    const infos = [c.date && `Date : ${c.date}`, c.volume && `Volume : ${c.volume} l`].filter(Boolean).join(' — ')
+    const v = rp.conditions ? volumeColonne(c, rp.conditions) : null
+    const infos = [c.date && `Date : ${c.date}`, v !== null && `Volume : ${nbF(v, 2)} l`].filter(Boolean).join(' — ')
     if (infos) ecrire(ws, r, 5 + j, infos, { taille: 8, wrap: true, h: 'center' })
   })
   r = entetes(ws, 4, titres)
@@ -223,6 +230,41 @@ function feuilleDonnees(wb: Workbook, rp: Rapport) {
     ecrire(ws, r, 3, l.unite, { h: 'center', taille: 9 })
     ecrire(ws, r, 4, s ? s.nom : l.classe ? `COV non listé (${l.classe})` : '—', { taille: 9, couleur: s ? undefined : 'FF808080' })
     l.valeurs.forEach((v, j) => ecrire(ws, r, 5 + j, v || '-', { h: 'center' }))
+    r++
+  }
+  if (rp.conditions) feuillePrelevements(ws, r + 2, rp.colonnes, rp.conditions)
+}
+
+/** Results per sample: duration, flows and volume of each sample, the
+ *  calculation that turns the masses into concentrations. */
+function feuillePrelevements(ws: Worksheet, r: number, colonnes: Colonne[], cond: Conditions) {
+  const f = facteurNormal(cond)
+  ecrire(ws, r++, 1, 'Conditions de prélèvement — résultats par échantillon convertis en concentration', { gras: true, taille: 11, bord: false })
+  ecrire(
+    ws,
+    r++,
+    1,
+    `C (mg/m³) = m (µg) / V (l), V = débit × durée, le débit étant la moyenne des débits de début et de fin.${
+      f !== 1 ? ` Volume ramené aux conditions normales (273,15 K, 101,325 kPa) : × ${nbF(f, 4)} (${cond.temperature ? `${cond.temperature} °C` : ''}${cond.temperature && cond.pression ? ', ' : ''}${cond.pression ? `${cond.pression} kPa` : ''}).` : ' Volume pris aux conditions du prélèvement (température et pression non renseignées).'
+    }`,
+    { taille: 9, italique: true, bord: false },
+  )
+  // Headers written over the data sheet's columns, their widths kept.
+  r++
+  ;['Échantillon', 'Durée (min)', 'Débit début (L/min)', 'Débit fin (L/min)', 'Débit retenu (L/min)', ...(f !== 1 ? ['Volume prélevé (l)', 'Volume normal (l)'] : ['Volume (l)'])].forEach((t, j) =>
+    ecrire(ws, r, j + 1, t, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true }),
+  )
+  ws.getRow(r).height = 32
+  r++
+  for (const c of colonnes) {
+    const p = prelevement(c)
+    const q = debitMoyen(p)
+    const v = volumeLitres(p)
+    ecrire(ws, r, 1, c.nom || '-')
+    ;[c.duree, c.debitDebut, c.debitFin].forEach((x, k) => ecrire(ws, r, 2 + k, x || '-', { h: 'center' }))
+    ecrire(ws, r, 5, q === null ? '-' : nbF(q, 3), { h: 'center' })
+    ecrire(ws, r, 6, v === null ? '-' : nbF(v, 2), { h: 'center' })
+    if (f !== 1) ecrire(ws, r, 7, v === null ? '-' : nbF(v * f, 2), { h: 'center' })
     r++
   }
 }
@@ -270,7 +312,7 @@ function feuilleReferences(wb: Workbook) {
     "Flux : concentration × débit du rejet (Nm³/h gaz secs pour l'air, m³/j pour l'eau), sauf flux maximal autorisé saisi, auquel les seuils sont alors comparés.",
     'Résultats inférieurs à la LQ : borne basse (LQ comptées 0) et borne haute (LQ comptées pleinement). Conforme si la borne haute respecte la valeur limite, non conforme si la borne basse la dépasse, indéterminé entre les deux.',
     'COV en carbone total : mesure FID si elle est fournie, sinon somme des composés analysés convertis en carbone (borne basse). COV CMR, halogénés H341/H351 et de l’annexe III d’après la classification harmonisée CLP et l’annexe III ; un COV non listé se classe à la main.',
-    "Tubes adsorbants : masse totale (zone de mesure + zone de contrôle) rapportée au volume prélevé, saisi en litres aux conditions normales.",
+    "Résultats par échantillon (tubes adsorbants, cartouches, filtres) : masse totale (zone de mesure + zone de contrôle) rapportée au volume prélevé, débit × durée (débit moyen de début et de fin), ramené aux conditions normales quand la température et la pression du prélèvement sont données. Résultats déjà en concentration (canister, sac, laboratoire) : repris tels quels.",
     "Azote global : valeur du laboratoire, sinon azote Kjeldahl + nitrates + nitrites exprimés en N.",
   ])
     r = texte(ws, r, `• ${t}`, { wrap: false })

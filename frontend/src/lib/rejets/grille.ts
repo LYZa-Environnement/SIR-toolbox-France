@@ -7,7 +7,7 @@
 
 import { normaliser } from '../resultats/guides.ts'
 import { LectureImpossible, lireClasseur, lireGrille, lireMesure, type Cell, type Couche, type Lecture, type Mode, type Parametre } from '../resultats/parse.ts'
-import { lireNombre } from '../resultats/calc.ts'
+import { lireNombre, volumeLitres, type Prelevement } from '../resultats/calc.ts'
 import type { Controle, LigneEvaluee, Resultat } from './conformite.ts'
 import { PAR_ID, reconnaitre, type ClasseCov } from './substances.ts'
 import { conversionAir, conversionEau, type Milieu } from './unites.ts'
@@ -15,8 +15,39 @@ import { conversionAir, conversionEau, type Milieu } from './unites.ts'
 export interface Colonne {
   nom: string
   date: string
-  /** Air, masses per tube: sampled volume in litres (normal conditions). */
-  volume: string
+  /** Air, results per sample (mass on the tube): sampling duration (min)
+   *  and flow at the start and end (L/min), as in the formatting tool. */
+  duree: string
+  debitDebut: string
+  debitFin: string
+}
+
+export const colonneVide = (nom: string): Colonne => ({ nom, date: '', duree: '', debitDebut: '', debitFin: '' })
+
+/** Conditions of the sampled air, to bring the volume to normal
+ *  conditions (273,15 K, 101,325 kPa) as article 24 requires; empty: the
+ *  volume is taken as pumped. */
+export interface Conditions {
+  temperature: string
+  pression: string
+}
+
+export function prelevement(c: Colonne | undefined): Prelevement {
+  return { duree: lireNombre(c?.duree ?? ''), debitDebut: lireNombre(c?.debitDebut ?? ''), debitFin: lireNombre(c?.debitFin ?? '') }
+}
+
+/** Factor from the pumped volume to normal conditions; 1 when none is given. */
+export function facteurNormal(cond: Conditions | undefined): number {
+  const t = lireNombre(cond?.temperature ?? '')
+  const p = lireNombre(cond?.pression ?? '')
+  return (t === null || t <= -273.15 ? 1 : 273.15 / (273.15 + t)) * (p === null || p <= 0 ? 1 : p / 101.325)
+}
+
+/** Sampled volume (litres, normal conditions when they are given):
+ *  flow × duration, the flow the mean of start and end. */
+export function volumeColonne(c: Colonne | undefined, cond?: Conditions): number | null {
+  const v = volumeLitres(prelevement(c))
+  return v === null ? null : v * facteurNormal(cond)
 }
 
 export interface Ligne {
@@ -35,8 +66,8 @@ export interface Ligne {
 let compteur = 0
 export const nouvelId = () => `l${++compteur}`
 
-export function ligneVide(milieu: Milieu, n: number): Ligne {
-  return { id: nouvelId(), libelle: '', cas: '', unite: milieu === 'air' ? 'mg/m³' : 'mg/l', substance: null, classe: '', fraction: '', valeurs: Array(n).fill('') }
+export function ligneVide(milieu: Milieu, n: number, unite?: string): Ligne {
+  return { id: nouvelId(), libelle: '', cas: '', unite: unite || (milieu === 'air' ? 'mg/m³' : 'mg/l'), substance: null, classe: '', fraction: '', valeurs: Array(n).fill('') }
 }
 
 /** Every sheet of the workbook that reads as results of this medium, their
@@ -108,7 +139,7 @@ function fusionner(lectures: Lecture[]): Lecture {
 export function grilleDepuisLecture(l: Lecture, milieu: Milieu): { colonnes: Colonne[]; lignes: Ligne[]; notes: string[] } {
   const notes: string[] = []
   const points = l.points
-  const colonnes = points.map((p) => ({ nom: p.nom, date: '', volume: '' }))
+  const colonnes = points.map((p) => colonneVide(p.nom))
   const avecCC = l.coucheControle && l.parametres.CC.length > 0
   if (avecCC) notes.push('Tubes : masses de la zone de contrôle ajoutées à celles de la zone de mesure (masse totale piégée).')
   const lignes: Ligne[] = []
@@ -145,9 +176,11 @@ export interface Probleme {
 }
 
 /** The grid in reference units, for the checks. */
-export function lireGrilleSaisie(milieu: Milieu, lignes: Ligne[], colonnes: Colonne[]): { lignes: LigneEvaluee[]; problemes: Probleme[] } {
+export function lireGrilleSaisie(milieu: Milieu, lignes: Ligne[], colonnes: Colonne[], conditions?: Conditions): { lignes: LigneEvaluee[]; problemes: Probleme[] } {
   const problemes: Probleme[] = []
   const out: LigneEvaluee[] = []
+  /** Columns with results per sample but no duration or flow. */
+  const sansVolume = new Set<number>()
   for (const l of lignes) {
     const s = l.substance ? (PAR_ID.get(l.substance) ?? null) : null
     const covLibre =
@@ -167,9 +200,9 @@ export function lireGrilleSaisie(milieu: Milieu, lignes: Ligne[], colonnes: Colo
       if (!m || m.valeur === null) return null
       let f = conv.facteur!
       if (conv.support) {
-        const vol = lireNombre(colonnes[j]?.volume ?? '')
+        const vol = volumeColonne(colonnes[j], conditions)
         if (!vol || vol <= 0) {
-          problemes.push({ ligne: l.libelle, texte: `volume prélevé manquant pour « ${colonnes[j]?.nom ?? j + 1} »` })
+          sansVolume.add(j)
           return null
         }
         // mg / (V l / 1000) = mg/m³.
@@ -178,6 +211,13 @@ export function lireGrilleSaisie(milieu: Milieu, lignes: Ligne[], colonnes: Colo
       return { valeur: m.valeur * f, inferieur: m.inferieur }
     })
     out.push({ libelle: l.libelle || s?.nom || '(sans nom)', substance: s, covLibre, valeurs })
+  }
+  if (sansVolume.size) {
+    const noms = [...sansVolume].sort((a, b) => a - b).map((j) => `« ${colonnes[j]?.nom || `Mesure ${j + 1}`} »`)
+    problemes.push({
+      ligne: 'Résultats par échantillon',
+      texte: `durée et débit de prélèvement à saisir pour ${noms.join(', ')} : sans eux, ces masses ne sont pas converties en concentration`,
+    })
   }
   // One message per row and kind.
   const vus = new Set<string>()
