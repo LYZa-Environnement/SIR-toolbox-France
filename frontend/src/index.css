@@ -1467,3 +1467,150 @@ a.card:hover {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.pfas-procedes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+}
+
+.pfas-procedes .card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pfas-procedes h3 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.pfas-procedes p {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.pfas-procedes svg {
+  display: block;
+  max-width: 22rem;
+  font-family: var(--font-body);
+}
+
+.pfas-procedes__sous-titre {
+  color: var(--color-muted);
+  font-size: 0.82rem !important;
+}
+
+.pfas-procedes__trace {
+  padding: 0.6rem 0.8rem;
+  background: var(--color-section);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 760px) {
+  .pfas-procedes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pfas-rappel {
+  margin: 0 0 1rem;
+  max-width: 64rem;
+}
+
+.pfas-rappel > summary {
+  margin-bottom: 0.5rem;
+}
+
+.pfas-indicateur__constat {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius);
+  background: var(--color-accent-soft);
+}
+
+.pfas-indicateur__lecture {
+  color: var(--color-muted);
+}
+
+.pfas-profils {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.pfas-profils__ligne,
+.pfas-profils__entete {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr) 7.5rem 7.5rem;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.pfas-profils__entete {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pfas-profils__ligne > .pfas-lien {
+  text-align: left;
+}
+
+.pfas-profils__ligne--ensemble {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.pfas-valeur-texte {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .pfas-profils__ligne,
+  .pfas-profils__entete {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pfas-profils__ligne .pfas-barre {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .pfas-profils__entete {
+    display: none;
+  }
+}
+
+.pfas-comparaison td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.pfas-comparaison tbody th {
+  font-weight: 600;
+  white-space: normal;
+  min-width: 11rem;
+}
+
+.pfas-mini-jauge {
+  display: block;
+  height: 4px;
+  margin: 0.25rem auto 0;
+  width: 4.5rem;
+  border-radius: 999px;
+  background: #e3e8e7;
+  overflow: hidden;
+}
+
+.pfas-mini-jauge span {
+  display: block;
+  height: 100%;
+  background: #2a78d6;
+}

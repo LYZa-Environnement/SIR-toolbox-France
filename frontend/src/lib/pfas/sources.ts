@@ -77,10 +77,10 @@ export function pistes(e: EchantillonPfas, matrice: Matrice): Piste[] {
   const liste: Omit<Piste, 'verdict' | 'score'>[] = [
     {
       id: 'mousses-ecf',
-      titre: 'Mousses d’extinction anciennes (fluoration électrochimique)',
-      court: 'Mousses anciennes (ECF)',
+      titre: 'Mousses d’extinction anciennes au PFOS (procédé électrochimique)',
+      court: 'Mousses anciennes au PFOS',
       description:
-        'Mousses AFFF à base de PFOS produites par fluoration électrochimique (3M) : sulfonates dominants, PFOS et PFHxS associés, isomères ramifiés.',
+        'Mousses AFFF à base de PFOS fabriquées par procédé électrochimique, principalement par 3M jusqu’à l’arrêt de cette chimie (2000-2002) : sulfonates dominants, PFOS et PFHxS associés, isomères ramifiés.',
       criteres: [
         majorite(partPfsa, 'Sulfonates majoritaires', 'plus', 'Sulfonates'),
         crit(
@@ -95,7 +95,7 @@ export function pistes(e: EchantillonPfas, matrice: Matrice): Piste[] {
           e.isomeres.PFOS?.ramifie ? `PFOS ramifiés : ${e.isomeres.PFOS.ramifie.brut}.` : 'Le laboratoire ne distingue pas les isomères.',
         ),
       ],
-      refs: ['anderson2016', 'barzenHanson2017', 'houtz2013', 'benskin2010', 'dauchy2019'],
+      refs: ['anderson2016', 'barzenHanson2017', 'houtz2013', 'benskin2010', 'iarc2025', 'tm2000', 'dauchy2019'],
       terrain:
         'Aéroports, bases militaires, centres d’entraînement et casernes de pompiers, dépôts pétroliers et sites industriels équipés de réseaux d’extinction, lieux d’incendie passés.',
     },
@@ -132,7 +132,7 @@ export function pistes(e: EchantillonPfas, matrice: Matrice): Piste[] {
         crit(
           'PFHxS non quantifié',
           !analyse('PFHxS') ? 'na' : q('PFHxS') ? 'non' : 'oui',
-          'Élément de distinction avec les mousses électrochimiques, qui associent PFHxS et PFOS.',
+          'Élément de distinction avec les mousses anciennes au PFOS, qui associent PFHxS et PFOS.',
           true,
         ),
       ],

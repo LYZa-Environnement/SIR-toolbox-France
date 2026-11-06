@@ -152,17 +152,15 @@ export function reperes(matrice: Matrice, grandeur: Grandeur): Repere[] {
   return REPERES.filter((r) => r.matrice === matrice && r.grandeur === grandeur)
 }
 
+/** Scales drawn: only quantities with at least one published reference value. */
 export const GRANDEURS: Record<Matrice, { grandeur: Grandeur; titre: string; aide: string }[]> = {
   eau: [
     { grandeur: 'somme20', titre: 'Somme des 20 PFAS', aide: 'Valeur rendue par le laboratoire, comparable aux seuils.' },
     { grandeur: 'TFA', titre: 'TFA', aide: 'Hors somme des 20 : seuils propres.' },
-    { grandeur: 'FTS62', titre: '6:2 FTS', aide: 'Pas de valeur de gestion française.' },
   ],
   sol: [
     { grandeur: 'somme20', titre: 'Somme des 20 PFAS', aide: 'Pas de valeur réglementaire française pour les sols.' },
     { grandeur: 'PFOS', titre: 'PFOS', aide: 'Bruit de fond néerlandais et zones sources.' },
     { grandeur: 'PFOA', titre: 'PFOA', aide: 'Bruit de fond néerlandais.' },
-    { grandeur: 'TFA', titre: 'TFA', aide: 'Pas de valeur de référence pour les sols.' },
-    { grandeur: 'FTS62', titre: '6:2 FTS', aide: 'Pas de valeur de référence pour les sols.' },
   ],
 }

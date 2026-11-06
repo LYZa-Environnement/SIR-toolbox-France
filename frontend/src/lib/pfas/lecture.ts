@@ -166,6 +166,37 @@ export function sommer(valeurs: Valeur[]): Valeur | null {
   return { valeur: total, inferieur: !q.length, brut: '' }
 }
 
+/** "Pz2" before "Pz10", case and accents ignored. */
+export function ordreNaturel(a: string, b: string): number {
+  return a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' })
+}
+
+/**
+ * All samples together, as one: quantified values added substance by
+ * substance. The profile is weighted by concentration, so the most
+ * contaminated samples dominate it.
+ */
+export function ensemble(echantillons: EchantillonPfas[]): EchantillonPfas {
+  const substances: EchantillonPfas['substances'] = {}
+  for (const s of SUBSTANCES) {
+    const valeurs = echantillons.flatMap((e) => (e.substances[s.id] ? [e.substances[s.id]!] : []))
+    const q = valeurs.filter((v) => !v.inferieur)
+    if (!valeurs.length) continue
+    substances[s.id] = q.length ? { valeur: q.reduce((a, v) => a + v.valeur, 0), inferieur: false, brut: 'somme' } : { valeur: Math.min(...valeurs.map((v) => v.valeur)), inferieur: true, brut: '< LQ' }
+  }
+  const sommes = echantillons.flatMap((e) => (e.somme && !e.somme.inferieur ? [e.somme.valeur] : []))
+  return {
+    nom: 'Ensemble des échantillons',
+    type: 'echantillon',
+    substances,
+    isomeres: {},
+    somme: sommes.length ? { valeur: sommes.reduce((a, v) => a + v, 0), inferieur: false, brut: 'somme' } : null,
+    sommeCalculee: false,
+    aof: null,
+    eof: null,
+  }
+}
+
 const LIBELLE: Record<IdSubstance, string> = Object.fromEntries(SUBSTANCES.map((s) => [s.id, s.abreviation])) as Record<IdSubstance, string>
 
 export function lirePfas(lecture: Lecture, matrice: Matrice): LecturePfas {
@@ -263,6 +294,10 @@ export function lirePfas(lecture: Lecture, matrice: Matrice): LecturePfas {
     }
     return e
   })
+
+  // Wells in natural order (Pz1, Pz2, Pz4, Pz10), blanks after the samples.
+  const blanc = (e: EchantillonPfas) => (e.type === 'blanc-terrain' || e.type === 'blanc-transport' ? 1 : 0)
+  echantillons.sort((a, b) => blanc(a) - blanc(b) || ordreNaturel(a.nom, b.nom))
 
   const manquantes = VINGT.filter((s) => !analysees.includes(s.id))
   if (!libelleSomme) {

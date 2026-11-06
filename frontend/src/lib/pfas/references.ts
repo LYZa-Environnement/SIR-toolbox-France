@@ -179,6 +179,26 @@ export const REFERENCES: Reference[] = [
     verification: 'secondaire',
   },
   {
+    id: 'iarc2025',
+    court: 'CIRC (IARC), 2025',
+    citation:
+      'Centre international de recherche sur le cancer (IARC). Perfluorooctanoic acid (PFOA) and perfluorooctanesulfonic acid (PFOS). IARC Monographs on the Identification of Carcinogenic Hazards to Humans, volume 135, Lyon.',
+    url: 'https://publications.iarc.who.int/_publications/media/download/6739/cfea878bfb404d94b198e73d910f54482e3008c1.pdf',
+    theme: 'mesure',
+    apport:
+      'Les deux procédés de fabrication : la fluoration électrochimique (principal usage des années 1950 à 2002) donne des isomères linéaires et ramifiés ; la télomérisation donne des acides carboxyliques linéaires à nombre pair de carbones.',
+    verification: 'secondaire',
+  },
+  {
+    id: 'tm2000',
+    court: '3M, 2000',
+    citation: '3M. 3M and fluorochemicals — annonce de mai 2000 de l’arrêt volontaire de la chimie du perfluorooctanyle (PFOS et dérivés), pour l’essentiel achevé fin 2002.',
+    url: 'https://www.3m.co.th/3M/th_TH/sustainability-th/annual-report/past-reports-policies/3m-and-fluorochemicals',
+    theme: 'mesure',
+    apport: 'Fin de la production à base de PFOS par fluoration électrochimique chez le principal fabricant (annonce en mai 2000, achèvement pour l’essentiel fin 2002).',
+    verification: 'secondaire',
+  },
+  {
     id: 'houtzSedlak2012',
     court: 'Houtz & Sedlak, 2012',
     citation:

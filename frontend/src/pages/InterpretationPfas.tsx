@@ -12,6 +12,8 @@ import { Auteur, Cite } from '../components/pfas/Cite'
 import { Echelle } from '../components/pfas/Echelle'
 import { BarreComposition, BilanFluor, LegendeGroupes, Profil } from '../components/pfas/Graphiques'
 import { Bibliographie, CarteSubstances, Indicateurs, Pistes } from '../components/pfas/Lecture'
+import { Comparaison } from '../components/pfas/Comparaison'
+import { Procedes } from '../components/pfas/Procedes'
 import { grandeur, nombre, valeurTexte } from '../components/pfas/format'
 
 async function lireFichier(f: File): Promise<Lecture> {
@@ -25,7 +27,7 @@ async function lireFichier(f: File): Promise<Lecture> {
 }
 
 /** "× 17" above a value, "17 %" below it, as a badge with an arrow. */
-function Comparaison({ v, seuil }: { v: Valeur | null; seuil: number }) {
+function BadgeSeuil({ v, seuil }: { v: Valeur | null; seuil: number }) {
   if (!v) return <span className="pfas-muet">—</span>
   if (v.inferieur) {
     return v.valeur < seuil ? (
@@ -142,7 +144,7 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
           <p className="eyebrow">PFAS — sols et eaux souterraines</p>
           <h1 style={{ maxWidth: '22ch' }}>Interprétation des résultats PFAS</h1>
           <p className="lede">
-            Situer les 20 PFAS de la directive, le TFA et le 6:2 FTS sur des ordres de grandeur publiés, lire la composition de chaque
+            Situer la somme des 20 PFAS de la directive et le TFA sur des ordres de grandeur publiés, comparer les profils des échantillons, lire la composition de chaque
             échantillon et en tirer des pistes de sources, chaque lecture renvoyant à sa référence.
           </p>
 
@@ -175,6 +177,12 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
                 </p>
               </div>
             </div>
+            <h3 style={{ marginTop: '1.5rem' }}>Deux procédés de fabrication, deux signatures</h3>
+            <p className="pfas-note" style={{ maxWidth: '48rem' }}>
+              Les PFAS d’un échantillon portent la marque du procédé qui les a fabriqués. C’est la clé des pistes de sources : « procédé
+              électrochimique » renvoie aux mousses et produits anciens au PFOS, « télomérisation » aux fluorotélomères actuels.
+            </p>
+            <Procedes />
             <h3 style={{ marginTop: '1.5rem' }}>Les 22 substances interprétées</h3>
             <p className="pfas-note">
               Une colonne par nombre de carbones. Teinte claire : chaînes courtes ; foncée : chaînes longues, c’est-à-dire au moins 7
@@ -400,7 +408,14 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
                             {blanc ? (
                               e.nom
                             ) : (
-                              <button type="button" className="pfas-lien" onClick={() => setChoisi(e.nom)}>
+                              <button
+                                type="button"
+                                className="pfas-lien"
+                                onClick={() => {
+                                  setChoisi(e.nom)
+                                  document.getElementById('lecture-detaillee')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                }}
+                              >
                                 {e.nom}
                               </button>
                             )}
@@ -413,19 +428,19 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
                           {matrice === 'eau' ? (
                             <>
                               <td>
-                                <Comparaison v={e.somme} seuil={100} />
+                                <BadgeSeuil v={e.somme} seuil={100} />
                               </td>
                               <td>
-                                <Comparaison v={e.somme} seuil={2000} />
+                                <BadgeSeuil v={e.somme} seuil={2000} />
                               </td>
                             </>
                           ) : (
                             <>
                               <td>
-                                <Comparaison v={e.substances.PFOS ?? null} seuil={1.4} />
+                                <BadgeSeuil v={e.substances.PFOS ?? null} seuil={1.4} />
                               </td>
                               <td>
-                                <Comparaison v={e.substances.PFOA ?? null} seuil={1.9} />
+                                <BadgeSeuil v={e.substances.PFOA ?? null} seuil={1.9} />
                               </td>
                             </>
                           )}
@@ -505,14 +520,37 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
                   points={reels.map((e) => ({ nom: e.nom, valeur: g.grandeur === 'somme20' ? e.somme : e.substances[g.grandeur] }))}
                 />
               ))}
+              <p className="pfas-note" style={{ maxWidth: '48rem', marginTop: '1rem' }}>
+                {matrice === 'eau'
+                  ? 'Le 6:2 FTS n’a pas d’échelle : aucune valeur de gestion ni ordre de grandeur publié n’a été retenu. Ses résultats figurent dans la vue d’ensemble, la comparaison des échantillons et la lecture détaillée (rapport avec ses produits de dégradation).'
+                  : 'Le TFA et le 6:2 FTS n’ont pas d’échelle : aucune valeur de référence publiée n’a été retenue pour les sols. Leurs résultats figurent dans la vue d’ensemble, la comparaison des échantillons et la lecture détaillée.'}
+              </p>
             </div>
           </section>
 
-          {courant && (
+          {reels.length > 1 && (
             <section className="section section--muted pfas">
               <div className="container">
                 <h2 className="etape">
-                  <span>4</span> Lecture détaillée
+                  <span>4</span> Comparaison des échantillons
+                </h2>
+                <Comparaison
+                  echantillons={reels}
+                  matrice={matrice}
+                  choisir={(nom) => {
+                    setChoisi(nom)
+                    document.getElementById('lecture-detaillee')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                />
+              </div>
+            </section>
+          )}
+
+          {courant && (
+            <section className={`section pfas${reels.length > 1 ? '' : ' section--muted'}`} id="lecture-detaillee">
+              <div className="container">
+                <h2 className="etape">
+                  <span>{reels.length > 1 ? 5 : 4}</span> Lecture détaillée
                 </h2>
                 <div className="pfas-onglets" role="tablist" aria-label="Échantillon">
                   {reels.map((e) => (
@@ -634,6 +672,10 @@ function Detail({ e, matrice }: { e: EchantillonPfas; matrice: Matrice }) {
         chaînes courtes s’enrichissent et les précurseurs se transforment : comparez à l’amont et à la zone source
         <Cite ids={['guelfoHiggins2013', 'houtz2013', 'zhang2016']} />.
       </div>
+      <details className="pfas-rappel">
+        <summary>Rappel : procédé électrochimique ou télomérisation ?</summary>
+        <Procedes />
+      </details>
       <Pistes liste={p} />
     </>
   )

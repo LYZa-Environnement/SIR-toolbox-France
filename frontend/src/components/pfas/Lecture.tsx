@@ -20,8 +20,10 @@ export function Indicateurs({ liste }: { liste: Indicateur[] }) {
             </div>
           )}
           {i.raison && <p className="pfas-note">{i.raison}</p>}
+          {i.constat && <p className="pfas-indicateur__constat">{i.constat}</p>}
           <p className="pfas-formule">{i.formule}</p>
           <p className="pfas-indicateur__lecture">
+            <strong>Repère : </strong>
             {i.lecture}
             <Cite ids={i.refs} />
           </p>

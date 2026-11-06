@@ -26,7 +26,7 @@ function barre(x: number, base: number, largeur: number, hauteur: number, versLe
  * below, one column per number of carbons; 6:2 FTS on the right. Light
  * shades are short chains, dark shades long chains (Buck et al., 2011).
  */
-export function Profil({ e, matrice }: { e: EchantillonPfas; matrice: Matrice }) {
+export function Profil({ e, matrice, titre = 'Profil par longueur de chaîne' }: { e: EchantillonPfas; matrice: Matrice; titre?: string }) {
   const L = 760
   const H = 348
   const gauche = 56
@@ -78,7 +78,7 @@ export function Profil({ e, matrice }: { e: EchantillonPfas; matrice: Matrice })
   return (
     <figure className="pfas-figure">
       <figcaption>
-        <strong>Profil par longueur de chaîne</strong>{' '}
+        <strong>{titre}</strong>{' '}
         <span className="pfas-muet">
           — concentrations quantifiées, échelle linéaire ; teinte claire : chaînes courtes, foncée : chaînes longues
           <Cite ids={['buck2011']} />. Survolez une colonne pour la valeur.

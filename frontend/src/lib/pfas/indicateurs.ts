@@ -56,6 +56,9 @@ export interface Indicateur {
   format: 'part' | 'rapport'
   /** Why it could not be computed. */
   raison?: string
+  /** What this value says, written from the value itself. */
+  constat: string | null
+  /** The general reading, whichever the value. */
   lecture: string
   refs: string[]
 }
@@ -84,10 +87,14 @@ export function fluorCible(e: EchantillonPfas): number {
 }
 
 export function indicateurs(e: EchantillonPfas, matrice: Matrice): Indicateur[] {
+  return calculer(e, matrice).map((i) => ({ ...i, constat: i.valeur === null ? null : constater(i, e, matrice) }))
+}
+
+function calculer(e: EchantillonPfas, matrice: Matrice): Omit<Indicateur, 'constat'>[] {
   const pfca = somme(e, PFCA)
   const pfsa = somme(e, PFSA)
   const total20 = pfca + pfsa
-  const r: Indicateur[] = []
+  const r: Omit<Indicateur, 'constat'>[] = []
 
   r.push({
     id: 'sulfonates',
@@ -96,7 +103,7 @@ export function indicateurs(e: EchantillonPfas, matrice: Matrice): Indicateur[] 
     format: 'part',
     ...part(pfsa, total20),
     lecture:
-      'Majoritaires, les sulfonates rapprochent le profil des mousses anciennes à fluoration électrochimique (PFOS, PFHxS) et des usages historiques du PFOS. Minoritaires, ce sont les carboxylates qui dominent : produits terminaux de la dégradation des fluorotélomères, retombées diffuses, lixiviats.',
+      'Majoritaires, les sulfonates rapprochent le profil des mousses anciennes au PFOS et au PFHxS (procédé électrochimique) et des usages historiques du PFOS. Minoritaires, ce sont les carboxylates qui dominent : produits terminaux de la dégradation des fluorotélomères, retombées diffuses, lixiviats.',
     refs: ['anderson2016', 'barzenHanson2017', 'houtz2013', 'rankin2016', 'hamid2018'],
   })
   r.push({
@@ -116,7 +123,7 @@ export function indicateurs(e: EchantillonPfas, matrice: Matrice): Indicateur[] 
     format: 'rapport',
     ...rapport(q(e.substances.PFOS), q(e.substances.PFOA), 'PFOA non quantifié'),
     lecture:
-      'Supérieur à 1, le PFOS domine : mousses à fluoration électrochimique, chromage antérieur à l’interdiction du PFOS, boues d’épuration. Inférieur à 1, le PFOA domine : chimie des fluoropolymères, retombées diffuses, lixiviats.',
+      'Supérieur à 1, le PFOS domine : mousses anciennes au PFOS, chromage antérieur à l’interdiction du PFOS, boues d’épuration. Inférieur à 1, le PFOA domine : chimie des fluoropolymères, retombées diffuses, lixiviats.',
     refs: ['anderson2016', 'egle2020', 'sepulvado2011', 'prevedouros2006', 'rankin2016', 'hamid2018'],
   })
   r.push({
@@ -126,7 +133,7 @@ export function indicateurs(e: EchantillonPfas, matrice: Matrice): Indicateur[] 
     format: 'rapport',
     ...rapport(q(e.substances.PFHxS), q(e.substances.PFOS), 'PFOS non quantifié'),
     lecture:
-      'Les mousses à fluoration électrochimique associaient PFOS, PFHxS et leurs précurseurs : un PFHxS bien présent à côté du PFOS appuie cette piste. Un PFOS sans PFHxS oriente plutôt vers d’autres usages du PFOS, à confirmer par l’historique du site.',
+      'Les mousses fabriquées par procédé électrochimique associaient PFOS, PFHxS et leurs précurseurs : un PFHxS bien présent à côté du PFOS appuie cette piste. Un PFOS sans PFHxS oriente plutôt vers d’autres usages du PFOS, à confirmer par l’historique du site.',
     refs: ['barzenHanson2017', 'anderson2016', 'egle2020'],
   })
   r.push({
@@ -175,8 +182,8 @@ export function indicateurs(e: EchantillonPfas, matrice: Matrice): Indicateur[] 
       format: 'part',
       ...part(ram, lin + ram),
       lecture:
-        'La fluoration électrochimique produit un mélange d’isomères linéaires et ramifiés, la télomérisation un produit essentiellement linéaire : des isomères ramifiés signent la fluoration électrochimique.',
-      refs: ['benskin2010'],
+        'Le procédé électrochimique produit un mélange d’isomères linéaires et ramifiés, la télomérisation des chaînes linéaires : des isomères ramifiés signent le procédé électrochimique.',
+      refs: ['benskin2010', 'iarc2025'],
     })
   }
 
@@ -195,6 +202,72 @@ export function indicateurs(e: EchantillonPfas, matrice: Matrice): Indicateur[] 
     })
   }
   return r
+}
+
+const pc = (x: number) => `${(x * 100).toLocaleString('fr-FR', { maximumFractionDigits: x < 0.1 && x > 0 ? 1 : 0 })} %`
+const fois = (x: number) => (x >= 10 ? Math.round(x).toLocaleString('fr-FR') : x.toLocaleString('fr-FR', { maximumSignificantDigits: 2 }))
+
+/** The reading of this sample's value: which way it points, in words. */
+function constater(i: Omit<Indicateur, 'constat'>, e: EchantillonPfas, matrice: Matrice): string {
+  const v = i.valeur!
+  switch (i.id) {
+    case 'sulfonates':
+      if (v === 0) return 'Aucun sulfonate quantifié : profil entièrement carboxylique, du côté des produits de dégradation des fluorotélomères, des apports diffus ou des lixiviats.'
+      if (v === 1) return 'Uniquement des sulfonates : profil du côté des mousses anciennes au PFOS et des usages historiques du PFOS.'
+      return v > 0.5
+        ? `Les sulfonates font ${pc(v)} des 20 PFAS quantifiés : ils dominent. Le profil se rapproche des mousses anciennes au PFOS et des usages historiques du PFOS.`
+        : `Les sulfonates ne font que ${pc(v)} : les carboxylates dominent (${pc(1 - v)}). Le profil se rapproche des produits de dégradation des fluorotélomères, des apports diffus ou des lixiviats.`
+    case 'courtes':
+      return v > 0.5
+        ? `Les chaînes courtes font ${pc(v)} des 20 PFAS quantifiés : profil mobile, attendu en aval d’une source, dans un lixiviat ou avec les substituts récents.`
+        : `Les chaînes longues dominent (${pc(1 - v)}) : profil plus retenu par les sols, plutôt attendu près de la source ou pour des apports anciens.`
+    case 'pfosPfoa':
+      if (v === 0) return 'PFOS non quantifié, PFOA présent : le PFOA domine, du côté des fluoropolymères, des apports diffus ou des lixiviats.'
+      return v >= 1
+        ? `Le PFOS est ${fois(v)} fois plus abondant que le PFOA : du côté des mousses anciennes, du chromage antérieur à l’interdiction du PFOS ou des boues.`
+        : `Le PFOA est ${fois(1 / v)} fois plus abondant que le PFOS : du côté des fluoropolymères, des apports diffus ou des lixiviats.`
+    case 'pfhxsPfos':
+      return v > 0
+        ? `PFHxS quantifié avec le PFOS (${fois(v)} fois le PFOS) : cette association appuie la piste des mousses anciennes au PFOS.`
+        : 'PFHxS non quantifié à côté du PFOS : la piste des mousses anciennes perd un appui ; d’autres usages du PFOS (chromage ancien, boues) restent possibles.'
+    case 'pfcaLongues': {
+      if (v === 0) return 'Aucun carboxylique au-delà du PFOA (C9 à C13) n’est quantifié : pas de signature de chaînes longues.'
+      const noms = VINGT.filter((s) => s.famille === 'PFCA' && s.carbones >= 9 && q(e.substances[s.id]) > 0).map((s) => s.abreviation)
+      return `${pc(v)} des carboxylates ont 9 carbones ou plus (${noms.join(', ')}). Plus cette part est forte, plus la piste de la chimie des fluoropolymères et la proximité d’une source se renforcent : ces composés migrent peu.`
+    }
+    case 'fts':
+      if (v === 0) return '6:2 FTS non quantifié alors que le PFPeA ou le PFHxA sont présents : pas de précurseur 6:2 visible ; ces PFCA viennent d’une conversion déjà complète ou d’une autre source.'
+      return v >= 1
+        ? `Le 6:2 FTS dépasse ses produits de dégradation (${fois(v)} fois PFPeA + PFHxA) : précurseur peu transformé, apport récent ou milieu pauvre en oxygène.`
+        : `Les produits de dégradation dépassent le 6:2 FTS (${fois(1 / v)} fois) : précurseur déjà largement converti, ou PFCA d’une autre origine.`
+    case 'tfa': {
+      const tfa = q(e.substances.TFA)
+      const mediane =
+        matrice === 'eau'
+          ? tfa > 780
+            ? ' Il dépasse la médiane nationale de l’eau traitée (780 ng/l) : à comparer à l’amont avant d’y voir une source locale.'
+            : ' Il reste sous la médiane nationale de l’eau traitée (780 ng/l) : niveau courant en France.'
+          : ''
+      if (v === 0) return `TFA non quantifié.`
+      return v >= 1
+        ? `Le TFA vaut ${fois(v)} fois la somme des 20.${mediane}`
+        : `Le TFA est inférieur à la somme des 20 (${fois(v)} fois) : la contamination est portée par les PFAS de la liste.${mediane}`
+    }
+    case 'ramifies':
+      return v > 0
+        ? `${pc(v)} d’isomères ramifiés : signature du procédé électrochimique, seul procédé qui produise le PFOS.`
+        : 'Aucun isomère ramifié quantifié : ramifiés sous la LQ, ou isomères séparés par le transport dans le milieu ; le PFOS lui-même ne vient que du procédé électrochimique.'
+    case 'fluor':
+      if (v >= 1) return 'Les substances dosées portent autant de fluor que le paramètre global, voire plus : écart entre méthodes à signaler au laboratoire.'
+      return `Les 22 substances expliquent ${pc(v)} du fluor organique mesuré ; ${pc(1 - v)} restent non identifiés.${
+        v >= 0.5
+          ? ' C’est au niveau des meilleurs bilans publiés près de sources de mousses.'
+          : v < 0.05
+            ? ' C’est l’ordre de grandeur des contaminations diffuses.'
+            : ' Une part importante de PFAS n’est pas recherchée (précurseurs, autres familles) : un TOP ou une liste élargie la préciserait.'
+      }`
+  }
+  return ''
 }
 
 export function formatIndicateur(i: Pick<Indicateur, 'valeur' | 'format'>): string {

@@ -56,13 +56,17 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   comparée aux seuils (0,1 µg/l eau du robinet, 2 µg/l eaux brutes) et
   située sur des échelles logarithmiques avec les valeurs publiées
   (`src/lib/pfas/reperes.ts` : ANSES, RIVM, Dauchy et al. 2019, Brusseau et
-  al. 2020…), profil par longueur de chaîne, indicateurs de composition et
+  al. 2020…), comparaison de tous les échantillons (profils, indicateurs et pistes côte à
+  côte, profil de l'ensemble), profil par longueur de chaîne, indicateurs de
+  composition lus d'après leur valeur et
   bilan du fluor (`src/lib/pfas/indicateurs.ts`, fractions de fluor
   calculées d'après les formules, `src/lib/pfas/substances.ts`), pistes de
   sources critère par critère (`src/lib/pfas/sources.ts`), contrôles (somme
   du laboratoire, blancs). Chaque valeur et chaque lecture renvoient à la
-  bibliographie de `src/lib/pfas/references.ts` (37 références vérifiées,
-  sources secondaires signalées). Exemple fictif intégré.
+  bibliographie de `src/lib/pfas/references.ts` (39 références vérifiées,
+  sources secondaires signalées), avec une explication des deux procédés de
+  fabrication (électrochimique, télomérisation). Ouvrages classés par nom
+  (Pz1, Pz2, Pz10). Exemple fictif intégré.
 - **Conformité des rejets** (`frontend/src/pages/ConformiteRejets.tsx`) —
   rejets d'une unité de traitement d'air ou d'eau comparés aux valeurs
   limites générales de l'arrêté du 2 février 1998 modifié
