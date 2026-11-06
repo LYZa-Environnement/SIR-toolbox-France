@@ -335,6 +335,29 @@ a.card:hover {
   background: var(--level-elevee-bg);
 }
 
+/* Physico-chemical state of groundwater: a blue (reducing) to amber
+   (oxidising) scale, with no good-or-bad meaning. */
+.badge--etat-reducteur {
+  color: #1d3f72;
+  background: #dbe5f3;
+}
+.badge--etat-faiblement-reducteur {
+  color: #285e7d;
+  background: #e1edf2;
+}
+.badge--etat-transition {
+  color: #4b5a5c;
+  background: #e9ecea;
+}
+.badge--etat-moderement-oxydant {
+  color: #7a5a12;
+  background: #f6edd6;
+}
+.badge--etat-oxydant {
+  color: #8a4a0c;
+  background: #f7e1c9;
+}
+
 .badge--indeterminee {
   color: var(--level-indeterminee);
   background: var(--level-indeterminee-bg);

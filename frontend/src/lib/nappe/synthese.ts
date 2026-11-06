@@ -15,11 +15,16 @@
  *   < 100 very weak, 100–200 weak, 200–333 moderately accentuated,
  *   333–666 moderate, 666–1000 high (« importante »), > 1000 µS/cm elevated;
  * - pH: < 5.5 acid, 5.5–6.5 slightly acid, 6.5–7.5 near neutral, 7.5–8.5
- *   slightly basic, > 8.5 basic.
+ *   slightly basic, > 8.5 basic;
+ * - physico-chemical state of the water, from oxygen and redox together
+ *   (whatever the pollutant): reducing, weakly reducing, transition
+ *   (suboxic), moderately oxidising, oxidising — or discordant when the two
+ *   probes disagree. The suitability for reductive dechlorination, which
+ *   only concerns chlorinated solvents, stays in the per-well table.
  */
 
 import type { Jeu } from './donnees.ts'
-import type { Evaluation, Favorabilite } from './evaluation.ts'
+import type { Evaluation } from './evaluation.ts'
 import type { ParamId, Valeur } from './parametres.ts'
 
 type Table = Partial<Record<ParamId, Valeur>>
@@ -64,11 +69,68 @@ function mediane(xs: number[]): number {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
+export type Etat = 'reducteur' | 'faiblement-reducteur' | 'transition' | 'moderement-oxydant' | 'oxydant' | 'discordant' | 'indetermine'
+
+export const LIBELLES_ETAT: Record<Etat, string> = {
+  reducteur: 'Réducteur',
+  'faiblement-reducteur': 'Faiblement réducteur',
+  transition: 'Transition (suboxique)',
+  'moderement-oxydant': 'Modérément oxydant',
+  oxydant: 'Oxydant',
+  discordant: 'Mesures discordantes',
+  indetermine: 'Non déterminé',
+}
+
+const PLURIELS: Record<Etat, string> = {
+  reducteur: 'réducteurs',
+  'faiblement-reducteur': 'faiblement réducteurs',
+  transition: 'en transition (suboxiques)',
+  'moderement-oxydant': 'modérément oxydants',
+  oxydant: 'oxydants',
+  discordant: 'aux mesures discordantes',
+  indetermine: 'non déterminés',
+}
+
+/** From the most reducing to the most oxidising. */
+export const ORDRE_ETATS: Etat[] = ['reducteur', 'faiblement-reducteur', 'transition', 'moderement-oxydant', 'oxydant', 'discordant', 'indetermine']
+
+/** Oxygen class: 0 anoxic (< 0.5 mg/l, or < LQ), 1 weakly oxygenated
+ *  (0.5–2), 2 oxygenated (≥ 2); redox class against Ag/AgCl: 0 < −100 mV,
+ *  1 < 50, 2 < 200, 3 ≥ 200. */
+const ETATS: Etat[][] = [
+  // redox:  < −100        −100 à 50               50 à 200               ≥ 200                 non mesuré
+  ['reducteur', 'faiblement-reducteur', 'transition', 'discordant', 'faiblement-reducteur'], // O₂ < 0,5
+  ['faiblement-reducteur', 'transition', 'moderement-oxydant', 'moderement-oxydant', 'transition'], // O₂ 0,5 à 2
+  ['discordant', 'moderement-oxydant', 'oxydant', 'oxydant', 'oxydant'], // O₂ ≥ 2
+  ['reducteur', 'faiblement-reducteur', 'moderement-oxydant', 'oxydant', 'indetermine'], // O₂ non mesuré
+]
+
+/** The water's state from oxygen and redox, with its reason. */
+export function etatPhysicoChimique(t: Table): { etat: Etat; motif: string } {
+  const od = t.od
+  const orp = t.orp
+  const io = !od ? 3 : od.inferieur || od.valeur < 0.5 ? 0 : od.valeur < 2 ? 1 : 2
+  const ir = !orp ? 4 : orp.valeur < -100 ? 0 : orp.valeur < 50 ? 1 : orp.valeur < 200 ? 2 : 3
+  const etat = ETATS[io][ir]
+  const parts = [
+    od ? `O₂ ${od.inferieur ? '< ' : ''}${fr(od.valeur)} mg/l (${od.inferieur ? 'anoxique' : qualifierO2(od.valeur)})` : 'O₂ non mesuré',
+    orp ? `redox ${signe(orp.valeur)} mV Ag/AgCl (${qualifierRedox(orp.valeur)})` : 'redox non mesuré',
+  ]
+  const suite =
+    etat === 'discordant'
+      ? ' : oxygène et redox ne concordent pas, une des deux mesures est à vérifier'
+      : io === 0 && ir === 4
+        ? ' : au moins anoxique, le redox préciserait si le milieu est réducteur'
+        : ''
+  return { etat, motif: `${parts.join(', ')}${suite}` }
+}
+
 export interface DescriptionOuvrage {
   cle: string
   nom: string
   rang: number
-  conditions: Favorabilite
+  etat: Etat
+  motifEtat: string
   description: string
   /** Measurement caveats (probe, stabilisation). */
   reserve: string | null
@@ -87,8 +149,6 @@ export interface Synthese {
   /** Wells standing out from the rest of the site. */
   singularites: string[]
 }
-
-const ORDRE: Favorabilite[] = ['favorable', 'possible', 'limite', 'defavorable', 'indetermine']
 
 export function decrire(t: Table, eh: number | null, saturation: number | null): string {
   const parts: string[] = []
@@ -174,16 +234,19 @@ export function synthetiser(jeu: Jeu, evaluations: Evaluation[]): Synthese {
       classes.set(q, [...(classes.get(q) ?? []), x.e.ouvrage.nom])
     }
     const ordre = ['anoxique', 'faiblement oxygénée', 'oxygénée', 'bien oxygénée']
-    const libelles: Record<string, string> = {
-      anoxique: 'anoxiques (O₂ < 0,5 mg/l)',
-      'faiblement oxygénée': 'faiblement oxygénés (0,5 à 2 mg/l)',
-      oxygénée: 'oxygénés (2 à 5 mg/l)',
-      'bien oxygénée': 'bien oxygénés (> 5 mg/l)',
+    const libelles: Record<string, [string, string]> = {
+      anoxique: ['anoxique', 'O₂ < 0,5 mg/l'],
+      'faiblement oxygénée': ['faiblement oxygéné', '0,5 à 2 mg/l'],
+      oxygénée: ['oxygéné', '2 à 5 mg/l'],
+      'bien oxygénée': ['bien oxygéné', '> 5 mg/l'],
     }
     site.push(
       `Oxygène dissous : ${ordre
         .filter((q) => classes.get(q))
-        .map((q) => `${classes.get(q)!.length} ouvrage${classes.get(q)!.length > 1 ? 's' : ''} ${libelles[q]}`)
+        .map((q) => {
+          const k = classes.get(q)!.length
+          return `${k} ouvrage${k > 1 ? 's' : ''} ${libelles[q][0]}${k > 1 ? 's' : ''} (${libelles[q][1]})`
+        })
         .join(', ')}${sansOD ? ` ; non mesuré sur ${sansOD} ouvrage${sansOD > 1 ? 's' : ''}` : ''}.`,
     )
   } else site.push('Oxygène dissous non mesuré.')
@@ -201,14 +264,22 @@ export function synthetiser(jeu: Jeu, evaluations: Evaluation[]): Synthese {
     )
   }
 
-  // Conditions and caveats
-  const comptes = new Map<Favorabilite, number>()
-  for (const e of avecTerrain) comptes.set(e.lecture.conditions, (comptes.get(e.lecture.conditions) ?? 0) + 1)
-  const LIB: Record<Favorabilite, string> = { favorable: 'favorables', possible: 'possibles', limite: 'peu favorables', defavorable: 'défavorables', indetermine: 'non déterminées' }
+  // Physico-chemical state and caveats
+  const etats = new Map(avecTerrain.map((e) => [e.ouvrage.cle, etatPhysicoChimique(val(e))]))
+  const etatDe = (e: Evaluation) => etats.get(e.ouvrage.cle)!.etat
+  const comptes = new Map<Etat, string[]>()
+  for (const e of avecTerrain) comptes.set(etatDe(e), [...(comptes.get(etatDe(e)) ?? []), e.ouvrage.nom])
   site.push(
-    `Conditions pour la déchloration réductrice : ${ORDRE.filter((c) => comptes.get(c))
-      .map((c) => `${comptes.get(c)} ${comptes.get(c) === 1 ? LIB[c].replace(/s$/, '') : LIB[c]}`)
-      .join(', ')}.`,
+    `État physico-chimique (oxygène et redox) : ${ORDRE_ETATS.filter((c) => comptes.get(c))
+      .map((c) => {
+        const noms = comptes.get(c)!
+        if (noms.length === avecTerrain.length && noms.length > 1) return `${LIBELLES_ETAT[c].toLowerCase()} dans tous les ouvrages`
+        // Names for a few wells; counts only on a large site.
+        return avecTerrain.length <= 12
+          ? `${LIBELLES_ETAT[c].toLowerCase()} à ${noms.join(', ')}`
+          : `${noms.length} ouvrage${noms.length > 1 ? 's' : ''} ${noms.length > 1 ? PLURIELS[c] : LIBELLES_ETAT[c].toLowerCase()}`
+      })
+      .join(' ; ')}.`,
   )
   const douteux = avecTerrain.filter((e) => e.alertes.some((a) => /sursatur|sonde à oxygène|incohérent/.test(a.texte)))
   if (douteux.length) {
@@ -219,7 +290,7 @@ export function synthetiser(jeu: Jeu, evaluations: Evaluation[]): Synthese {
 
   // Ranking: most reducing first.
   const tri = [...avecTerrain].sort((a, b) => {
-    const c = ORDRE.indexOf(a.lecture.conditions) - ORDRE.indexOf(b.lecture.conditions)
+    const c = ORDRE_ETATS.indexOf(etatDe(a)) - ORDRE_ETATS.indexOf(etatDe(b))
     if (c) return c
     const ra = val(a).orp?.valeur ?? Infinity
     const rb = val(b).orp?.valeur ?? Infinity
@@ -232,14 +303,15 @@ export function synthetiser(jeu: Jeu, evaluations: Evaluation[]): Synthese {
       cle: e.ouvrage.cle,
       nom: e.ouvrage.nom,
       rang: k + 1,
-      conditions: e.lecture.conditions,
+      etat: etatDe(e),
+      motifEtat: etats.get(e.ouvrage.cle)!.motif,
       description: decrire(val(e), e.eh, e.saturationO2),
       reserve: reserves.length ? [...new Set(reserves)].join(' ; ') : null,
     }
   })
-  if (tri.length > 1) {
-    const reducteurs = tri.filter((e) => e.lecture.conditions === 'favorable' || e.lecture.conditions === 'possible').slice(0, 5)
-    const oxygenes = [...tri].reverse().filter((e) => e.lecture.conditions === 'defavorable' || e.lecture.conditions === 'limite').slice(0, 5)
+  if (tri.length > 12) {
+    const reducteurs = tri.filter((e) => etatDe(e) === 'reducteur' || etatDe(e) === 'faiblement-reducteur').slice(0, 5)
+    const oxygenes = [...tri].reverse().filter((e) => etatDe(e) === 'oxydant' || etatDe(e) === 'moderement-oxydant').slice(0, 5)
     if (reducteurs.length) site.push(`Ouvrages les plus réducteurs : ${reducteurs.map((e) => e.ouvrage.nom).join(', ')}.`)
     if (oxygenes.length) site.push(`Ouvrages les plus oxygénés ou oxydants : ${oxygenes.map((e) => e.ouvrage.nom).join(', ')}.`)
   }

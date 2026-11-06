@@ -22,7 +22,7 @@ import {
 import { cleOuvrage, lireFiches, type FicheTerrain } from '../lib/nappe/fiches'
 import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../lib/nappe/parametres'
 import { SOURCES } from '../lib/nappe/sources'
-import { synthetiser, type Synthese } from '../lib/nappe/synthese'
+import { LIBELLES_ETAT, synthetiser, type Etat, type Synthese } from '../lib/nappe/synthese'
 import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../lib/nappe/transport'
 import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../lib/nappe/recap'
 
@@ -48,6 +48,15 @@ const BADGE_CONDITIONS: Record<Favorabilite, string> = {
   possible: 'badge badge--faible',
   limite: 'badge badge--moderee',
   defavorable: 'badge badge--elevee',
+  indetermine: 'badge badge--indeterminee',
+}
+const BADGE_ETAT: Record<Etat, string> = {
+  reducteur: 'badge badge--etat-reducteur',
+  'faiblement-reducteur': 'badge badge--etat-faiblement-reducteur',
+  transition: 'badge badge--etat-transition',
+  'moderement-oxydant': 'badge badge--etat-moderement-oxydant',
+  oxydant: 'badge badge--etat-oxydant',
+  discordant: 'badge badge--moderee',
   indetermine: 'badge badge--indeterminee',
 }
 const ORDRE_CONDITIONS: Favorabilite[] = ['favorable', 'possible', 'limite', 'defavorable', 'indetermine']
@@ -863,14 +872,14 @@ function SyntheseGenerale({ s }: { s: Synthese }) {
           )}
         </div>
       )}
-      <h3 style={{ fontSize: '1rem', marginTop: '1.5rem' }}>Classement des ouvrages, du plus réducteur au plus oxygéné</h3>
+      <h3 style={{ fontSize: '1rem', marginTop: '1.5rem' }}>Classement des ouvrages, du plus réducteur au plus oxydant</h3>
       <div className="tableau-defile" style={{ maxHeight: '36rem' }}>
         <table className="tableau">
           <thead>
             <tr>
               <th>Rang</th>
               <th>Ouvrage</th>
-              <th>Conditions (déchloration)</th>
+              <th>État physico-chimique</th>
               <th>Conditions physico-chimiques</th>
               <th>Réserve sur la mesure</th>
             </tr>
@@ -883,7 +892,9 @@ function SyntheseGenerale({ s }: { s: Synthese }) {
                   <strong>{c.nom}</strong>
                 </td>
                 <td>
-                  <span className={BADGE_CONDITIONS[c.conditions]}>{LIBELLES_FAVORABILITE[c.conditions]}</span>
+                  <span className={BADGE_ETAT[c.etat]} title={c.motifEtat} style={{ whiteSpace: 'nowrap' }}>
+                    {LIBELLES_ETAT[c.etat]}
+                  </span>
                 </td>
                 <td style={{ fontSize: '0.85rem', minWidth: '22rem', maxWidth: '46rem', whiteSpace: 'normal' }}>{c.description}</td>
                 <td style={{ fontSize: '0.8rem', maxWidth: '16rem', whiteSpace: 'normal', color: c.reserve ? 'var(--level-moderee)' : undefined }}>{c.reserve ?? '-'}</td>
@@ -893,7 +904,10 @@ function SyntheseGenerale({ s }: { s: Synthese }) {
         </table>
       </div>
       <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>
-        Classement : conditions pour la déchloration réductrice, puis redox croissant, puis oxygène croissant. Qualificatifs : pH (neutre de 6,5 à
+        Classement : état physico-chimique, d'après l'oxygène dissous et le redox ensemble (réducteur : O₂ &lt; 0,5 mg/l et redox &lt; −100 mV ;
+        faiblement réducteur : anoxique et redox jusqu'à 50 mV ; transition : peu d'oxygène et redox intermédiaire ; modérément oxydant ; oxydant :
+        O₂ ≥ 2 mg/l et redox ≥ 50 mV ; mesures discordantes quand les deux sondes se contredisent), puis redox croissant, puis oxygène croissant.
+        L'aptitude à la déchloration réductrice des COHV est donnée par ouvrage à l'étape suivante. Qualificatifs : pH (neutre de 6,5 à
         7,5) ; oxygène (anoxique &lt; 0,5 mg/l, faiblement oxygénée 0,5 à 2, oxygénée 2 à 5, bien oxygénée &gt; 5) ; redox contre Ag/AgCl
         (réducteur &lt; −100 mV, faiblement réducteur jusqu'à 50 mV, modérément oxydant jusqu'à 200 mV, oxydant au-delà) ; minéralisation d'après la
         conductivité (classes de Rodier : moyenne de 333 à 666, importante de 666 à 1 000, élevée au-delà de 1 000 µS/cm).

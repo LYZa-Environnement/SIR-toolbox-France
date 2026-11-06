@@ -15,7 +15,7 @@ import { PARAMS_TERRAIN } from './fiches.ts'
 import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from './parametres.ts'
 import { formatExtreme, formatMoyenne, type Recap } from './recap.ts'
 import { SOURCES } from './sources.ts'
-import type { Synthese } from './synthese.ts'
+import { LIBELLES_ETAT, type Etat, type Synthese } from './synthese.ts'
 import type { Transport } from './transport.ts'
 
 export interface Rapport {
@@ -42,6 +42,16 @@ const COULEUR_CONDITIONS: Record<Favorabilite, { fond: string; texte: string }> 
   possible: ETAT.ok,
   limite: ETAT.vigilance,
   defavorable: ETAT.alerte,
+  indetermine: { fond: 'FFEDEDED', texte: 'FF555555' },
+}
+
+const COULEUR_ETAT: Record<Etat, { fond: string; texte: string }> = {
+  reducteur: { fond: 'FFDBE5F3', texte: 'FF1D3F72' },
+  'faiblement-reducteur': { fond: 'FFE1EDF2', texte: 'FF285E7D' },
+  transition: { fond: 'FFE9ECEA', texte: 'FF4B5A5C' },
+  'moderement-oxydant': { fond: 'FFF6EDD6', texte: 'FF7A5A12' },
+  oxydant: { fond: 'FFF7E1C9', texte: 'FF8A4A0C' },
+  discordant: ETAT.vigilance,
   indetermine: { fond: 'FFEDEDED', texte: 'FF555555' },
 }
 
@@ -103,19 +113,19 @@ function feuilleGenerale(wb: Workbook, rp: Rapport) {
     rp.synthese.singularites.forEach((p) => paragraphe(`• ${p}`))
     r++
   }
-  r = bandeau(ws, r, 'Classement des ouvrages, du plus réducteur au plus oxygéné', 5)
+  r = bandeau(ws, r, 'Classement des ouvrages, du plus réducteur au plus oxydant', 5)
   r = entetes(ws, r, [
     ['Rang', 0],
     ['Ouvrage', 0],
-    ['Conditions (déchloration)', 0],
+    ['État physico-chimique', 0],
     ['Conditions physico-chimiques', 0],
     ['Réserve sur la mesure', 0],
   ])
   for (const c of rp.synthese.classement) {
-    const cc = COULEUR_CONDITIONS[c.conditions]
+    const cc = COULEUR_ETAT[c.etat]
     ecrire(ws, r, 1, c.rang, { taille: 9, h: 'center' })
     ecrire(ws, r, 2, c.nom, { taille: 9, gras: true })
-    ecrire(ws, r, 3, LIBELLES_FAVORABILITE[c.conditions], { taille: 9, gras: true, h: 'center', fond: cc.fond, couleur: cc.texte })
+    ecrire(ws, r, 3, LIBELLES_ETAT[c.etat], { taille: 9, gras: true, h: 'center', fond: cc.fond, couleur: cc.texte, wrap: true })
     ecrire(ws, r, 4, c.description, { taille: 9, wrap: true })
     ecrire(ws, r, 5, c.reserve ?? '-', { taille: 9, wrap: true, couleur: c.reserve ? ETAT.vigilance.texte : undefined })
     ws.getRow(r).height = Math.max(15, Math.ceil(c.description.length / 120) * 12 + 2)
@@ -123,7 +133,7 @@ function feuilleGenerale(wb: Workbook, rp: Rapport) {
   }
   r++
   paragraphe(
-    'Classement : conditions pour la déchloration réductrice (seuils USEPA 1998 sur O2 et redox), puis redox croissant, puis oxygène croissant. Qualificatifs : pH neutre de 6,5 à 7,5 ; oxygène anoxique < 0,5 mg/l, faiblement oxygénée 0,5 à 2, oxygénée 2 à 5, bien oxygénée > 5 ; redox contre Ag/AgCl réducteur < −100 mV, faiblement réducteur jusqu’à 50 mV, modérément oxydant jusqu’à 200 mV, oxydant au-delà ; minéralisation d’après la conductivité, classes de Rodier (< 100 très faible, 100-200 faible, 200-333 moyenne accentuée, 333-666 moyenne, 666-1 000 importante, > 1 000 µS/cm élevée).',
+    'Classement : état physico-chimique d’après l’oxygène dissous et le redox ensemble (réducteur : O2 < 0,5 mg/l et redox < −100 mV ; faiblement réducteur : anoxique et redox jusqu’à 50 mV ; transition (suboxique) : peu d’oxygène et redox intermédiaire ; modérément oxydant ; oxydant : O2 ≥ 2 mg/l et redox ≥ 50 mV ; mesures discordantes quand les deux sondes se contredisent), puis redox croissant, puis oxygène croissant. L’aptitude à la déchloration réductrice des COHV est donnée par ouvrage dans l’onglet « Synthèse par ouvrage ». Qualificatifs : pH neutre de 6,5 à 7,5 ; oxygène anoxique < 0,5 mg/l, faiblement oxygénée 0,5 à 2, oxygénée 2 à 5, bien oxygénée > 5 ; redox contre Ag/AgCl réducteur < −100 mV, faiblement réducteur jusqu’à 50 mV, modérément oxydant jusqu’à 200 mV, oxydant au-delà ; minéralisation d’après la conductivité, classes de Rodier (< 100 très faible, 100-200 faible, 200-333 moyenne accentuée, 333-666 moyenne, 666-1 000 importante, > 1 000 µS/cm élevée).',
   )
 }
 
