@@ -14,6 +14,7 @@ import { BAREME_CLASSES, COMPOSES_FILIATION, LIBELLES_CLASSE, LIBELLES_FAVORABIL
 import { PARAMS_TERRAIN } from './fiches.ts'
 import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from './parametres.ts'
 import { SOURCES } from './sources.ts'
+import type { Synthese } from './synthese.ts'
 import type { Transport } from './transport.ts'
 
 export interface Rapport {
@@ -24,6 +25,7 @@ export interface Rapport {
   options: Options
   /** Limits shared by most wells. */
   limites: string[]
+  synthese: Synthese
   transport?: Transport
 }
 
@@ -64,8 +66,61 @@ const texte = (ws: Worksheet, r: number, t: string, o: Parameters<typeof ecrire>
   return r + 1
 }
 
+function feuilleGenerale(wb: Workbook, rp: Rapport) {
+  const ws = wb.addWorksheet('Synthèse générale', { views: [{ showGridLines: false }] })
+  ws.getColumn(1).width = 7
+  ws.getColumn(2).width = 18
+  ws.getColumn(3).width = 16
+  ws.getColumn(4).width = 100
+  ws.getColumn(5).width = 40
+  ecrire(ws, 1, 1, rp.titre, { gras: true, taille: 12, bord: false })
+  ecrire(ws, 2, 1, 'Synthèse générale des conditions physico-chimiques (mesures de terrain en fin de purge)', { italique: true, taille: 9, bord: false })
+  let r = 4
+  const paragraphe = (t: string) => {
+    ws.mergeCells(r, 1, r, 5)
+    ecrire(ws, r, 1, t, { taille: 9, wrap: true, bord: false })
+    ws.getRow(r).height = Math.ceil(t.length / 170) * 13 + 3
+    r++
+  }
+  r = bandeau(ws, r, 'Le site', 5)
+  rp.synthese.site.forEach(paragraphe)
+  r++
+  if (rp.synthese.profils.length) {
+    r = bandeau(ws, r, 'Profils verticaux (ouvrages multi-niveaux)', 5)
+    rp.synthese.profils.forEach((p) => paragraphe(`• ${p.texte}`))
+    r++
+  }
+  if (rp.synthese.singularites.length) {
+    r = bandeau(ws, r, 'Ouvrages singuliers', 5)
+    rp.synthese.singularites.forEach((p) => paragraphe(`• ${p}`))
+    r++
+  }
+  r = bandeau(ws, r, 'Classement des ouvrages, du plus réducteur au plus oxygéné', 5)
+  r = entetes(ws, r, [
+    ['Rang', 0],
+    ['Ouvrage', 0],
+    ['Conditions (déchloration)', 0],
+    ['Conditions physico-chimiques', 0],
+    ['Réserve sur la mesure', 0],
+  ])
+  for (const c of rp.synthese.classement) {
+    const cc = COULEUR_CONDITIONS[c.conditions]
+    ecrire(ws, r, 1, c.rang, { taille: 9, h: 'center' })
+    ecrire(ws, r, 2, c.nom, { taille: 9, gras: true })
+    ecrire(ws, r, 3, LIBELLES_FAVORABILITE[c.conditions], { taille: 9, gras: true, h: 'center', fond: cc.fond, couleur: cc.texte })
+    ecrire(ws, r, 4, c.description, { taille: 9, wrap: true })
+    ecrire(ws, r, 5, c.reserve ?? '-', { taille: 9, wrap: true, couleur: c.reserve ? ETAT.vigilance.texte : undefined })
+    ws.getRow(r).height = Math.max(15, Math.ceil(c.description.length / 120) * 12 + 2)
+    r++
+  }
+  r++
+  paragraphe(
+    'Classement : conditions pour la déchloration réductrice (seuils USEPA 1998 sur O2 et redox), puis redox croissant, puis oxygène croissant. Qualificatifs : pH neutre de 6,5 à 7,5 ; oxygène anoxique < 0,5 mg/l, faiblement oxygénée 0,5 à 2, oxygénée 2 à 5, bien oxygénée > 5 ; redox contre Ag/AgCl réducteur < −100 mV, faiblement réducteur jusqu’à 50 mV, modérément oxydant jusqu’à 200 mV, oxydant au-delà ; minéralisation d’après la conductivité, classes de Rodier (< 100 très faible, 100-200 faible, 200-333 moyenne accentuée, 333-666 moyenne, 666-1 000 importante, > 1 000 µS/cm élevée).',
+  )
+}
+
 function feuilleSynthese(wb: Workbook, rp: Rapport) {
-  const ws = wb.addWorksheet('Synthèse', { views: [{ showGridLines: false }] })
+  const ws = wb.addWorksheet('Synthèse par ouvrage', { views: [{ showGridLines: false }] })
   ecrire(ws, 1, 1, rp.titre, { gras: true, taille: 12, bord: false })
   let r = texte(ws, 2, 'Évaluation des conditions de la nappe — criblage USEPA (1998), processus redox USGS (McMahon et Chapelle, 2008), contrôles des mesures de terrain.', { italique: true })
   r++
@@ -403,6 +458,7 @@ export async function telechargerRapport(rp: Rapport, nomFichier: string) {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
   wb.creator = 'ERM SIR Toolbox France'
+  feuilleGenerale(wb, rp)
   feuilleSynthese(wb, rp)
   feuilleScore(wb, rp)
   feuilleTerrain(wb, rp)

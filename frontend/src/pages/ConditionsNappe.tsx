@@ -22,6 +22,7 @@ import {
 import { cleOuvrage, lireFiches, type FicheTerrain } from '../lib/nappe/fiches'
 import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../lib/nappe/parametres'
 import { SOURCES } from '../lib/nappe/sources'
+import { synthetiser, type Synthese } from '../lib/nappe/synthese'
 import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../lib/nappe/transport'
 
 type Feuille = { nom: string; grille: Cell[][] }
@@ -110,6 +111,7 @@ export default function ConditionsNappe() {
   const [projet, setProjet] = useState('')
   const [export_, setExport] = useState(false)
   const [hydro, setHydro] = useState<SaisieHydro>(HYDRO_DEFAUT)
+  const [avecBiochlor, setAvecBiochlor] = useState(false)
 
   async function chargerFiches(fs: File[]) {
     if (!fs.length) return
@@ -177,6 +179,7 @@ export default function ConditionsNappe() {
   const limitesSite = frequents((e) => e.lecture.limites)
   const analysesSite = frequents((e) => e.lecture.analysesUtiles)
 
+  const synthese = useMemo(() => synthetiser(jeu, evaluations), [jeu, evaluations])
   const transport = useMemo(() => calculerTransport(hydro, jeu, plusContamine?.ouvrage.cle ?? ''), [hydro, jeu, plusContamine])
   const nomOuvrage = (cle: string) => jeu.ouvrages.find((o) => o.cle === cle)?.nom ?? cle
 
@@ -212,7 +215,8 @@ export default function ConditionsNappe() {
           jeu,
           evaluations,
           options,
-          transport: transport.vx !== null ? transport : undefined,
+          synthese,
+          transport: avecBiochlor && transport.vx !== null ? transport : undefined,
         },
         `Conditions nappe${projet ? ` - ${projet}` : ''} - ${date}.xlsx`,
       )
@@ -445,7 +449,18 @@ export default function ConditionsNappe() {
         <section className="section section--muted">
           <div className="container">
             <h2 className="etape">
-              <span>4</span> Conditions par ouvrage
+              <span>4</span> Synthèse générale
+            </h2>
+            <SyntheseGenerale s={synthese} />
+          </div>
+        </section>
+      )}
+
+      {evaluations.length > 0 && (
+        <section className="section">
+          <div className="container">
+            <h2 className="etape">
+              <span>5</span> Conditions par ouvrage
             </h2>
             <div className="grid grid--3" style={{ gap: '1rem', marginBottom: '1rem' }}>
               <div className="card">
@@ -643,28 +658,42 @@ export default function ConditionsNappe() {
       )}
 
       {evaluations.length > 0 && (
-        <section className="section">
+        <section className="section section--muted">
           <div className="container">
             <h2 className="etape">
-              <span>5</span> Transport et données d'entrée BIOCHLOR
+              <span>6</span> Données d'entrée BIOCHLOR (option)
             </h2>
-            <TransportBiochlor h={hydro} setH={setHydro} calc={transport} ouvrages={jeu.ouvrages} sourceDefaut={plusContamine?.ouvrage.cle ?? ''} />
+            <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', maxWidth: '48rem' }}>
+              <input type="checkbox" checked={avecBiochlor} onChange={(e) => setAvecBiochlor(e.target.checked)} />
+              <span>
+                <strong>Préparer une modélisation BIOCHLOR</strong>
+                <span style={{ display: 'block', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                  Usage expert : vitesse de l'eau, porosité, retard et constantes de biodégradation à renseigner, pour un modèle de transport du
+                  panache (USEPA / AFCEE). Inutile pour décrire les conditions de la nappe.
+                </span>
+              </span>
+            </label>
+            {avecBiochlor && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <TransportBiochlor h={hydro} setH={setHydro} calc={transport} ouvrages={jeu.ouvrages} sourceDefaut={plusContamine?.ouvrage.cle ?? ''} />
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {evaluations.length > 0 && (
-        <section className="section section--muted">
+        <section className="section">
           <div className="container">
             <h2 className="etape">
-              <span>6</span> Rapport
+              <span>7</span> Rapport
             </h2>
             <button type="button" className="btn" onClick={() => void exporter()} disabled={export_}>
               {export_ ? 'Préparation…' : 'Télécharger le rapport Excel'}
             </button>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-              Onglets : synthèse par ouvrage, score USEPA critère par critère, paramètres de terrain et stabilisation, données utilisées
-              {transport.vx !== null ? ', transport et saisies BIOCHLOR' : ''}, méthode et sources.
+              Onglets : synthèse générale et classement, synthèse par ouvrage, score USEPA critère par critère, paramètres de terrain et
+              stabilisation, données utilisées{avecBiochlor && transport.vx !== null ? ', transport et saisies BIOCHLOR' : ''}, méthode et sources.
             </p>
           </div>
         </section>
@@ -703,6 +732,79 @@ export default function ConditionsNappe() {
           </ul>
         </div>
       </section>
+    </>
+  )
+}
+
+function SyntheseGenerale({ s }: { s: Synthese }) {
+  return (
+    <>
+      <div className="card" style={{ maxWidth: '64rem' }}>
+        {s.site.map((p) => (
+          <p key={p} style={{ margin: '0 0 0.5rem', fontSize: '0.95rem' }}>
+            {p}
+          </p>
+        ))}
+      </div>
+      {(s.profils.length > 0 || s.singularites.length > 0) && (
+        <div className="grid grid--2" style={{ gap: '1rem', marginTop: '1rem' }}>
+          {s.profils.length > 0 && (
+            <div className="card">
+              <span className="eyebrow">Profils verticaux (ouvrages multi-niveaux)</span>
+              <ul style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
+                {s.profils.map((p) => (
+                  <li key={p.base}>{p.texte}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {s.singularites.length > 0 && (
+            <div className="card">
+              <span className="eyebrow">Ouvrages singuliers</span>
+              <ul style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
+                {s.singularites.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+      <h3 style={{ fontSize: '1rem', marginTop: '1.5rem' }}>Classement des ouvrages, du plus réducteur au plus oxygéné</h3>
+      <div className="tableau-defile" style={{ maxHeight: '36rem' }}>
+        <table className="tableau">
+          <thead>
+            <tr>
+              <th>Rang</th>
+              <th>Ouvrage</th>
+              <th>Conditions (déchloration)</th>
+              <th>Conditions physico-chimiques</th>
+              <th>Réserve sur la mesure</th>
+            </tr>
+          </thead>
+          <tbody>
+            {s.classement.map((c) => (
+              <tr key={c.cle}>
+                <td>{c.rang}</td>
+                <td>
+                  <strong>{c.nom}</strong>
+                </td>
+                <td>
+                  <span className={BADGE_CONDITIONS[c.conditions]}>{LIBELLES_FAVORABILITE[c.conditions]}</span>
+                </td>
+                <td style={{ fontSize: '0.85rem', minWidth: '22rem', maxWidth: '46rem', whiteSpace: 'normal' }}>{c.description}</td>
+                <td style={{ fontSize: '0.8rem', maxWidth: '16rem', whiteSpace: 'normal', color: c.reserve ? 'var(--level-moderee)' : undefined }}>{c.reserve ?? '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>
+        Classement : conditions pour la déchloration réductrice, puis redox croissant, puis oxygène croissant. Qualificatifs : pH (neutre de 6,5 à
+        7,5) ; oxygène (anoxique &lt; 0,5 mg/l, faiblement oxygénée 0,5 à 2, oxygénée 2 à 5, bien oxygénée &gt; 5) ; redox contre Ag/AgCl
+        (réducteur &lt; −100 mV, faiblement réducteur jusqu'à 50 mV, modérément oxydant jusqu'à 200 mV, oxydant au-delà) ; minéralisation d'après la
+        conductivité (classes de Rodier : moyenne de 333 à 666, importante de 666 à 1 000, élevée au-delà de 1 000 µS/cm).
+      </p>
     </>
   )
 }
