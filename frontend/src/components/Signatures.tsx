@@ -13,12 +13,12 @@ const fichier = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').replac
 /** One pie per organic family, all samples together — the per-sample pies
  *  are in the "Signatures" sheet of the Excel file, and can be downloaded
  *  for a map, all on one scale. */
-export function SignaturesApercu({ lecture, qualifications }: { lecture: Lecture; qualifications: Record<string, Qualification> }) {
+export function SignaturesApercu({ lecture, qualifications, metaux = false }: { lecture: Lecture; qualifications: Record<string, Qualification>; metaux?: boolean }) {
   const [preparation, setPreparation] = useState(false)
   const familles = useMemo(() => {
     const echantillons = lecture.points.filter((p) => !estControle(qualifications[p.nom])).map((p) => p.nom)
-    return signatures(lecture, echantillons)
-  }, [lecture, qualifications])
+    return signatures(lecture, echantillons, { metaux })
+  }, [lecture, qualifications, metaux])
   const images = useMemo(
     () =>
       familles
@@ -85,7 +85,7 @@ export function SignaturesApercu({ lecture, qualifications }: { lecture: Lecture
   if (!images.length) return null
   return (
     <details className="qualif" style={{ marginTop: '1rem' }}>
-      <summary>Signatures des composés organiques (aperçu — un graphique par échantillon dans l'onglet Excel)</summary>
+      <summary>Signatures des composés organiques{metaux ? ' et des métaux' : ''} (aperçu — un graphique par échantillon dans l'onglet Excel)</summary>
       <div className="signatures">
         {images.map((x) => (
           <figure key={x.famille} style={{ margin: 0 }}>
@@ -100,6 +100,8 @@ export function SignaturesApercu({ lecture, qualifications }: { lecture: Lecture
         Par échantillon, la surface du camembert est proportionnelle au total de la famille, sur une échelle commune à tous les
         échantillons : les graphiques se comparent d’un ouvrage à l’autre et se placent sur une carte. Les composés y sont
         désignés par leur abréviation usuelle (PCE, cis-DCE, BaP…).
+        {metaux &&
+          ' Métaux : une seule famille, sur le sol brut (hors éluat), sans les éléments majeurs (fer, aluminium, manganèse…), désignés par leur symbole chimique.'}
       </p>
       <button type="button" className="btn btn--petit" onClick={() => void telechargerCarte()} disabled={preparation}>
         {preparation ? 'Préparation…' : 'Télécharger les camemberts pour une carte (PNG transparents, échelle commune)'}

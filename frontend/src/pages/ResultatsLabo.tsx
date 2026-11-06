@@ -957,7 +957,7 @@ export default function ResultatsLabo() {
               conversion={conversion ? { prelevements, unite } : null}
             />
 
-            <SignaturesApercu lecture={lecture} qualifications={qualifications} />
+            <SignaturesApercu lecture={lecture} qualifications={qualifications} metaux={matrice === 'sol'} />
 
             <div className="exports">
               <div className="card export">
