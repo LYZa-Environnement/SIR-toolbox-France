@@ -13,6 +13,8 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  # Lire les déploiements, pour annuler un déploiement Pages resté bloqué.
+  deployments: read
 
 concurrency:
   group: pages
@@ -52,7 +54,41 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_bis.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
+      # Un déploiement Pages peut rester marqué « en cours » côté GitHub alors
+      # qu'il a réussi, surtout quand deux publications s'enchaînent : tout
+      # déploiement suivant est alors refusé (« Deployment request failed …
+      # due to in progress deployment. Please cancel … first »). On annule
+      # d'abord les déploiements précédents restés ouverts ; l'annulation
+      # d'un déploiement terminé est refusée par l'API, sans effet.
+      - name: Annuler un déploiement Pages resté bloqué
+        run: |
+          for sha in $(gh api "repos/${{ github.repository }}/deployments?environment=github-pages&per_page=5" --jq '.[].sha' | awk '!vu[$0]++'); do
+            [ "$sha" = "${{ github.sha }}" ] && continue
+            if gh api -X POST "repos/${{ github.repository }}/pages/deployments/$sha/cancel" >/dev/null 2>&1; then
+              echo "Déploiement $sha annulé"
+            fi
+          done
+
       - id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      # Second essai, une minute plus tard, après une nouvelle annulation.
+      - name: Annuler à nouveau avant le second essai
+        if: steps.deployment.outcome == 'failure'
+        run: |
+          sleep 60
+          for sha in $(gh api "repos/${{ github.repository }}/deployments?environment=github-pages&per_page=5" --jq '.[].sha' | awk '!vu[$0]++'); do
+            [ "$sha" = "${{ github.sha }}" ] && continue
+            if gh api -X POST "repos/${{ github.repository }}/pages/deployments/$sha/cancel" >/dev/null 2>&1; then
+              echo "Déploiement $sha annulé"
+            fi
+          done
+
+      - id: deployment_bis
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
