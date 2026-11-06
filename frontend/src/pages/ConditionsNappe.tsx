@@ -2,7 +2,7 @@ import { Fragment, useMemo, useRef, useState, type DragEvent, type ReactNode } f
 import { lireNombre } from '../lib/resultats/calc'
 import { fusionnerLectures } from '../lib/resultats/fusion'
 import { lireClasseur, type Cell, type Lecture } from '../lib/resultats/parse'
-import { AQUIFERE_DEFAUT, ETHENES, tauxDegradation, type Aquifere, type Ethene } from '../lib/nappe/biochlor'
+import TransportBiochlor from '../components/nappe/TransportBiochlor'
 import { associationAuto, construireJeu, decalageFiches } from '../lib/nappe/donnees'
 import {
   BAREME_CLASSES,
@@ -13,13 +13,16 @@ import {
   STATUTS_DEFAUT,
   type Classe,
   type Compose,
+  LIBELLES_FAVORABILITE,
   type Evaluation,
+  type Favorabilite,
   type Niveau,
   type Statut,
 } from '../lib/nappe/evaluation'
 import { cleOuvrage, lireFiches, type FicheTerrain } from '../lib/nappe/fiches'
 import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../lib/nappe/parametres'
 import { SOURCES } from '../lib/nappe/sources'
+import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../lib/nappe/transport'
 
 type Feuille = { nom: string; grille: Cell[][] }
 
@@ -38,6 +41,14 @@ const BADGE_CLASSE: Record<Classe, string> = {
   limitee: 'badge badge--moderee',
   insuffisante: 'badge badge--indeterminee',
 }
+const BADGE_CONDITIONS: Record<Favorabilite, string> = {
+  favorable: 'badge badge--faible',
+  possible: 'badge badge--faible',
+  limite: 'badge badge--moderee',
+  defavorable: 'badge badge--elevee',
+  indetermine: 'badge badge--indeterminee',
+}
+const ORDRE_CONDITIONS: Favorabilite[] = ['favorable', 'possible', 'limite', 'defavorable', 'indetermine']
 const COULEUR_NIVEAU: Record<Niveau, string> = { alerte: 'var(--level-elevee)', vigilance: 'var(--level-moderee)', info: 'var(--color-muted)' }
 
 const fr = (x: number | null | undefined, d = 2) =>
@@ -98,15 +109,7 @@ export default function ConditionsNappe() {
   const [chargement, setChargement] = useState<'fiches' | 'labo' | null>(null)
   const [projet, setProjet] = useState('')
   const [export_, setExport] = useState(false)
-  // Transport (BIOCHLOR)
-  const [aq, setAq] = useState<Record<keyof Aquifere, string>>(
-    Object.fromEntries(Object.entries(AQUIFERE_DEFAUT).map(([k, v]) => [k, String(v).replace('.', ',')])) as Record<keyof Aquifere, string>,
-  )
-  const [koc, setKoc] = useState<Record<Ethene, string>>(Object.fromEntries(ETHENES.map((e) => [e.id, String(e.koc).replace('.', ',')])) as Record<Ethene, string>)
-  const [amont, setAmont] = useState('')
-  const [aval, setAval] = useState('')
-  const [distance, setDistance] = useState('')
-  const [normaliser, setNormaliser] = useState(true)
+  const [hydro, setHydro] = useState<SaisieHydro>(HYDRO_DEFAUT)
 
   async function chargerFiches(fs: File[]) {
     if (!fs.length) return
@@ -160,21 +163,21 @@ export default function ConditionsNappe() {
 
   const plusContamine = evaluations.reduce<Evaluation | null>((m, e) => (e.cohvMolaire > (m?.cohvMolaire ?? 0) ? e : m), null)
   const comptes = new Map<Classe, number>()
-  for (const e of evaluations) comptes.set(e.score.classe, (comptes.get(e.score.classe) ?? 0) + 1)
+  for (const e of evaluations) if (e.score.complet) comptes.set(e.score.classe, (comptes.get(e.score.classe) ?? 0) + 1)
+  const complets = evaluations.filter((e) => e.score.complet).length
+  const conditions = new Map<Favorabilite, number>()
+  for (const e of evaluations) conditions.set(e.lecture.conditions, (conditions.get(e.lecture.conditions) ?? 0) + 1)
   const requisSite = PARAMS.filter((p) => p.requis && !evaluations.some((e) => jeu.valeurs[e.ouvrage.cle]?.[p.id]))
-  const sansLabo = !labo.lecture
+  // Limits and useful analyses shared by most wells, said once.
+  const frequents = (liste: (e: Evaluation) => string[]) => {
+    const n = new Map<string, number>()
+    for (const e of evaluations) for (const x of liste(e)) n.set(x, (n.get(x) ?? 0) + 1)
+    return [...n.entries()].filter(([, k]) => k >= evaluations.length / 2).map(([x]) => x)
+  }
+  const limitesSite = frequents((e) => e.lecture.limites)
+  const analysesSite = frequents((e) => e.lecture.analysesUtiles)
 
-  // Transport
-  const aquifere = useMemo(() => {
-    const a = Object.fromEntries(Object.entries(aq).map(([k, v]) => [k, lireNombre(v)])) as Record<keyof Aquifere, number | null>
-    return Object.values(a).every((v) => v !== null && v > 0) ? (a as Aquifere) : null
-  }, [aq])
-  const kocs = useMemo(() => Object.fromEntries(ETHENES.map((e) => [e.id, lireNombre(koc[e.id]) ?? e.koc])) as Record<Ethene, number>, [koc])
-  const dist = lireNombre(distance)
-  const transport =
-    aquifere && amont && aval && amont !== aval && dist && dist > 0
-      ? { ...tauxDegradation(aquifere, dist, jeu.valeurs[amont] ?? {}, jeu.valeurs[aval] ?? {}, normaliser, kocs), aquifere, koc: kocs, distance: dist, normaliser }
-      : null
+  const transport = useMemo(() => calculerTransport(hydro, jeu, plusContamine?.ouvrage.cle ?? ''), [hydro, jeu, plusContamine])
   const nomOuvrage = (cle: string) => jeu.ouvrages.find((o) => o.cle === cle)?.nom ?? cle
 
   const fichesMesurees = fiches.filter((f) => !f.vide)
@@ -194,13 +197,22 @@ export default function ConditionsNappe() {
             ['Résultats du laboratoire', labos.map((l) => l.nom).join(', ') || 'aucun (paramètres de terrain seuls)'],
             ['Écart redox mesuré → Eh', `${fr(dec, 1)} mV (électrode de référence Ag/AgCl)`],
             ['Ouvrages de fond', fond.map(nomOuvrage).join(', ') || 'aucun désigné'],
-            ['Ouvrage le plus contaminé (COHV, µmol/l)', plusContamine ? `${plusContamine.ouvrage.nom} — score ${plusContamine.score.total} (${LIBELLES_CLASSE[plusContamine.score.classe].toLowerCase()})` : '-'],
+            [
+              'Ouvrage le plus contaminé (COHV, µmol/l)',
+              plusContamine
+                ? `${plusContamine.ouvrage.nom} — conditions ${LIBELLES_FAVORABILITE[plusContamine.lecture.conditions].toLowerCase()}, score USEPA ${plusContamine.score.complet ? `${plusContamine.score.total} (${LIBELLES_CLASSE[plusContamine.score.classe].toLowerCase()})` : `partiel ${plusContamine.score.total} / ${plusContamine.score.accessible}`}`
+                : '-',
+            ],
+            ['Criblage USEPA complet (nitrates, fer, sulfates, méthane)', `${complets} ouvrage${complets > 1 ? 's' : ''} sur ${evaluations.length}`],
             ['Analyses requises absentes partout', requisSite.map((p) => p.libelle).join(', ') || 'aucune'],
+            ['Limites de l’interprétation', limitesSite.join(' ') || '-'],
+            ['Analyses utiles', analysesSite.join(' ; ') || '-'],
           ],
+          limites: limitesSite,
           jeu,
           evaluations,
           options,
-          transport: transport ? { ...transport, amont: nomOuvrage(amont), aval: nomOuvrage(aval) } : undefined,
+          transport: transport.vx !== null ? transport : undefined,
         },
         `Conditions nappe${projet ? ` - ${projet}` : ''} - ${date}.xlsx`,
       )
@@ -439,20 +451,27 @@ export default function ConditionsNappe() {
               <div className="card">
                 <span className="eyebrow">Zone la plus contaminée</span>
                 {plusContamine ? (
-                  <p style={{ margin: '0.3rem 0 0' }}>
-                    <strong>{plusContamine.ouvrage.nom}</strong> ({fr(plusContamine.cohvMolaire)} µmol/l de COHV) : score{' '}
-                    <span className={BADGE_CLASSE[plusContamine.score.classe]}>
-                      {plusContamine.score.total} — {LIBELLES_CLASSE[plusContamine.score.classe]}
-                    </span>
-                  </p>
+                  <>
+                    <p style={{ margin: '0.3rem 0 0' }}>
+                      <strong>{plusContamine.ouvrage.nom}</strong> ({fr(plusContamine.cohvMolaire)} µmol/l de COHV) : conditions{' '}
+                      <span className={BADGE_CONDITIONS[plusContamine.lecture.conditions]}>{LIBELLES_FAVORABILITE[plusContamine.lecture.conditions].toLowerCase()}</span>
+                    </p>
+                    <p style={{ margin: '0.3rem 0 0', fontSize: '0.85rem' }}>{plusContamine.lecture.conclusion}</p>
+                  </>
                 ) : (
                   <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem', color: 'var(--color-muted)' }}>Pas de COHV quantifié (résultats du laboratoire nécessaires).</p>
                 )}
               </div>
               <div className="card">
-                <span className="eyebrow">Score USEPA par ouvrage</span>
+                <span className="eyebrow">Conditions pour la déchloration réductrice</span>
                 <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
-                  {BAREME_CLASSES.map((b) => `${comptes.get(b.classe) ?? 0} ${LIBELLES_CLASSE[b.classe].toLowerCase()}`).join(' · ')}
+                  {ORDRE_CONDITIONS.filter((c) => conditions.get(c))
+                    .map((c) => `${conditions.get(c)} ${LIBELLES_FAVORABILITE[c].toLowerCase()}`)
+                    .join(' · ')}
+                </p>
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.82rem', color: 'var(--color-muted)' }}>
+                  Criblage USEPA complet : {complets} ouvrage{complets > 1 ? 's' : ''} sur {evaluations.length}
+                  {complets > 0 && ` (${BAREME_CLASSES.filter((b) => comptes.get(b.classe)).map((b) => `${comptes.get(b.classe)} ${LIBELLES_CLASSE[b.classe].toLowerCase()}`).join(', ')})`}
                 </p>
               </div>
               <div className="card">
@@ -460,12 +479,24 @@ export default function ConditionsNappe() {
                 <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>{requisSite.length ? requisSite.map((p) => p.libelle).join(', ') : 'Aucune'}</p>
               </div>
             </div>
-            {sansLabo && (
-              <p className="alerte" style={{ maxWidth: 'none' }}>
-                Sans résultats du laboratoire, seuls l'oxygène, le redox, le pH et la température sont notés : le score est un minorant et le
-                processus redox reste provisoire (oxique ou anoxique). Les accepteurs d'électrons (NO₃, Fe²⁺, Mn, SO₄, sulfures), le méthane, les
-                chlorures et les COHV sont nécessaires pour conclure.
-              </p>
+            {limitesSite.length > 0 && (
+              <div className="card" style={{ marginBottom: '1rem', borderLeft: '3px solid var(--level-moderee)' }}>
+                <strong>Ce que les données permettent de dire — et pas</strong>
+                <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
+                  La lecture repose sur un faisceau d'indices : conditions d'oxygène et de redox (seuils USEPA 1998), produits de dégradation des
+                  solvants chlorés, sources de carbone. Elle situe chaque ouvrage, sans démontrer la déchloration.
+                </p>
+                <ul style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
+                  {limitesSite.map((l) => (
+                    <li key={l}>{l}</li>
+                  ))}
+                </ul>
+                {analysesSite.length > 0 && (
+                  <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
+                    <strong>Pour lever ces limites :</strong> {analysesSite.join(' ; ')}.
+                  </p>
+                )}
+              </div>
             )}
             <div className="tableau-defile" style={{ maxHeight: '40rem' }}>
               <table className="tableau">
@@ -477,9 +508,10 @@ export default function ConditionsNappe() {
                     <th>O₂ mg/l (sat.)</th>
                     <th>CE µS/cm</th>
                     <th>T °C</th>
+                    <th>Conditions (déchloration)</th>
+                    <th>Indices de dégradation</th>
                     <th>Processus redox</th>
-                    <th>Score USEPA</th>
-                    <th>Devenir du CV</th>
+                    <th title="Complet : nitrates, fer, sulfates et méthane disponibles">Score USEPA</th>
                     <th>Vigilance</th>
                   </tr>
                 </thead>
@@ -506,27 +538,36 @@ export default function ConditionsNappe() {
                           </td>
                           <td>{fr(t.ce?.valeur, 0)}</td>
                           <td>{fr(t.t?.valeur, 1)}</td>
-                          <td style={{ minWidth: '10rem' }}>
+                          <td>
+                            <span className={BADGE_CONDITIONS[e.lecture.conditions]} title={e.lecture.motifConditions}>
+                              {LIBELLES_FAVORABILITE[e.lecture.conditions]}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '0.8rem', minWidth: '12rem' }}>{e.lecture.indices[0] ?? (e.cohvMolaire ? 'Aucun produit de dégradation' : '-')}</td>
+                          <td style={{ minWidth: '9rem' }}>
                             {e.redox.categorie}
                             {e.redox.processus !== '—' && <div style={{ fontSize: '0.78rem', color: 'var(--color-muted)' }}>{e.redox.processus}</div>}
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
-                            <span className={BADGE_CLASSE[e.score.classe]} title={LIBELLES_CLASSE[e.score.classe]}>
-                              {e.score.total}
-                            </span>
-                            {e.score.potentiel > 0 && (
-                              <span style={{ fontSize: '0.78rem', color: 'var(--color-muted)' }} title="Points que les critères non évalués pourraient ajouter">
-                                {' '}
-                                +{e.score.potentiel} n.é.
+                            {e.score.complet ? (
+                              <span className={BADGE_CLASSE[e.score.classe]} title={LIBELLES_CLASSE[e.score.classe]}>
+                                {e.score.total}
+                              </span>
+                            ) : (
+                              <span
+                                className="badge badge--indeterminee"
+                                title={`Score partiel : ${e.score.geochimieManquante.join(', ')} manquants ; non comparable aux classes du tableau 2.4`}
+                              >
+                                {e.score.total} / {e.score.accessible}
                               </span>
                             )}
+                            {!e.score.complet && <div style={{ fontSize: '0.72rem', color: 'var(--color-muted)' }}>partiel</div>}
                           </td>
-                          <td style={{ fontSize: '0.8rem', minWidth: '12rem' }}>{e.devenirCV[0] ?? '-'}</td>
                           <td style={{ fontSize: '0.8rem' }}>{alertes ? `${alertes} point${alertes > 1 ? 's' : ''}` : '-'}</td>
                         </tr>
                         {actif && (
                           <tr>
-                            <td colSpan={10} style={{ background: 'var(--color-surface)' }}>
+                            <td colSpan={11} style={{ background: 'var(--color-surface)' }}>
                               <Detail e={e} />
                             </td>
                           </tr>
@@ -538,9 +579,10 @@ export default function ConditionsNappe() {
               </table>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-              Cliquez sur un ouvrage pour le détail des points. Interprétation (USEPA 1998, tableau 2.4) :{' '}
-              {BAREME_CLASSES.map((b) => `${b.bornes} ${LIBELLES_CLASSE[b.classe].toLowerCase()}`).join(' ; ')}. Le protocole applique le score à la zone la plus
-              contaminée ; « n.é. » : points que les critères non évalués pourraient ajouter.
+              Cliquez sur un ouvrage pour le détail. Conditions : O₂ &lt; 0,5 mg/l et redox &lt; −100 mV (Ag/AgCl) favorables, &lt; 50 mV possibles ;
+              O₂ de 0,5 à 5 mg/l peu favorables ; O₂ &gt; 5 mg/l défavorables (seuils USEPA 1998). Score USEPA « x / y » : partiel, x points sur les y
+              accessibles avec les données disponibles, à ne pas lire avec le tableau 2.4 ({BAREME_CLASSES.map((b) => `${b.bornes} ${LIBELLES_CLASSE[b.classe].toLowerCase()}`).join(' ; ')}),
+              réservé au jeu complet.
             </p>
 
             <details className="qualif" style={{ marginTop: '1.5rem' }}>
@@ -600,124 +642,13 @@ export default function ConditionsNappe() {
         </section>
       )}
 
-      {evaluations.length > 1 && (
+      {evaluations.length > 0 && (
         <section className="section">
           <div className="container">
             <h2 className="etape">
-              <span>5</span> Transport et constantes de biodégradation (données d'entrée BIOCHLOR)
+              <span>5</span> Transport et données d'entrée BIOCHLOR
             </h2>
-            <p className="lede" style={{ marginBottom: '1rem' }}>
-              Vitesse réelle, retard et constante de biodégradation du premier ordre entre deux ouvrages d'une même ligne d'écoulement, dans le
-              panache (USEPA 1998, annexe C). Ces valeurs renseignent les champs « Advection », « Adsorption » et « Biotransformation » de BIOCHLOR.
-            </p>
-            <div className="grid grid--4" style={{ alignItems: 'end' }}>
-              {(
-                [
-                  ['K', 'Conductivité hydraulique K (m/s)'],
-                  ['i', 'Gradient hydraulique i (m/m)'],
-                  ['ne', 'Porosité efficace ne'],
-                  ['n', 'Porosité totale n'],
-                  ['rhob', 'Masse volumique apparente ρb (kg/l)'],
-                  ['foc', 'Carbone organique foc (g/g)'],
-                ] as [keyof Aquifere, string][]
-              ).map(([k, l]) => (
-                <label key={k} className="champ">
-                  {l}
-                  <input inputMode="decimal" value={aq[k]} onChange={(e) => setAq((a) => ({ ...a, [k]: e.target.value }))} />
-                </label>
-              ))}
-              <label className="champ">
-                Ouvrage amont (A)
-                <select value={amont} onChange={(e) => setAmont(e.target.value)}>
-                  <option value="">—</option>
-                  {jeu.ouvrages.map((o) => (
-                    <option key={o.cle} value={o.cle}>
-                      {o.nom}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="champ">
-                Ouvrage aval (B)
-                <select value={aval} onChange={(e) => setAval(e.target.value)}>
-                  <option value="">—</option>
-                  {jeu.ouvrages.map((o) => (
-                    <option key={o.cle} value={o.cle}>
-                      {o.nom}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="champ">
-                Distance A → B le long de l'écoulement (m)
-                <input inputMode="decimal" value={distance} onChange={(e) => setDistance(e.target.value)} />
-              </label>
-              <label className="champ">
-                <span>
-                  <input type="checkbox" checked={normaliser} onChange={(e) => setNormaliser(e.target.checked)} /> Normaliser par les chlorures + chlore
-                  organique (dilution, dispersion)
-                </span>
-              </label>
-            </div>
-            <details className="qualif" style={{ marginTop: '0.75rem' }}>
-              <summary>Coefficients de partage Koc (l/kg)</summary>
-              <div className="grid grid--4" style={{ marginTop: '0.5rem' }}>
-                {ETHENES.map((e) => (
-                  <label key={e.id} className="champ">
-                    {e.libelle}
-                    <input inputMode="decimal" value={koc[e.id]} onChange={(ev) => setKoc((k) => ({ ...k, [e.id]: ev.target.value }))} />
-                  </label>
-                ))}
-              </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>Valeurs par défaut : USEPA (1998), tableau B.2.1 (première valeur citée).</p>
-            </details>
-            {aquifere && (
-              <p style={{ marginTop: '0.75rem' }}>
-                Vitesse réelle de l'eau : <strong>{fr(transport?.vx ?? ((aquifere.K * aquifere.i) / aquifere.ne) * 31557600, 1)} m/an</strong>
-                {transport?.facteur !== null && transport?.facteur !== undefined && <> · facteur de normalisation TA/TB = {fr(transport.facteur)}</>}
-              </p>
-            )}
-            {transport && (
-              <div className="tableau-defile">
-                <table className="tableau">
-                  <thead>
-                    <tr>
-                      <th>Composé</th>
-                      <th>Retard R</th>
-                      <th>Transit (an)</th>
-                      <th>CA µg/l</th>
-                      <th>CB µg/l</th>
-                      <th>CB corrigée</th>
-                      <th>λ (1/an)</th>
-                      <th>Littérature</th>
-                      <th>Remarque</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transport.taux.map((x) => {
-                      const e = ETHENES.find((y) => y.id === x.compose)!
-                      return (
-                        <tr key={x.compose}>
-                          <td>
-                            <strong>{e.libelle}</strong>
-                          </td>
-                          <td>{fr(x.retard)}</td>
-                          <td>{fr(x.temps)}</td>
-                          <td>{fr(x.cA)}</td>
-                          <td>{fr(x.cB)}</td>
-                          <td>{fr(x.cBcorr)}</td>
-                          <td>
-                            <strong>{fr(x.lambda)}</strong>
-                          </td>
-                          <td>{e.litterature}</td>
-                          <td style={{ fontSize: '0.8rem' }}>{x.note ?? '-'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <TransportBiochlor h={hydro} setH={setHydro} calc={transport} ouvrages={jeu.ouvrages} sourceDefaut={plusContamine?.ouvrage.cle ?? ''} />
           </div>
         </section>
       )}
@@ -733,7 +664,7 @@ export default function ConditionsNappe() {
             </button>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
               Onglets : synthèse par ouvrage, score USEPA critère par critère, paramètres de terrain et stabilisation, données utilisées
-              {transport ? ', transport BIOCHLOR' : ''}, méthode et sources.
+              {transport.vx !== null ? ', transport et saisies BIOCHLOR' : ''}, méthode et sources.
             </p>
           </div>
         </section>
@@ -776,9 +707,42 @@ export default function ConditionsNappe() {
   )
 }
 
-function Detail({ e }: { e: Evaluation }) {
+function Liste({ titre, items }: { titre: string; items: string[] }) {
+  if (!items.length) return null
   return (
-    <div style={{ padding: '0.5rem 0.25rem' }}>
+    <>
+      <strong style={{ fontSize: '0.9rem' }}>{titre}</strong>
+      <ul style={{ margin: '0.2rem 0 0.5rem', fontSize: '0.85rem' }}>
+        {items.map((d) => (
+          <li key={d}>{d}</li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+function Detail({ e }: { e: Evaluation }) {
+  const l = e.lecture
+  // Sticky and bounded: the row spans a table wider than the screen.
+  return (
+    <div style={{ padding: '0.5rem 0.25rem', position: 'sticky', left: 0, maxWidth: 'min(70rem, calc(100vw - 3rem))', whiteSpace: 'normal' }}>
+      <div className="card" style={{ marginBottom: '1rem' }}>
+        <p style={{ margin: 0 }}>
+          <span className={BADGE_CONDITIONS[l.conditions]}>Conditions {LIBELLES_FAVORABILITE[l.conditions].toLowerCase()}</span>{' '}
+          <span style={{ fontSize: '0.88rem' }}>{l.motifConditions}</span>
+        </p>
+        <p style={{ margin: '0.5rem 0', fontWeight: 600 }}>{l.conclusion}</p>
+        <div className="grid grid--2" style={{ gap: '1rem' }}>
+          <div>
+            <Liste titre="Indices de dégradation" items={l.indices} />
+            <Liste titre="Sources de carbone" items={l.carbone} />
+          </div>
+          <div>
+            <Liste titre="Limites" items={l.limites} />
+            <Liste titre="Analyses utiles" items={l.analysesUtiles} />
+          </div>
+        </div>
+      </div>
       <div className="grid grid--2" style={{ gap: '1rem' }}>
         <div>
           <strong>Processus redox (USGS) :</strong> {e.redox.categorie} — {e.redox.processus}
@@ -848,11 +812,14 @@ function Detail({ e }: { e: Evaluation }) {
               <strong>Total</strong>
             </td>
             <td>
-              <span className={BADGE_CLASSE[e.score.classe]}>{e.score.total}</span>
+              <span className={e.score.complet ? BADGE_CLASSE[e.score.classe] : 'badge badge--indeterminee'}>
+                {e.score.total}
+                {!e.score.complet && ` / ${e.score.accessible}`}
+              </span>
             </td>
             <td>
-              {LIBELLES_CLASSE[e.score.classe]}
-              {e.score.potentiel > 0 && e.score.classeMax !== e.score.classe && (
+              {e.score.complet ? LIBELLES_CLASSE[e.score.classe] : `Score partiel (${e.score.geochimieManquante.join(', ')} manquants) : non comparable aux classes USEPA`}
+              {e.score.complet && e.score.potentiel > 0 && e.score.classeMax !== e.score.classe && (
                 <span style={{ color: 'var(--color-muted)' }}> — au mieux {LIBELLES_CLASSE[e.score.classeMax].toLowerCase()} avec les critères non évalués</span>
               )}
             </td>

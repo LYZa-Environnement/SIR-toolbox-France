@@ -130,7 +130,9 @@ export function construireJeu(e: Entrees): Jeu {
           if (!unitesIgnorees.includes(t)) unitesIgnorees.push(t)
           continue
         }
-        if (!lus.has(role)) lus.set(role, v)
+        // Several totals (C10-C40, C5-C40): the widest range, i.e. the largest.
+        const deja = lus.get(role)
+        if (!deja || (role === 'hc' && !v.inferieur && (deja.inferieur || v.valeur > deja.valeur))) lus.set(role, v)
       }
       // Iron: the best form available.
       for (const r of PRIORITE_FER) {

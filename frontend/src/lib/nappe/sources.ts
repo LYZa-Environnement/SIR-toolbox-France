@@ -35,5 +35,7 @@ export const SOURCES: Source[] = [
     texte: 'North Carolina DENR (2000). Guidance on Developing a Monitored Natural Attenuation Remedial Proposal for Chlorinated Organics in Ground Water — trois lignes de preuve, points géochimiques, usage de BIOCHLOR.',
     url: 'https://www.deq.nc.gov/monitored-natural-attenuation-remedial-proposal/download',
   },
+  { texte: 'Xu M., Eckstein Y. (1995). Use of weighted least-squares method in evaluation of the relationship between dispersivity and field scale. Ground Water 33(6), 905-908 — dispersivité αx = 0,83 (log10 L)^2,414.' },
+  { texte: 'Domenico P.A., Schwartz F.W. (1990). Physical and Chemical Hydrogeology. Wiley — perméabilités types (repris dans USEPA 1998, tableau C.3.1).' },
   { texte: 'APHA, AWWA, WEF. Standard Methods for the Examination of Water and Wastewater, méthode 4500-O (solubilité de l’oxygène dans l’eau douce).' },
 ]

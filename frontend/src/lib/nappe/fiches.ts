@@ -76,6 +76,8 @@ export interface FicheTerrain {
   date: string
   prelevePar: string
   niveauStatique: number | null
+  /** Water level elevation (m NGF), for the hydraulic gradient. */
+  coteNiveau: number | null
   flottant: string
   profondeurPompage: number | null
   debitPurge: number | null
@@ -301,6 +303,7 @@ export function lireFiche(grille: Cell[][], onglet: string): FicheTerrain | null
     date: dateIso(apres(grille, /^date\s*:?$/i)),
     prelevePar: texte(apres(grille, /pr[ée]lev[ée] par/i)),
     niveauStatique: nombre(apres(grille, /niveau statique/i)),
+    coteNiveau: nombre(apres(grille, /^(altim[ée]trie|cote|altitude) (du |de la )?(ns|niveau|nappe|pi[ée]zom[ée]trique)/i)),
     flottant: texte(apres(grille, /flottant/i, 2)),
     profondeurPompage: nombre(apres(grille, /prof\.?\s*(de\s*)?pompage/i)),
     debitPurge: nombre(apres(grille, /d[ée]bit de purge/i)),

@@ -34,6 +34,7 @@ export type ParamId =
   | 'cot'
   | 'agv'
   | 'btex'
+  | 'hc'
   // chlorinated solvents and end products
   | 'pce'
   | 'tce'
@@ -84,6 +85,7 @@ export const PARAMS: DefParam[] = [
   { id: 'cot', libelle: 'Carbone organique total / dissous', unite: 'mg/l', groupe: 'carbone' },
   { id: 'agv', libelle: 'Acides gras volatils', unite: 'mg/l', groupe: 'carbone' },
   { id: 'btex', libelle: 'BTEX (somme)', unite: 'µg/l', groupe: 'carbone', requis: true },
+  { id: 'hc', libelle: 'Hydrocarbures totaux (C5/C10-C40)', unite: 'µg/l', groupe: 'carbone' },
   { id: 'pce', libelle: 'Tétrachloroéthylène (PCE)', unite: 'µg/l', groupe: 'cohv', masseMolaire: 165.83 },
   { id: 'tce', libelle: 'Trichloroéthylène (TCE)', unite: 'µg/l', groupe: 'cohv', requis: true, masseMolaire: 131.39 },
   { id: 'cisdce', libelle: 'cis-1,2-dichloroéthylène', unite: 'µg/l', groupe: 'cohv', requis: true, masseMolaire: 96.94 },
@@ -169,7 +171,11 @@ function cles(nom: string): string[] {
 
 export type Reconnu = (typeof VARIANTES)[number][0]
 
+/** Total petroleum hydrocarbons, however the lab words it: "Indice hydrocarbures C10-C40", "HCT C5-C40"… */
+const HC_TOTAL = /^(indice|somme|total)?(des|d)?(hydrocarbures?|hct|hc|ht)(totaux|total)?((c5|c6|c10)(a)?c40)?$|^(somme|indice)(des)?(c5|c10)(a)?c40$/
+
 export function reconnaitre(p: Parametre): Reconnu | null {
+  for (const c of cles(p.nom)) if (HC_TOTAL.test(c)) return 'hc'
   for (const c of cles(p.nom)) {
     const id = INDEX.get(c)
     if (!id) continue

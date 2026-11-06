@@ -8,12 +8,13 @@
 import type { Workbook, Worksheet } from 'exceljs'
 import { BANDEAU, ETAT } from '../resultats/couleurs.ts'
 import { ecrire, GRIS_FAMILLE, VERT_ENTETE } from '../resultats/export.ts'
-import { ETHENES, type Aquifere, type Ethene, type Taux } from './biochlor.ts'
+import { ETHENES } from './biochlor.ts'
 import type { Jeu } from './donnees.ts'
-import { BAREME_CLASSES, COMPOSES_FILIATION, LIBELLES_CLASSE, type Classe, type Evaluation, type Options } from './evaluation.ts'
+import { BAREME_CLASSES, COMPOSES_FILIATION, LIBELLES_CLASSE, LIBELLES_FAVORABILITE, type Classe, type Evaluation, type Favorabilite, type Options } from './evaluation.ts'
 import { PARAMS_TERRAIN } from './fiches.ts'
 import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from './parametres.ts'
 import { SOURCES } from './sources.ts'
+import type { Transport } from './transport.ts'
 
 export interface Rapport {
   titre: string
@@ -21,7 +22,17 @@ export interface Rapport {
   jeu: Jeu
   evaluations: Evaluation[]
   options: Options
-  transport?: { aquifere: Aquifere; koc: Record<Ethene, number>; amont: string; aval: string; distance: number; normaliser: boolean; vx: number; facteur: number | null; taux: Taux[] }
+  /** Limits shared by most wells. */
+  limites: string[]
+  transport?: Transport
+}
+
+const COULEUR_CONDITIONS: Record<Favorabilite, { fond: string; texte: string }> = {
+  favorable: ETAT.ok,
+  possible: ETAT.ok,
+  limite: ETAT.vigilance,
+  defavorable: ETAT.alerte,
+  indetermine: { fond: 'FFEDEDED', texte: 'FF555555' },
 }
 
 const COULEUR_CLASSE: Record<Classe, { fond: string; texte: string }> = {
@@ -75,11 +86,14 @@ function feuilleSynthese(wb: Workbook, rp: Rapport) {
     ['Saturation O2 (%)', 9],
     ['Conductivité (µS/cm)', 11],
     ['T (°C)', 7],
+    ['Conditions pour la déchloration réductrice', 14],
+    ['Motif (O2, redox)', 34],
+    ['Indices de dégradation', 40],
+    ['Sources de carbone', 30],
+    ['Lecture', 50],
     ['Processus redox (USGS)', 22],
     ['Score USEPA 1998', 9],
-    ['Points non évalués', 9],
-    ['Interprétation', 22],
-    ['Interprétation si données complètes au mieux', 22],
+    ['Interprétation du score', 26],
     ['COHV (µmol/l)', 9],
     ['Devenir du chlorure de vinyle', 40],
     ['Points de vigilance', 70],
@@ -87,7 +101,8 @@ function feuilleSynthese(wb: Workbook, rp: Rapport) {
   ws.views = [{ state: 'frozen', ySplit: r - 1, xSplit: 1, showGridLines: false }]
   for (const e of rp.evaluations) {
     const t = rp.jeu.valeurs[e.ouvrage.cle] ?? {}
-    const c = COULEUR_CLASSE[e.score.classe]
+    const c = e.score.complet ? COULEUR_CLASSE[e.score.classe] : COULEUR_CLASSE.insuffisante
+    const cc = COULEUR_CONDITIONS[e.lecture.conditions]
     const ligne: (string | number)[] = [
       e.ouvrage.nom,
       e.ouvrage.date || '-',
@@ -98,38 +113,66 @@ function feuilleSynthese(wb: Workbook, rp: Rapport) {
       nb(e.saturationO2, 2),
       nb(t.ce?.valeur, 4),
       nb(t.t?.valeur),
+      LIBELLES_FAVORABILITE[e.lecture.conditions],
+      e.lecture.motifConditions,
+      e.lecture.indices.join(' ; ') || '-',
+      e.lecture.carbone.join(' ; ') || '-',
+      e.lecture.conclusion,
       `${e.redox.categorie}${e.redox.processus && e.redox.processus !== '—' ? ` — ${e.redox.processus}` : ''}`,
-      e.score.total,
-      e.score.potentiel,
-      LIBELLES_CLASSE[e.score.classe],
-      LIBELLES_CLASSE[e.score.classeMax],
+      e.score.complet ? e.score.total : `${e.score.total} / ${e.score.accessible}`,
+      e.score.complet
+        ? `${LIBELLES_CLASSE[e.score.classe]}${e.score.potentiel ? ` (${e.score.potentiel} points non évalués)` : ''}`
+        : `Partiel (${e.score.geochimieManquante.join(', ')} manquants) : non comparable au tableau 2.4`,
       nb(e.cohvMolaire),
       e.devenirCV.join(' ; ') || '-',
       e.alertes.map((a) => a.texte).join(' ; ') || '-',
     ]
     ligne.forEach((v, j) => {
-      const enClasse = j === 10 || j === 12
+      const enClasse = j === 15 || j === 16
+      const enConditions = j === 9
       ecrire(ws, r, j + 1, typeof v === 'number' ? v : String(v).replace(/^(-?\d+)\.(\d+)$/, '$1,$2'), {
         taille: 9,
-        h: j >= 2 && j <= 8 ? 'center' : j === 10 || j === 11 || j === 14 ? 'center' : 'left',
+        h: (j >= 2 && j <= 8) || j === 15 || j === 17 ? 'center' : 'left',
         wrap: j >= 9,
-        gras: j === 0 || j === 10,
-        fond: enClasse ? c.fond : undefined,
-        couleur: enClasse ? c.texte : undefined,
+        gras: j === 0 || j === 9 || j === 15,
+        fond: enClasse ? c.fond : enConditions ? cc.fond : undefined,
+        couleur: enClasse ? c.texte : enConditions ? cc.texte : undefined,
       })
     })
-    ws.getRow(r).height = Math.max(15, Math.ceil(Math.max(String(ligne[16]).length / 95, String(ligne[15]).length / 55, 1)) * 12)
+    ws.getRow(r).height = Math.max(15, Math.ceil(Math.max(String(ligne[19]).length / 95, String(ligne[13]).length / 70, String(ligne[11]).length / 55, 1)) * 12)
     r++
   }
   r++
-  r = bandeau(ws, r, 'Interprétation du score (USEPA, 1998, tableau 2.4)', 8)
+  if (rp.limites.length) {
+    r = bandeau(ws, r, 'Limites de l’interprétation', 8)
+    for (const l of rp.limites) {
+      ws.mergeCells(r, 1, r, 12)
+      ecrire(ws, r, 1, `• ${l}`, { taille: 9, wrap: true, bord: false })
+      ws.getRow(r).height = Math.ceil(l.length / 160) * 13 + 2
+      r++
+    }
+    r++
+  }
+  r = bandeau(ws, r, 'Conditions (seuils USEPA 1998 sur O2 et redox mesuré contre Ag/AgCl)', 8)
+  for (const [k, v] of [
+    ['Favorables', 'O2 < 0,5 mg/l et redox < −100 mV'],
+    ['Possibles', 'O2 < 0,5 mg/l et redox < 50 mV (ou redox non mesuré, ou O2 non mesuré avec redox < 50 mV)'],
+    ['Peu favorables', 'O2 entre 0,5 et 5 mg/l, ou redox ≥ 50 mV'],
+    ['Défavorables', 'O2 > 5 mg/l'],
+  ] as [string, string][]) {
+    ecrire(ws, r, 1, k, { gras: true, taille: 9 })
+    ws.mergeCells(r, 2, r, 8)
+    ecrire(ws, r++, 2, v, { taille: 9 })
+  }
+  r++
+  r = bandeau(ws, r, 'Interprétation du score (USEPA, 1998, tableau 2.4) — jeu complet de paramètres uniquement', 8)
   for (const b of BAREME_CLASSES) {
     const c = COULEUR_CLASSE[b.classe]
     ecrire(ws, r, 1, b.bornes, { gras: true, taille: 9, h: 'center', fond: c.fond, couleur: c.texte })
     ws.mergeCells(r, 2, r, 8)
     ecrire(ws, r++, 2, b.texte, { taille: 9 })
   }
-  r = texte(ws, r + 1, "Le score est calculé ouvrage par ouvrage ; le protocole l'applique à la zone la plus contaminée. Un critère sans donnée ne rapporte aucun point : le score est alors un minorant, la colonne « Points non évalués » donnant ce que ces critères pourraient ajouter.", { italique: true })
+  r = texte(ws, r + 1, "Le score est calculé ouvrage par ouvrage ; le protocole l'applique à la zone la plus contaminée. « x / y » : score partiel, x points sur les y accessibles avec les données disponibles ; sans nitrates, fer, sulfates et méthane, il ne se lit pas avec ce barème.", { italique: true })
 }
 
 function feuilleScore(wb: Workbook, rp: Rapport) {
@@ -279,47 +322,55 @@ function feuilleTransport(wb: Workbook, rp: Rapport) {
   const ws = wb.addWorksheet('Transport BIOCHLOR', { views: [{ showGridLines: false }] })
   ecrire(ws, 1, 1, 'Données d’entrée BIOCHLOR et constantes de biodégradation de terrain (USEPA, 1998, annexe C)', { gras: true, taille: 11, bord: false })
   let r = 3
-  ws.getColumn(1).width = 40
-  ws.getColumn(2).width = 16
-  const lignes: [string, string | number][] = [
-    ['Conductivité hydraulique K (m/s)', t.aquifere.K],
-    ['Gradient hydraulique i (m/m)', t.aquifere.i],
-    ['Porosité efficace ne', t.aquifere.ne],
-    ['Porosité totale n', t.aquifere.n],
-    ['Masse volumique apparente ρb (kg/l)', t.aquifere.rhob],
-    ['Fraction de carbone organique foc (g/g)', t.aquifere.foc],
-    ['Vitesse réelle vx = K·i/ne (m/an)', nb(t.vx)],
-    ['Ouvrage amont (A)', t.amont],
-    ['Ouvrage aval (B)', t.aval],
-    ['Distance A → B le long de l’écoulement (m)', t.distance],
-    ['Normalisation par les chlorures + chlore organique', t.normaliser ? `oui (TA/TB = ${t.facteur === null ? 'non calculable' : String(nb(t.facteur)).replace('.', ',')})` : 'non'],
-  ]
-  for (const [k, v] of lignes) {
+  ws.getColumn(1).width = 44
+  ws.getColumn(2).width = 30
+  ws.getColumn(3).width = 28
+  ws.getColumn(4).width = 24
+  r = bandeau(ws, r, 'Paramètres saisis et calculés', 4)
+  for (const [k, v] of t.parametres) {
     ecrire(ws, r, 1, k, { taille: 9, fond: GRIS_FAMILLE, gras: true })
-    ecrire(ws, r++, 2, v, { taille: 9, h: 'center' })
+    ws.mergeCells(r, 2, r, 4)
+    ecrire(ws, r++, 2, v, { taille: 9 })
   }
   r++
-  r = entetes(ws, r, [
-    ['Composé', 0],
-    ['Koc (l/kg)', 0],
-    ['Retard R', 12],
-    ['Temps de transit (an)', 12],
-    ['CA (µg/l)', 11],
-    ['CB (µg/l)', 11],
-    ['CB corrigée (µg/l)', 12],
-    ['λ (1/an)', 10],
-    ['Littérature (USEPA 1998)', 18],
-    ['Remarque', 60],
-  ])
-  for (const x of t.taux) {
-    const e = ETHENES.find((y) => y.id === x.compose)!
-    const v: (string | number)[] = [e.libelle, nb(t.koc[x.compose]), nb(x.retard), nb(x.temps), nb(x.cA), nb(x.cB), nb(x.cBcorr), nb(x.lambda), e.litterature, x.note ?? '-']
-    v.forEach((y, j) => ecrire(ws, r, j + 1, y, { taille: 9, h: j === v.length - 1 ? 'left' : 'center', wrap: j === v.length - 1, gras: j === 0 || j === 7 }))
+  if (t.saisies.length) {
+    r = bandeau(ws, r, 'Valeurs à saisir dans BIOCHLOR', 4)
+    r = entetes(ws, r, [
+      ['Section', 0],
+      ['Champ', 0],
+      ['Valeur (SI)', 0],
+      ['Dans BIOCHLOR (unités US)', 0],
+    ])
+    for (const x of t.saisies) {
+      ;[x.section, x.champ, x.si, x.biochlor].forEach((v, j) => ecrire(ws, r, j + 1, v, { taille: 9, gras: j === 3 }))
+      r++
+    }
     r++
   }
-  r++
-  r = texte(ws, r, 'λ = −ln(CB,corr / CA) / t ; t = distance / (vx / R) ; R = 1 + ρb·Koc·foc / n ; CB,corr = CB·TA/TB, T = Cl⁻ + 0,86 PCE + 0,81 TCE + 0,73 DCE + 0,57 CV (mg/l).', { italique: true })
-  texte(ws, r, 'Ces constantes et la vitesse renseignent les champs « Biotransformation » et « Advection » de BIOCHLOR ; les deux ouvrages doivent être sur une même ligne d’écoulement, dans le panache.', { italique: true })
+  if (t.taux) {
+    r = bandeau(ws, r, 'Constantes de biodégradation entre les deux ouvrages', 10)
+    r = entetes(ws, r, [
+      ['Composé', 0],
+      ['Koc (l/kg)', 0],
+      ['Retard R', 0],
+      ['Temps de transit (an)', 0],
+      ['CA (µg/l)', 11],
+      ['CB (µg/l)', 11],
+      ['CB corrigée (µg/l)', 12],
+      ['λ (1/an)', 10],
+      ['Littérature (USEPA 1998)', 18],
+      ['Remarque', 60],
+    ])
+    for (const x of t.taux) {
+      const e = ETHENES.find((y) => y.id === x.compose)!
+      const v: (string | number)[] = [e.libelle, nb(t.kocs[x.compose]), nb(x.retard), nb(x.temps), nb(x.cA), nb(x.cB), nb(x.cBcorr), nb(x.lambda), e.litterature, x.note ?? '-']
+      v.forEach((y, j) => ecrire(ws, r, j + 1, y, { taille: 9, h: j === v.length - 1 ? 'left' : 'center', wrap: j === v.length - 1, gras: j === 0 || j === 7 }))
+      r++
+    }
+    r++
+  }
+  r = texte(ws, r, 'q = K·i ; vx = q / ne ; R = 1 + ρb·Koc·foc / n ; t = distance / (vx / R) ; λ = −ln(CB,corr / CA) / t ; CB,corr = CB·TA/TB, T = Cl⁻ + 0,86 PCE + 0,81 TCE + 0,73 DCE + 0,57 CV (mg/l) ; αx = 0,83 (log10 L)^2,414 m.', { italique: true })
+  texte(ws, r, 'Les deux ouvrages doivent être sur une même ligne d’écoulement, dans le panache. Les valeurs types par lithologie (USEPA 1998, tableaux C.3.1 et C.3.2) sont à remplacer par des mesures dès que possible.', { italique: true })
 }
 
 function feuilleMethode(wb: Workbook) {
@@ -330,6 +381,7 @@ function feuilleMethode(wb: Workbook) {
   const textes = [
     "Démarche par lignes de preuve de l'atténuation naturelle (USEPA, 1998 ; reprise par le programme MACAOH, ADEME) : 1) baisse des concentrations et des masses dans le temps et le long de l'écoulement ; 2) processus identifiés et quantifiés — indicateurs géochimiques, produits de dégradation, constantes de biodégradation ; 3) études microbiologiques ou en microcosmes. Cet outil documente la deuxième ligne de preuve ; la première se lit sur l'évolution des campagnes (outil Résultats labo), la troisième demande des analyses spécifiques (Dehalococcoides, qPCR, isotopie).",
     'Criblage USEPA (1998), tableau 2.3 : points attribués par critère, total interprété selon le tableau 2.4. Le potentiel redox est celui mesuré contre l’électrode Ag/AgCl, comme le demande le protocole (et non Eh). Le seuil des nitrates (1 mg/l) est appliqué aux nitrates exprimés en NO3⁻, le protocole ne précisant pas la forme (1 mg NO3⁻/l = 0,23 mg N/l).',
+    'Lecture simplifiée (données usuelles : paramètres de terrain, COHV, BTEX, hydrocarbures) : conditions pour la déchloration réductrice d’après l’oxygène dissous et le redox mesuré (seuils du tableau 2.3 : O2 < 0,5 mg/l, > 5 mg/l ; redox < 50 et < −100 mV contre Ag/AgCl), indices de dégradation (part molaire des produits de dégradation, cis-DCE > 80 % du DCE, CV, éthène), sources de carbone (BTEX > 0,1 mg/l, hydrocarbures, COT > 20 mg/l). C’est un faisceau d’indices : sans nitrates, fer, sulfates ni méthane, le processus redox n’est pas identifiable (le redox de terrain sépare oxique et anoxique mais pas les zones anaérobies entre elles, USEPA 1998 § 2.3.2.9) et le score USEPA, partiel, ne se compare pas au tableau 2.4.',
     'Processus redox prédominant : cadre de McMahon et Chapelle (2008) mis en œuvre dans le classeur USGS de Jurgens et al. (2009) — seuils O2 0,5 mg/l, NO3-N 0,5 mg/l, Mn 0,05 mg/l, Fe 0,1 mg/l, SO4 0,5 mg/l — et rapport massique Fe(II)/H2S de Chapelle et al. (2009) : > 10 réduction du fer, < 0,3 sulfato-réduction. Le fer dissous (échantillon filtré) est l’indicateur usuel du Fe(II) ; le fer total majore le Fe(II).',
     'Eh (électrode normale à hydrogène) = redox mesuré + écart de l’électrode de référence (lu sur les fiches, corrigé − mesuré). Saturation en oxygène : solubilité de l’eau douce à 1 atm (APHA 4500-O, Benson et Krause).',
     'Paramètres de terrain : valeur de la dernière lecture complète de la purge ; paramètre non mesuré à cette lecture : dernière valeur relevée avant, signalée. Stabilisation jugée sur les trois dernières lectures, avec les critères de la fiche.',

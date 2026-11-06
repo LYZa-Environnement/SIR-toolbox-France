@@ -91,6 +91,12 @@ export interface Score {
   total: number
   /** Points the criteria without data could still bring. */
   potentiel: number
+  /** Best total reachable with the criteria evaluated. */
+  accessible: number
+  /** Nitrate, Fe²⁺, sulfate and methane all available: the total can be read against table 2.4. */
+  complet: boolean
+  /** Key geochemical analyses missing (nitrate, Fe²⁺, sulfate, methane). */
+  geochimieManquante: string[]
   classe: Classe
   /** Class if every missing criterion scored its best. */
   classeMax: Classe
@@ -126,6 +132,37 @@ export interface Evaluation {
   alertes: Alerte[]
   /** Chlorinated ethenes, ethanes and methanes quantified, µmol/l. */
   cohvMolaire: number
+  lecture: LectureSimplifiee
+}
+
+export type Favorabilite = 'favorable' | 'possible' | 'limite' | 'defavorable' | 'indetermine'
+
+export const LIBELLES_FAVORABILITE: Record<Favorabilite, string> = {
+  favorable: 'Favorables',
+  possible: 'Possibles',
+  limite: 'Peu favorables',
+  defavorable: 'Défavorables',
+  indetermine: 'Non déterminées',
+}
+
+/**
+ * The reading that holds with the usual data — field parameters and
+ * chlorinated solvents, sometimes BTEX and petroleum hydrocarbons — when
+ * nitrate, iron, sulfate and methane are not analysed: a set of clues, not
+ * a score, with what it cannot tell.
+ */
+export interface LectureSimplifiee {
+  /** Conditions for reductive dechlorination, from oxygen and redox. */
+  conditions: Favorabilite
+  motifConditions: string
+  /** Signs that dechlorination has taken place (daughter products). */
+  indices: string[]
+  /** Electron donors seen (BTEX, hydrocarbons, organic carbon). */
+  carbone: string[]
+  conclusion: string
+  limites: string[]
+  /** Analyses that would lift the limits, cheapest first. */
+  analysesUtiles: string[]
 }
 
 // ---- Helpers ---------------------------------------------------------------------------
@@ -210,6 +247,14 @@ function filiation(c: Compose, statut: Statut, t: Table, site: Site): { oui: boo
         : { oui: false, pourquoi: 'pas de parent quantifié : dichlorométhane réputé rejeté' }
   }
 }
+
+/** Without these, the total is not read against table 2.4: the redox process stays unknown. */
+const GEOCHIMIE: [ParamId, string][] = [
+  ['nitrate', 'nitrates'],
+  ['fe2', 'fer ferreux'],
+  ['sulfate', 'sulfates'],
+  ['methane', 'méthane'],
+]
 
 export function scorer(t: Table, site: Site, opts: Options): Score {
   const criteres: Critere[] = []
@@ -390,8 +435,20 @@ export function scorer(t: Table, site: Site, opts: Options): Score {
 
   const total = criteres.reduce((s, c) => s + (c.points ?? 0), 0)
   const potentiel = criteres.filter((c) => c.points === null).reduce((s, c) => s + c.max, 0)
+  const accessible = criteres.filter((c) => c.points !== null).reduce((s, c) => s + c.max, 0)
   const requisManquants = criteres.filter((c) => c.requis && c.points === null && c.interpretation === 'Non analysé').map((c) => c.analyse)
-  return { total, potentiel, classe: classer(total), classeMax: classer(total + potentiel), criteres, requisManquants }
+  const geochimieManquante = GEOCHIMIE.filter(([id]) => !t[id]).map(([, l]) => l)
+  return {
+    total,
+    potentiel,
+    accessible,
+    complet: !geochimieManquante.length,
+    geochimieManquante,
+    classe: classer(total),
+    classeMax: classer(total + potentiel),
+    criteres,
+    requisManquants,
+  }
 }
 
 // ---- Redox process (McMahon & Chapelle, 2008) ------------------------------------------
@@ -412,8 +469,13 @@ export function processusRedox(t: Table): Redox {
   const F = haut(fe, 0.1)
   if (N === null || M === null || F === null) {
     return O
-      ? { categorie: 'Oxique (provisoire)', processus: 'O₂', detail: 'O₂ ≥ 0,5 mg/l ; Mn, Fe et NO₃ nécessaires pour exclure un mélange', manquants }
-      : { categorie: 'Anoxique (provisoire)', processus: 'À préciser', detail: 'O₂ < 0,5 mg/l ; NO₃, Mn, Fe et SO₄ nécessaires pour identifier le processus', manquants }
+      ? { categorie: 'Oxique (terrain)', processus: 'O₂', detail: 'O₂ ≥ 0,5 mg/l ; Mn, Fe et NO₃ nécessaires pour exclure un mélange d’eaux', manquants }
+      : {
+          categorie: 'Anoxique (terrain)',
+          processus: 'Non identifiable',
+          detail: 'O₂ < 0,5 mg/l ; dénitrification, réduction du fer, sulfato-réduction ou méthanogenèse : NO₃, Mn, Fe et SO₄ nécessaires pour les distinguer',
+          manquants,
+        }
   }
   if (O) {
     if (!M && !F) return { categorie: 'Oxique', processus: 'O₂', detail: 'Réduction de l’oxygène', manquants }
@@ -504,7 +566,104 @@ export function evaluer(o: Ouvrage, t: Table, site: Site, opts: Options): Evalua
 
   const cohvMolaire = MOLAIRES.reduce((s, id) => (quantifie(t[id]) ? s + t[id]!.valeur / PAR_ID.get(id)!.masseMolaire! : s), 0)
   const score = scorer(t, site, opts)
-  return { ouvrage: o, eh, saturationO2, redox: processusRedox(t), score, devenirCV: devenirCV(t), alertes, cohvMolaire }
+  return { ouvrage: o, eh, saturationO2, redox: processusRedox(t), score, devenirCV: devenirCV(t), alertes, cohvMolaire, lecture: lireSimplement(t, site) }
 }
 
 const LIB_TERRAIN: Record<string, string> = { ph: 'pH', orp: 'redox', od: 'oxygène dissous', ce: 'conductivité', t: 'température' }
+
+// ---- Reading with field data and chlorinated solvents only -----------------------------
+
+const molaire = (v: Valeur | undefined, id: ParamId) => (quantifie(v) ? v.valeur / PAR_ID.get(id)!.masseMolaire! : 0)
+
+function conditions(t: Table): { niveau: Favorabilite; motif: string } {
+  const od = t.od
+  const orp = t.orp
+  if (!od && !orp) return { niveau: 'indetermine', motif: 'Ni oxygène dissous ni redox mesurés' }
+  const redox = orp ? `redox ${fr(orp.valeur)} mV (Ag/AgCl)` : 'redox non mesuré'
+  if (od && superieurA(od, 5)) return { niveau: 'defavorable', motif: `O₂ = ${fr(od.valeur)} mg/l (> 5 mg/l) : la déchloration réductrice n’est pas tolérée (USEPA 1998)` }
+  if (od && !(inferieurA(od, 0.5) ?? false)) {
+    return { niveau: 'limite', motif: `O₂ = ${fr(od.valeur)} mg/l (entre 0,5 et 5 mg/l), ${redox} : oxygène résiduel, voie réductrice inhibée au droit de l’ouvrage` }
+  }
+  const anoxique = od ? `O₂ = ${od.inferieur ? '<' : ''}${fr(od.valeur)} mg/l (< 0,5 mg/l)` : 'O₂ non mesuré'
+  if (!orp) return { niveau: 'possible', motif: `${anoxique}, redox non mesuré : milieu anoxique, degré de réduction inconnu` }
+  if (orp.valeur < -100) return { niveau: od ? 'favorable' : 'possible', motif: `${anoxique}, ${redox} (< −100 mV) : voie réductrice probable` }
+  if (orp.valeur < 50) return { niveau: 'possible', motif: `${anoxique}, ${redox} (< 50 mV) : voie réductrice possible` }
+  return { niveau: 'limite', motif: `${anoxique}, ${redox} (≥ 50 mV) : milieu peu réducteur` }
+}
+
+function lireSimplement(t: Table, site: Site): LectureSimplifiee {
+  const c = conditions(t)
+  const indices: string[] = []
+  const carbone: string[] = []
+
+  // Daughter products.
+  const pce = molaire(t.pce, 'pce')
+  const tce = molaire(t.tce, 'tce')
+  const dce = molaire(t.cisdce, 'cisdce') + molaire(t.transdce, 'transdce') + molaire(t.dce11, 'dce11')
+  const cv = molaire(t.cv, 'cv')
+  const eth = molaire(t.ethene, 'ethene') + molaire(t.ethane, 'ethane')
+  const total = pce + tce + dce + cv + eth
+  const pceSurSite = site.quantifies.has('pce')
+  const filles = (pceSurSite ? tce : 0) + dce + cv + eth
+  if (total > 0 && filles > 0) indices.push(`Produits de dégradation : ${fr((filles / total) * 100, 0)} % (molaire) des chloroéthènes${pceSurSite ? '' : ' hors TCE (pas de PCE sur le site, TCE réputé rejeté)'}`)
+  const cis = quantifie(t.cisdce) ? t.cisdce.valeur : 0
+  const dceMasse = cis + (quantifie(t.transdce) ? t.transdce.valeur : 0) + (quantifie(t.dce11) ? t.dce11.valeur : 0)
+  if (dceMasse > 0) {
+    const part = cis / dceMasse
+    indices.push(
+      part > 0.8
+        ? `cis-DCE = ${fr(part * 100, 0)} % du DCE : signature d’une déchloration biologique (USEPA 1998)`
+        : `cis-DCE = ${fr(part * 100, 0)} % du DCE seulement : DCE en partie d’origine industrielle ou abiotique possible`,
+    )
+  }
+  if (cv > 0) indices.push('Chlorure de vinyle quantifié : déchloration poussée jusqu’au CV (composé le plus toxique de la chaîne)')
+  if (eth > 0) indices.push('Éthène / éthane quantifiés : déchloration complète')
+  if (quantifie(t.dca11) || quantifie(t.dca12) || quantifie(t.ca)) indices.push('Chloroéthanes peu chlorés (DCA, chloroéthane) quantifiés : déchloration des chloroéthanes possible')
+  if (quantifie(t.cf) && site.quantifies.has('ct')) indices.push('Chloroforme avec du tétrachlorure de carbone sur le site : déchloration des chlorométhanes')
+
+  // Electron donors.
+  if (t.btex && superieurA(t.btex, 100)) carbone.push(`BTEX = ${fr(t.btex.valeur, 0)} µg/l (> 0,1 mg/l) : source de carbone qui entretient la déchloration (USEPA 1998)`)
+  else if (quantifie(t.btex)) carbone.push(`BTEX = ${fr(t.btex.valeur, 1)} µg/l : apport de carbone faible`)
+  if (quantifie(t.hc)) carbone.push(`Hydrocarbures totaux = ${fr(t.hc.valeur, 0)} µg/l : donneurs d’électrons potentiels (critère hors barème USEPA)`)
+  if (t.cot && superieurA(t.cot, 20)) carbone.push(`COT = ${fr(t.cot.valeur)} mg/l (> 20 mg/l) : source de carbone`)
+
+  // Conclusion.
+  const degrade = filles > 0
+  const sansCOHV = total === 0
+  let conclusion: string
+  if (c.niveau === 'indetermine') conclusion = 'Conditions non déterminées : oxygène dissous et redox à mesurer en cellule de circulation.'
+  else if (sansCOHV)
+    conclusion = `Conditions ${LIBELLES_FAVORABILITE[c.niveau].toLowerCase()} pour la déchloration réductrice ; pas de chloroéthène quantifié (ou non analysé) pour juger d’une dégradation.`
+  else if (c.niveau === 'favorable' || c.niveau === 'possible')
+    conclusion = degrade
+      ? `Milieu ${c.niveau === 'favorable' ? 'réducteur' : 'anoxique'} et produits de dégradation présents : déchloration réductrice ${c.niveau === 'favorable' ? 'probable' : 'plausible'}, à confirmer par les accepteurs d’électrons et l’évolution des concentrations.`
+      : 'Milieu compatible avec la déchloration réductrice, mais aucun produit de dégradation : déchloration absente ou lente (donneurs d’électrons ou micro-organismes limitants), ou rejet récent.'
+  else
+    conclusion = degrade
+      ? 'Produits de dégradation présents alors que l’eau est oxygénée au droit de l’ouvrage : déchloration en amont ou dans des niveaux plus réducteurs puis transport, ou mélange d’eaux dans l’ouvrage crépiné. Le DCE et le CV peuvent s’y oxyder en aérobie.'
+      : 'Milieu oxygéné, sans produit de dégradation : déchloration réductrice peu probable ; seuls les composés peu chlorés (DCE, CV) peuvent se dégrader par oxydation aérobie.'
+
+  // Limits and useful analyses.
+  const limites: string[] = []
+  const manque = (id: ParamId) => !t[id]
+  if (manque('nitrate') && manque('fe2') && manque('sulfate') && manque('methane')) {
+    limites.push(
+      'Sans nitrates, fer, sulfates ni méthane, le processus redox n’est pas identifiable : le redox de terrain sépare les eaux oxiques des eaux anoxiques mais ne distingue pas dénitrification, réduction du fer, sulfato-réduction et méthanogenèse (USEPA 1998, § 2.3.2.9, d’après Chapelle et al., 1996).',
+    )
+    limites.push('Le score USEPA est partiel : il ne se compare pas aux classes du tableau 2.4, établies pour le jeu complet de paramètres.')
+  } else if (GEOCHIMIE.some(([id]) => manque(id))) {
+    limites.push(`Géochimie incomplète (${GEOCHIMIE.filter(([id]) => manque(id)).map(([, l]) => l).join(', ')}) : processus redox et score USEPA à lire comme des minorants.`)
+  }
+  if (manque('methane') && manque('ethene') && cv > 0) limites.push('Sans méthane ni éthène / éthane, le devenir du CV (accumulation en méthanogenèse ou oxydation) ne peut pas être précisé.')
+  if (manque('chlorure')) limites.push('Sans chlorures, pas de critère « chlorures > 2 × le fond » ni de normalisation des constantes de dégradation (dilution non corrigée).')
+  if (c.niveau !== 'indetermine') limites.push('Une mesure ponctuelle en fin de purge reflète l’eau du massif filtrant : un ouvrage crépiné sur plusieurs niveaux mélange des eaux de conditions différentes.')
+
+  const analysesUtiles: string[] = []
+  if (manque('fe2')) analysesUtiles.push('Fer ferreux (Fe²⁺) au kit colorimétrique sur le terrain, au moment du prélèvement')
+  if (manque('nitrate') || manque('sulfate') || manque('chlorure')) analysesUtiles.push('Anions au laboratoire : nitrates, sulfates, chlorures (un seul flacon, analyse peu coûteuse)')
+  if (manque('methane') || manque('ethene')) analysesUtiles.push('Gaz dissous : méthane, éthène, éthane (flacon spécifique sans bulle)')
+  if (manque('sulfure') && (c.niveau === 'favorable' || c.niveau === 'possible')) analysesUtiles.push('Sulfures au kit de terrain (milieu anoxique : sulfato-réduction possible)')
+  if (manque('cot')) analysesUtiles.push('COT / COD (source de carbone)')
+
+  return { conditions: c.niveau, motifConditions: c.motif, indices, carbone, conclusion, limites, analysesUtiles }
+}
