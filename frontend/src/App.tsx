@@ -5,6 +5,7 @@ import ResultatsLabo from './pages/ResultatsLabo'
 import ConformiteRejets from './pages/ConformiteRejets'
 import VerificationLivrables from './pages/VerificationLivrables'
 import SiteSetting from './pages/SiteSetting'
+import InterpretationPfas from './pages/InterpretationPfas'
 import ConditionsNappe from './pages/ConditionsNappe'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/resultats-labo" element={<ResultatsLabo />} />
         <Route path="/conformite-rejets" element={<ConformiteRejets />} />
         <Route path="/verification-livrables" element={<VerificationLivrables />} />
+        <Route path="/interpretation-pfas" element={<InterpretationPfas />} />
         <Route path="/conditions-nappe" element={<ConditionsNappe />} />
         <Route path="/declaration-iota" element={<Navigate to="/verification-livrables" replace />} />
         <Route path="/conversion" element={<Navigate to="/resultats-labo" replace />} />

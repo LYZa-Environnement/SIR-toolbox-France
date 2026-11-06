@@ -47,6 +47,26 @@ Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), sans serveur applicatif.
   lors d'au moins deux campagnes, et « Statistiques campagnes » sur
   l'ensemble des données (distribution, par campagne, par régime, par
   ouvrage, corrélations de rang) dans l'export.
+- **Interprétation PFAS** (`frontend/src/pages/InterpretationPfas.tsx`) —
+  lecture des résultats PFAS en eaux souterraines ou en sols, depuis le
+  fichier du laboratoire (plusieurs fichiers réunis, par exemple le TFA
+  rendu à part) : les 20 PFAS de la directive (UE) 2020/2184, le TFA et le
+  6:2 FTS reconnus par n° CAS, abréviation ou nom (`src/lib/pfas/lecture.ts`),
+  isomères linéaires et ramifiés, AOF / EOF. Somme des 20 du laboratoire
+  comparée aux seuils (0,1 µg/l eau du robinet, 2 µg/l eaux brutes) et
+  située sur des échelles logarithmiques avec les valeurs publiées
+  (`src/lib/pfas/reperes.ts` : ANSES, RIVM, Dauchy et al. 2019, Brusseau et
+  al. 2020…), comparaison de tous les échantillons (profils, indicateurs et pistes côte à
+  côte, profil de l'ensemble), profil par longueur de chaîne, indicateurs de
+  composition lus d'après leur valeur et
+  bilan du fluor (`src/lib/pfas/indicateurs.ts`, fractions de fluor
+  calculées d'après les formules, `src/lib/pfas/substances.ts`), pistes de
+  sources critère par critère (`src/lib/pfas/sources.ts`), contrôles (somme
+  du laboratoire, blancs). Chaque valeur et chaque lecture renvoient à la
+  bibliographie de `src/lib/pfas/references.ts` (39 références vérifiées,
+  sources secondaires signalées), avec une explication des deux procédés de
+  fabrication (électrochimique, télomérisation). Ouvrages classés par nom
+  (Pz1, Pz2, Pz10). Exemple fictif intégré.
 - **Conditions de la nappe** (`frontend/src/pages/ConditionsNappe.tsx`) —
   interprétation des paramètres physico-chimiques au regard du devenir des
   solvants chlorés (`src/lib/nappe/`). Lit le classeur des fiches de
