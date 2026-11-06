@@ -56,8 +56,12 @@ function controleSomme(e: EchantillonPfas): string | null {
   return ecart > 0.05 ? `somme du laboratoire ${nombre(e.somme.valeur)}, somme des valeurs quantifiées ${nombre(calcul)} (écart ${Math.round(ecart * 100)} %)` : null
 }
 
-export default function InterpretationPfas() {
-  const [fichiers, setFichiers] = useState<{ nom: string; lecture: Lecture }[]>([])
+/** `exemple`: open on the fictitious example (standalone page); `impression`:
+ *  offer the print button (not where printing is blocked). */
+export default function InterpretationPfas({ exemple: auDemarrage = false, impression = true }: { exemple?: boolean; impression?: boolean }) {
+  const [fichiers, setFichiers] = useState<{ nom: string; lecture: Lecture }[]>(() =>
+    auDemarrage ? [{ nom: 'Exemple fictif', lecture: lireGrille(grilleExemple(), 'tout') }] : [],
+  )
   const [matrice, setMatrice] = useState<Matrice>('eau')
   const [choisi, setChoisi] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -534,7 +538,7 @@ export default function InterpretationPfas() {
             français ; <Auteur id="brusseau2020" /> donne le cadre mondial.
           </p>
           <Bibliographie />
-          {pfas && (
+          {pfas && impression && (
             <p style={{ marginTop: '2rem' }}>
               <button type="button" className="btn btn--ghost" onClick={() => window.print()}>
                 Imprimer ou enregistrer en PDF
