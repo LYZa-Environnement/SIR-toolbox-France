@@ -21,6 +21,8 @@
  * tests alike.
  */
 
+import { jourIso } from '../format.ts'
+
 export type Cell = string | number | boolean | Date | null | undefined
 export type Couche = 'CM' | 'CC'
 /** `support`: sorbent tubes, masses to convert; `tout`: every row with a unit. */
@@ -85,7 +87,7 @@ const SANS_VALEUR = /^(-|-\/-|n\.?\s*[ad]\.?|na|nd|n\.?\s*m\.?|\/|—|–)$/i
 
 function texte(c: Cell): string {
   if (c === null || c === undefined) return ''
-  if (c instanceof Date) return c.toISOString().slice(0, 10)
+  if (c instanceof Date) return jourIso(c)
   return String(c).replace(/\s+/g, ' ').trim()
 }
 

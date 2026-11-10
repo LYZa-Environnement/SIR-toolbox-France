@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 
 interface Outil {
@@ -159,6 +160,17 @@ function Carte({ outil, numero }: { outil: Outil; numero: number }) {
   )
 }
 
+/**
+ * The site runs on a hash router: a plain "#contexte" link would be read as
+ * a route (and sent back to the home page). Scroll to the section instead,
+ * and move the focus to its heading for keyboard and screen reader users.
+ */
+function allerA(e: MouseEvent<HTMLAnchorElement>, id: string) {
+  e.preventDefault()
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  document.getElementById(`titre-${id}`)?.focus({ preventScroll: true })
+}
+
 export default function Accueil() {
   // One running number across groups, in reading order: each group starts after the previous ones.
   const debuts = CATEGORIES.map((_, i) => CATEGORIES.slice(0, i).reduce((n, c) => n + c.outils.length, 0))
@@ -175,7 +187,7 @@ export default function Accueil() {
 
         <nav className="categories" aria-label="Catégories d'outils">
           {CATEGORIES.map((c, i) => (
-            <a key={c.id} href={`#${c.id}`} className={`categories__lien categorie--${c.id}`}>
+            <a key={c.id} href={`#${c.id}`} onClick={(e) => allerA(e, c.id)} className={`categories__lien categorie--${c.id}`}>
               <span className="categories__etape">
                 {i + 1}. {c.etape}
               </span>
@@ -193,7 +205,7 @@ export default function Accueil() {
               <span className="categorie__etape">
                 {i + 1}. {c.etape}
               </span>
-              <h2 id={`titre-${c.id}`} className="categorie__titre">
+              <h2 id={`titre-${c.id}`} className="categorie__titre" tabIndex={-1}>
                 {c.titre}
               </h2>
               <p className="categorie__texte">{c.description}</p>

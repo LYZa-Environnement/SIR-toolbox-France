@@ -4,6 +4,7 @@ import { lireDocument, type Document } from '../lib/livrables/extraction'
 import { categories, PAR_ID } from '../lib/livrables/referentiels'
 import type { Point, Source } from '../lib/livrables/controles'
 import ZoneDepot from '../components/ZoneDepot'
+import { jourIso } from '../lib/format'
 
 /** A source as a link, or as plain text when it has no public page (the standard). */
 function LienSource({ s }: { s: Source }) {
@@ -125,7 +126,7 @@ export default function VerificationLivrables() {
     setExport(true)
     try {
       const { telechargerVerification } = await import('../lib/livrables/export')
-      const date = new Date().toISOString().slice(0, 10)
+      const date = jourIso()
       const nom = livrables.length > 1 ? `${livrables.length} documents` : livrable.nom.replace(/\.[^.]+$/, '')
       await telechargerVerification({ referentiel: { ...referentiel, limites }, documents: livrables, resultats, statut: effectif }, `Vérification ${referentiel.titre} - ${nom} - ${date}.xlsx`)
     } finally {

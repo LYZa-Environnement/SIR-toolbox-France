@@ -19,6 +19,7 @@
  */
 
 import type { Cell } from '../resultats/parse.ts'
+import { jourIso } from '../format.ts'
 
 export type ParamTerrain = 'ph' | 'orp' | 'od' | 'ce' | 't'
 
@@ -102,7 +103,7 @@ export interface FicheTerrain {
 
 function texte(c: Cell): string {
   if (c === null || c === undefined) return ''
-  if (c instanceof Date) return c.toISOString().slice(0, 10)
+  if (c instanceof Date) return jourIso(c)
   return String(c).replace(/\s+/g, ' ').trim()
 }
 
@@ -118,11 +119,8 @@ function nombre(c: Cell): number | null {
 
 /** Excel serial date (1900 system) or Date → ISO date. */
 function dateIso(c: Cell): string {
-  if (c instanceof Date) {
-    // SheetJS builds dates at local midnight; keep the calendar day.
-    const d = new Date(c.getTime() - c.getTimezoneOffset() * 60000)
-    return d.toISOString().slice(0, 10)
-  }
+  // SheetJS builds dates at local midnight; keep the calendar day.
+  if (c instanceof Date) return jourIso(c)
   if (typeof c === 'number' && c > 20000 && c < 80000) {
     return new Date(Date.UTC(1899, 11, 30) + Math.round(c) * 86400000).toISOString().slice(0, 10)
   }

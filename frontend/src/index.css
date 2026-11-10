@@ -1768,3 +1768,9 @@ a.card:hover {
   height: 100%;
   background: #2a78d6;
 }
+
+/* Headings reached from the category links: focused for screen readers,
+   without a ring after a mouse click. */
+.categorie__titre:focus:not(:focus-visible) {
+  outline: none;
+}

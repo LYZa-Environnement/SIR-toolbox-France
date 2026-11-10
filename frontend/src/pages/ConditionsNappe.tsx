@@ -27,7 +27,7 @@ import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../lib/nappe/
 import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../lib/nappe/recap'
 import { lireFeuilles } from '../lib/fichiers'
 import ZoneDepot from '../components/ZoneDepot'
-import { nombreFrOuTiret } from '../lib/format'
+import { jourIso, nombreFrOuTiret } from '../lib/format'
 
 const BADGE_CLASSE: Record<Classe, string> = {
   forte: 'badge badge--faible',
@@ -159,7 +159,7 @@ export default function ConditionsNappe() {
     setExport(true)
     try {
       const { telechargerRapport } = await import('../lib/nappe/export')
-      const date = new Date().toISOString().slice(0, 10)
+      const date = jourIso()
       await telechargerRapport(
         {
           titre: `Conditions de la nappe${projet ? ` — ${projet}` : ''}`,
@@ -198,7 +198,7 @@ export default function ConditionsNappe() {
     setExportRecap(true)
     try {
       const { telechargerRecap } = await import('../lib/nappe/export')
-      const date = new Date().toISOString().slice(0, 10)
+      const date = jourIso()
       await telechargerRecap(
         `Récapitulatif des paramètres de terrain${projet ? ` — ${projet}` : ''}`,
         { recap, synthese: syntheseRecap },

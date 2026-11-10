@@ -31,7 +31,7 @@ import { LIBELLES_CLASSE, PAR_ID, SUBSTANCES, type ClasseCov } from '../lib/reje
 import { conversionAir, type Milieu } from '../lib/rejets/unites'
 import { lireFeuilles } from '../lib/fichiers'
 import ZoneDepot from '../components/ZoneDepot'
-import { nombreFr } from '../lib/format'
+import { jourIso, nombreFr } from '../lib/format'
 
 const MILIEUX: { id: Milieu; titre: string; detail: string }[] = [
   {
@@ -346,7 +346,7 @@ export default function ConformiteRejets() {
     setExport(true)
     try {
       const { telechargerRapport } = await import('../lib/rejets/export')
-      const date = new Date().toISOString().slice(0, 10)
+      const date = jourIso()
       await telechargerRapport(
         {
           titre: `Conformité des rejets ${milieu === 'air' ? 'atmosphériques' : 'aqueux'}${installation ? ` — ${installation}` : ''}`,
