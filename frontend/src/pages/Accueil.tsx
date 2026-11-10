@@ -127,6 +127,10 @@ const CATEGORIES: Categorie[] = [
   },
 ]
 
+/** Small counts written out at the start of a sentence, as in French typography. */
+const EN_LETTRES = ['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six', 'Sept', 'Huit', 'Neuf', 'Dix', 'Onze', 'Douze', 'Treize', 'Quatorze', 'Quinze', 'Seize']
+const enLettres = (n: number) => EN_LETTRES[n] ?? String(n)
+
 function Carte({ outil, numero }: { outil: Outil; numero: number }) {
   const contenu = (
     <>
@@ -165,7 +169,7 @@ export default function Accueil() {
         <p className="eyebrow">ERM — boîte à outils</p>
         <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
         <p className="lede">
-          {total === 9 ? 'Neuf' : total} outils pour mener une étude de site, de la lecture des données publiques au terrain, à
+          {enLettres(total)} outils pour mener une étude de site, de la lecture des données publiques au terrain, à
           l'interprétation des résultats d'analyses et au contrôle de conformité.
         </p>
 
