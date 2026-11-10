@@ -1,0 +1,46 @@
+name: Vérification
+
+# Typage, lint, tests et build sur chaque pull request, avant la fusion
+# dans main (qui publie le site).
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installation
+        run: npm ci
+
+      - name: Typage
+        run: npx tsc -b
+
+      - name: Lint
+        run: npx oxlint src
+
+      - name: Tests
+        run: npm test
+
+      # Sans la collecte des données de baignade (npm run donnees), qui
+      # dépend de data.gouv.fr : le build vérifie seulement le code.
+      - name: Build
+        run: npx vite build
