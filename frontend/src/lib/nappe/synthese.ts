@@ -26,10 +26,11 @@
 import type { Jeu } from './donnees.ts'
 import type { Evaluation } from './evaluation.ts'
 import type { ParamId, Valeur } from './parametres.ts'
+import { nombreFr } from '../format.ts'
 
 type Table = Partial<Record<ParamId, Valeur>>
 
-const fr = (x: number, d = 2) => Number(x.toPrecision(3)).toLocaleString('fr-FR', { maximumFractionDigits: d })
+const fr = nombreFr
 const signe = (x: number) => `${x > 0 ? '+' : ''}${fr(x, 0)}`
 
 export function qualifierPH(ph: number): string {

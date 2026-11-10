@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { fusionnerLectures } from '../lib/resultats/fusion'
-import { LectureImpossible, lireClasseur, lireGrille, type Cell, type Lecture } from '../lib/resultats/parse'
+import { LectureImpossible, lireClasseur, lireGrille, type Lecture } from '../lib/resultats/parse'
 import { LIBELLES_TYPE } from '../lib/resultats/qualite'
 import { grilleExemple } from '../lib/pfas/exemple'
 import { composition, indicateurs } from '../lib/pfas/indicateurs'
@@ -15,14 +15,11 @@ import { Bibliographie, CarteSubstances, Indicateurs, Pistes } from '../componen
 import { Comparaison } from '../components/pfas/Comparaison'
 import { Procedes } from '../components/pfas/Procedes'
 import { grandeur, nombre, valeurTexte } from '../components/pfas/format'
+import { lireFeuilles } from '../lib/fichiers'
+import ZoneDepot, { FORMATS_TABLEUR } from '../components/ZoneDepot'
 
 async function lireFichier(f: File): Promise<Lecture> {
-  const XLSX = await import('xlsx')
-  const classeur = XLSX.read(await f.arrayBuffer(), { type: 'array' })
-  const feuilles = classeur.SheetNames.map((nom) => ({
-    nom,
-    grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
-  }))
+  const feuilles = await lireFeuilles(f)
   return lireClasseur(feuilles, 'tout')
 }
 
@@ -68,8 +65,6 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
   const [choisi, setChoisi] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
-  const [survol, setSurvol] = useState(false)
-  const input = useRef<HTMLInputElement>(null)
   const ajout = useRef<HTMLInputElement>(null)
 
   const fusion = useMemo(() => {
@@ -123,12 +118,6 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
   function exemple() {
     setErreur(null)
     installer([{ nom: 'Exemple fictif', lecture: lireGrille(grilleExemple(), 'tout') }])
-  }
-
-  function deposer(e: DragEvent) {
-    e.preventDefault()
-    setSurvol(false)
-    void charger(e.dataTransfer.files, false)
   }
 
   const blancsPollues = echantillons.filter(
@@ -217,56 +206,45 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
           <h2 className="etape">
             <span>1</span> Fichier du laboratoire
           </h2>
-          <div
-            className={`depot${survol ? ' depot--survol' : ''}`}
-            onDragOver={(e) => {
-              e.preventDefault()
-              setSurvol(true)
-            }}
-            onDragLeave={() => setSurvol(false)}
-            onDrop={deposer}
-          >
-            <input
-              ref={input}
-              type="file"
-              multiple
-              accept=".xlsx,.xlsm,.xls,.csv"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                void charger(e.target.files, false)
-                e.target.value = ''
-              }}
-            />
-            <input
-              ref={ajout}
-              type="file"
-              multiple
-              accept=".xlsx,.xlsm,.xls,.csv"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                void charger(e.target.files, true)
-                e.target.value = ''
-              }}
-            />
-            <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture du fichier…' : 'Déposez ici le ou les fichiers du laboratoire'}</p>
-            <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-              Excel ou CSV, eaux ou sols. Le TFA rendu dans un rapport à part se joint au premier (échantillons rapprochés par leur nom).
-              Les fichiers sont lus dans votre navigateur et ne sont envoyés nulle part.
-            </p>
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
-                Choisir un fichier
-              </button>
-              {fichiers.length > 0 && !estExemple && (
-                <button type="button" className="btn btn--ghost" onClick={() => ajout.current?.click()} disabled={chargement}>
-                  Ajouter un fichier
+          <ZoneDepot
+            titre="Déposez ici le ou les fichiers du laboratoire"
+            aide={
+              <>
+                Excel ou CSV, eaux ou sols. Le TFA rendu dans un rapport à part se joint au premier (échantillons rapprochés par leur nom).
+                Les fichiers sont lus dans votre navigateur et ne sont envoyés nulle part.
+              </>
+            }
+            chargement={chargement}
+            multiple
+            onFichiers={(fs) => void charger(fs, false)}
+            actions={(choisir) => (
+              <div className="depot__actions">
+                <button type="button" className="btn" onClick={choisir} disabled={chargement}>
+                  Choisir un fichier
                 </button>
-              )}
-              <button type="button" className="btn btn--ghost" onClick={exemple} disabled={chargement}>
-                Voir un exemple fictif
-              </button>
-            </div>
-          </div>
+                {fichiers.length > 0 && !estExemple && (
+                  <button type="button" className="btn btn--ghost" onClick={() => ajout.current?.click()} disabled={chargement}>
+                    Ajouter un fichier
+                  </button>
+                )}
+                <button type="button" className="btn btn--ghost" onClick={exemple} disabled={chargement}>
+                  Voir un exemple fictif
+                </button>
+              </div>
+            )}
+          />
+          <input
+            ref={ajout}
+            type="file"
+            multiple
+            accept={FORMATS_TABLEUR}
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const fs = [...(e.target.files ?? [])]
+              e.target.value = ''
+              void charger(fs, true)
+            }}
+          />
 
           {erreur && (
             <p role="alert" className="alerte">

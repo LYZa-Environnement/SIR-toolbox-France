@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from 'react'
+import { useMemo, useState, type ClipboardEvent } from 'react'
 import { debitMoyen, lireNombre, volumeLitres } from '../lib/resultats/calc'
-import { LectureImpossible, lireMesure, type Cell, type Lecture } from '../lib/resultats/parse'
+import { LectureImpossible, lireMesure, type Lecture } from '../lib/resultats/parse'
 import {
   bilan,
   bilanParEchantillon,
@@ -29,6 +29,9 @@ import {
 } from '../lib/rejets/grille'
 import { LIBELLES_CLASSE, PAR_ID, SUBSTANCES, type ClasseCov } from '../lib/rejets/substances'
 import { conversionAir, type Milieu } from '../lib/rejets/unites'
+import { lireFeuilles } from '../lib/fichiers'
+import ZoneDepot from '../components/ZoneDepot'
+import { nombreFr } from '../lib/format'
 
 const MILIEUX: { id: Milieu; titre: string; detail: string }[] = [
   {
@@ -60,7 +63,7 @@ const CLASSE_STATUT: Record<Statut, string> = {
 
 const ORDRE: Statut[] = ['depassement', 'indetermine', 'ap', 'conforme', 'non-soumis', 'sans-donnee']
 
-const fr = (x: number) => Number(x.toPrecision(3)).toLocaleString('fr-FR', { maximumFractionDigits: 6 })
+const fr = (x: number) => nombreFr(x, 6)
 function borne(b: Borne | null): string {
   if (!b) return '-'
   if (b.bas === b.haut || fr(b.bas) === fr(b.haut)) return fr(b.bas)
@@ -75,12 +78,7 @@ type Variante = 'concentration' | 'echantillon'
  *  holds both, both are kept, the concentrations first — as in the
  *  formatting tool —, and the user picks the basis of the evaluation. */
 async function lireFichier(f: File, milieu: Milieu): Promise<{ lu: Lu; variantes?: Record<Variante, Lu> }> {
-  const XLSX = await import('xlsx')
-  const classeur = XLSX.read(await f.arrayBuffer(), { type: 'array' })
-  const feuilles = classeur.SheetNames.map((nom) => ({
-    nom,
-    grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
-  }))
+  const feuilles = await lireFeuilles(f)
   if (milieu === 'eau') return { lu: lireOnglets(feuilles, 'tout', 'eau') }
   const essayer = (mode: 'concentration' | 'support' | 'tout') => {
     try {
@@ -145,7 +143,6 @@ export default function ConformiteRejets() {
   const [notesLecture, setNotesLecture] = useState<string[]>([])
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
-  const [survol, setSurvol] = useState(false)
   const [reconnuesSeules, setReconnuesSeules] = useState(false)
   const [export_, setExport] = useState(false)
   // Air, results per sample
@@ -154,7 +151,6 @@ export default function ConformiteRejets() {
   const [conditions, setConditions] = useState<Conditions>({ temperature: '', pression: '' })
   const [selection, setSelection] = useState<Record<number, boolean>>({})
   const [aAppliquer, setAAppliquer] = useState<Record<Champ, string>>(SAISIE_VIDE)
-  const input = useRef<HTMLInputElement>(null)
 
   function choisir(m: Milieu) {
     if (m === milieu) return
@@ -209,12 +205,6 @@ export default function ConformiteRejets() {
     if (!variantes || v === variante) return
     setVariante(v)
     installer(variantes[v], fichier, colonnes)
-  }
-
-  function deposer(e: DragEvent) {
-    e.preventDefault()
-    setSurvol(false)
-    void charger(e.dataTransfer.files[0])
   }
 
   function saisieManuelle() {
@@ -555,42 +545,30 @@ export default function ConformiteRejets() {
               <h2 className="etape">
                 <span>3</span> Résultats d'analyses en sortie de traitement
               </h2>
-              <div
-                className={`depot${survol ? ' depot--survol' : ''}`}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setSurvol(true)
-                }}
-                onDragLeave={() => setSurvol(false)}
-                onDrop={deposer}
-              >
-                <input
-                  ref={input}
-                  type="file"
-                  accept=".xlsx,.xlsm,.xls,.csv"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    void charger(e.target.files?.[0])
-                    e.target.value = ''
-                  }}
-                />
-                <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture du fichier…' : 'Déposez ici le fichier du laboratoire'}</p>
-                <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  Une colonne par mesure (ou par point de prélèvement). Excel ou CSV, disposition reconnue automatiquement
-                  {milieu === 'air'
-                    ? ' ; résultats en concentration (mg/m³, µg/m³, ppm) repris tels quels, ou résultats par échantillon (µg/support, µg/tube) convertis avec la durée et le débit de prélèvement'
-                    : ' ; µg/l, mg/l, mg O2/l…'}
-                  .
-                </p>
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
-                    Choisir un fichier
-                  </button>
-                  <button type="button" className="btn btn--ghost" onClick={saisieManuelle}>
-                    Saisir les résultats à la main
-                  </button>
-                </div>
-              </div>
+              <ZoneDepot
+                titre="Déposez ici le fichier du laboratoire"
+                aide={
+                  <>
+                    Une colonne par mesure (ou par point de prélèvement). Excel ou CSV, disposition reconnue automatiquement
+                    {milieu === 'air'
+                      ? ' ; résultats en concentration (mg/m³, µg/m³, ppm) repris tels quels, ou résultats par échantillon (µg/support, µg/tube) convertis avec la durée et le débit de prélèvement'
+                      : ' ; µg/l, mg/l, mg O2/l…'}
+                    .
+                  </>
+                }
+                chargement={chargement}
+                onFichiers={(fs) => void charger(fs[0])}
+                actions={(choisir) => (
+                  <div className="depot__actions" style={{ gap: '0.75rem', justifyContent: 'center' }}>
+                    <button type="button" className="btn" onClick={choisir} disabled={chargement}>
+                      Choisir un fichier
+                    </button>
+                    <button type="button" className="btn btn--ghost" onClick={saisieManuelle}>
+                      Saisir les résultats à la main
+                    </button>
+                  </div>
+                )}
+              />
               {erreur && (
                 <p role="alert" className="alerte">
                   {erreur}

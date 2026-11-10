@@ -12,6 +12,7 @@
  */
 
 import type { LigneTableau } from '../types/site'
+import { telechargerClasseurExcel } from './fichiers.ts'
 
 const COLONNES: [string, number][] = [
   ['Référence', 16],
@@ -60,16 +61,5 @@ export async function telechargerTableau(lignes: LigneTableau[], titre: string, 
       row.getCell(6).font = lien
     }
   }
-  const buffer = await wb.xlsx.writeBuffer()
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = nom
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  // Revoked on the next tick, not immediately: Safari cancels a download whose
-  // object URL disappears in the same turn of the event loop.
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await telechargerClasseurExcel(wb, nom)
 }

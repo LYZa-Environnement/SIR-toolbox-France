@@ -11,6 +11,7 @@ import { bilanParEchantillon, LIBELLES_STATUT, type Borne, type Controle, type D
 import { debitMoyen, volumeLitres } from '../resultats/calc.ts'
 import { facteurNormal, prelevement, volumeColonne, type Colonne, type Conditions, type Ligne } from './grille.ts'
 import { PAR_ID } from './substances.ts'
+import { telechargerClasseurExcel } from '../fichiers.ts'
 
 export interface Rapport {
   titre: string
@@ -326,14 +327,5 @@ export async function telechargerRapport(rp: Rapport, nomFichier: string) {
   feuilleDetail(wb, rp)
   feuilleDonnees(wb, rp)
   feuilleReferences(wb)
-  const buffer = await wb.xlsx.writeBuffer()
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = nomFichier
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await telechargerClasseurExcel(wb, nomFichier)
 }

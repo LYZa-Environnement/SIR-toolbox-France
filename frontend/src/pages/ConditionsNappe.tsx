@@ -1,7 +1,7 @@
-import { Fragment, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { lireNombre } from '../lib/resultats/calc'
 import { fusionnerLectures } from '../lib/resultats/fusion'
-import { lireClasseur, type Cell, type Lecture } from '../lib/resultats/parse'
+import { lireClasseur, type Lecture } from '../lib/resultats/parse'
 import TransportBiochlor from '../components/nappe/TransportBiochlor'
 import { associationAuto, construireJeu, decalageFiches } from '../lib/nappe/donnees'
 import {
@@ -25,17 +25,9 @@ import { SOURCES } from '../lib/nappe/sources'
 import { LIBELLES_ETAT, synthetiser, type Etat, type Synthese } from '../lib/nappe/synthese'
 import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../lib/nappe/transport'
 import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../lib/nappe/recap'
-
-type Feuille = { nom: string; grille: Cell[][] }
-
-async function lireOnglets(f: File): Promise<Feuille[]> {
-  const XLSX = await import('xlsx')
-  const classeur = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true })
-  return classeur.SheetNames.map((nom) => ({
-    nom,
-    grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
-  }))
-}
+import { lireFeuilles } from '../lib/fichiers'
+import ZoneDepot from '../components/ZoneDepot'
+import { nombreFrOuTiret } from '../lib/format'
 
 const BADGE_CLASSE: Record<Classe, string> = {
   forte: 'badge badge--faible',
@@ -62,46 +54,7 @@ const BADGE_ETAT: Record<Etat, string> = {
 const ORDRE_CONDITIONS: Favorabilite[] = ['favorable', 'possible', 'limite', 'defavorable', 'indetermine']
 const COULEUR_NIVEAU: Record<Niveau, string> = { alerte: 'var(--level-elevee)', vigilance: 'var(--level-moderee)', info: 'var(--color-muted)' }
 
-const fr = (x: number | null | undefined, d = 2) =>
-  x === null || x === undefined || !Number.isFinite(x) ? '-' : Number(x.toPrecision(3)).toLocaleString('fr-FR', { maximumFractionDigits: d })
-
-function Depot({ titre, aide, multiple, chargement, onFichiers }: { titre: string; aide: ReactNode; multiple?: boolean; chargement: boolean; onFichiers: (f: File[]) => void }) {
-  const [survol, setSurvol] = useState(false)
-  const input = useRef<HTMLInputElement>(null)
-  const deposer = (e: DragEvent) => {
-    e.preventDefault()
-    setSurvol(false)
-    onFichiers([...e.dataTransfer.files])
-  }
-  return (
-    <div
-      className={`depot${survol ? ' depot--survol' : ''}`}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setSurvol(true)
-      }}
-      onDragLeave={() => setSurvol(false)}
-      onDrop={deposer}
-    >
-      <input
-        ref={input}
-        type="file"
-        multiple={multiple}
-        accept=".xlsx,.xlsm,.xls,.csv"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          onFichiers([...(e.target.files ?? [])])
-          e.target.value = ''
-        }}
-      />
-      <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture…' : titre}</p>
-      <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>{aide}</p>
-      <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
-        Choisir {multiple ? 'des fichiers' : 'un fichier'}
-      </button>
-    </div>
-  )
-}
+const fr = nombreFrOuTiret
 
 export default function ConditionsNappe() {
   const [fiches, setFiches] = useState<FicheTerrain[]>([])
@@ -130,7 +83,7 @@ export default function ConditionsNappe() {
     setChargement('fiches')
     setErreur(null)
     try {
-      const lus = await Promise.all(fs.map(async (f) => ({ f, ...lireFiches(await lireOnglets(f)) })))
+      const lus = await Promise.all(fs.map(async (f) => ({ f, ...lireFiches(await lireFeuilles(f, { cellDates: true })) })))
       const toutes = lus.flatMap((l) => l.fiches)
       if (!toutes.length) throw new Error("Aucune fiche de prélèvement reconnue : le tableau de purge (colonnes « pH », « Redox »…) n'a pas été trouvé.")
       setFiches((avant) => [...avant.filter((a) => !toutes.some((t) => cleOuvrage(t.ouvrage) === cleOuvrage(a.ouvrage))), ...toutes])
@@ -150,7 +103,7 @@ export default function ConditionsNappe() {
     setChargement('labo')
     setErreur(null)
     try {
-      const lus = await Promise.all(fs.map(async (f) => ({ lecture: lireClasseur(await lireOnglets(f), 'tout'), nom: f.name })))
+      const lus = await Promise.all(fs.map(async (f) => ({ lecture: lireClasseur(await lireFeuilles(f, { cellDates: true }), 'tout'), nom: f.name })))
       setLabos((avant) => [...avant, ...lus])
     } catch (e) {
       setErreur(`Fichier du laboratoire non lu : ${(e as Error).message}`)
@@ -286,7 +239,8 @@ export default function ConditionsNappe() {
           <h2 className="etape">
             <span>1</span> Fiches de prélèvement
           </h2>
-          <Depot
+          <ZoneDepot
+            libelleChargement="Lecture…"
             titre="Déposez ici le classeur des fiches de prélèvement"
             aide="Une fiche par onglet (modèle ERM ou équivalent) : tableau de purge avec pH, redox mesuré et corrigé, oxygène dissous, conductivité, température. Plusieurs classeurs possibles."
             multiple
@@ -323,7 +277,8 @@ export default function ConditionsNappe() {
           <h2 className="etape">
             <span>2</span> Résultats du laboratoire (facultatif)
           </h2>
-          <Depot
+          <ZoneDepot
+            libelleChargement="Lecture…"
             titre="Déposez ici le ou les fichiers du laboratoire"
             aide="ALS / Wessling, Eurofins, SGS : disposition reconnue automatiquement. Utiles : nitrates, fer (II ou dissous), manganèse, sulfates, sulfures, méthane, éthène/éthane, COT, chlorures, alcalinité, COHV, BTEX."
             multiple

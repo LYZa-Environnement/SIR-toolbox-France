@@ -17,6 +17,7 @@ import { formatExtreme, formatMoyenne, type Recap } from './recap.ts'
 import { SOURCES } from './sources.ts'
 import { LIBELLES_ETAT, type Etat, type Synthese } from './synthese.ts'
 import type { Transport } from './transport.ts'
+import { telechargerClasseurExcel } from '../fichiers.ts'
 
 export interface Rapport {
   titre: string
@@ -525,7 +526,7 @@ async function classeur(): Promise<Workbook> {
 export async function telechargerRecap(titre: string, rt: RecapTerrain, nomFichier: string) {
   const wb = await classeur()
   feuilleRecap(wb, titre, rt)
-  await telecharger(wb, nomFichier)
+  await telechargerClasseurExcel(wb, nomFichier)
 }
 
 export async function telechargerRapport(rp: Rapport, nomFichier: string) {
@@ -538,18 +539,5 @@ export async function telechargerRapport(rp: Rapport, nomFichier: string) {
   feuilleDonnees(wb, rp)
   feuilleTransport(wb, rp)
   feuilleMethode(wb)
-  await telecharger(wb, nomFichier)
-}
-
-async function telecharger(wb: Workbook, nomFichier: string) {
-  const buffer = await wb.xlsx.writeBuffer()
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = nomFichier
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await telechargerClasseurExcel(wb, nomFichier)
 }

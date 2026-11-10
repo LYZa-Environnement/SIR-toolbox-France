@@ -381,6 +381,23 @@ a.card:hover {
   background: var(--color-accent-soft);
 }
 
+.depot__titre {
+  margin: 0;
+  font-weight: 600;
+}
+
+.depot__aide {
+  margin: 0.25rem 0 0.9rem;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+}
+
+.depot__actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
 .alerte {
   max-width: 40rem;
   margin-top: 1rem;

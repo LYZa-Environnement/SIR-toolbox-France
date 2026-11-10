@@ -12,6 +12,7 @@
 
 import { acronyme } from './acronymes.ts'
 import { preparerParts, type Signature } from './signatures.ts'
+import { nombreFr } from '../format.ts'
 
 export const LARGEUR = 380
 export const HAUTEUR = 230
@@ -28,7 +29,7 @@ export function rayonPour(total: number, totalMax: number): number {
 
 const tropPetit = (total: number, totalMax: number) => RAYON_MAX * Math.sqrt(Math.max(0, total) / totalMax) < RAYON_MIN
 
-const fr = (x: number) => Number(x.toPrecision(3)).toLocaleString('fr-FR')
+const fr = (x: number) => nombreFr(x, 3)
 
 function tracer(ctx: CanvasRenderingContext2D, signature: Signature, ordre: string[], cx: number, cy: number, r: number) {
   let angle = -Math.PI / 2

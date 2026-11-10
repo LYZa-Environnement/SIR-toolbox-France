@@ -25,6 +25,7 @@
 
 import type { Ouvrage } from './donnees.ts'
 import { PAR_ID, PARAMS, type ParamId, type Valeur } from './parametres.ts'
+import { nombreFr } from '../format.ts'
 
 export type Statut = 'auto' | 'filiation' | 'rejete'
 export type Compose = 'tce' | 'dce' | 'cv' | 'dca' | 'ca' | 'cf' | 'dcm'
@@ -167,7 +168,7 @@ export interface LectureSimplifiee {
 
 // ---- Helpers ---------------------------------------------------------------------------
 
-const fr = (x: number, d = 2) => Number(x.toPrecision(3)).toLocaleString('fr-FR', { maximumFractionDigits: d })
+const fr = nombreFr
 const ecrireValeur = (v: Valeur | undefined, unite?: string) => (v ? `${v.inferieur ? '<' : ''}${fr(v.valeur, 3)}${unite ? ` ${unite}` : ''}` : 'non analysé')
 
 /** true / false, or null when a value below the LQ cannot tell (LQ above the threshold). */

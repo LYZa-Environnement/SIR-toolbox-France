@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ClipboardEvent, type ReactNode } from 'react'
 import { convertir, debitMoyen, formatConcentration, lireNombre, volumeLitres, type Prelevement, type UniteSortie } from '../lib/resultats/calc'
 import { AnalyseApercu, ControleQualite, ExempleConversion } from '../components/ControleQualite'
 import { telechargerClasseur } from '../lib/resultats/export'
@@ -20,7 +20,9 @@ import {
   type OptionsGuides,
   type Repere,
 } from '../lib/resultats/guides'
-import { LectureImpossible, lireClasseur, type Cell, type Couche, type Lecture, type Parametre } from '../lib/resultats/parse'
+import { LectureImpossible, lireClasseur, type Couche, type Lecture, type Parametre } from '../lib/resultats/parse'
+import { lireFeuilles } from '../lib/fichiers'
+import ZoneDepot from '../components/ZoneDepot'
 
 type Champ = 'duree' | 'debitDebut' | 'debitFin'
 type Saisie = Record<Champ, string>
@@ -75,12 +77,7 @@ function dansLa(libelle: string): string {
 /** A lab file as read, before the processing done on the whole campaign
  *  (computed sums, ordering) — so that two files can be merged first. */
 async function lireBrut(fichier: File, matrice: Matrice): Promise<Lecture> {
-  const XLSX = await import('xlsx')
-  const classeur = XLSX.read(await fichier.arrayBuffer(), { type: 'array' })
-  const feuilles = classeur.SheetNames.map((nom) => ({
-    nom,
-    grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
-  }))
+  const feuilles = await lireFeuilles(fichier)
   if (matrice !== 'air') return lireClasseur(feuilles, 'tout')
   const essayer = (mode: 'support' | 'concentration') => {
     try {
@@ -127,7 +124,6 @@ export default function ResultatsLabo() {
   const inputAjout = useRef<HTMLInputElement>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
-  const [survol, setSurvol] = useState(false)
   const [saisies, setSaisies] = useState<Record<string, Saisie>>({})
   const [selection, setSelection] = useState<Record<string, boolean>>({})
   const [exclus, setExclus] = useState<Record<string, boolean>>({})
@@ -151,7 +147,6 @@ export default function ResultatsLabo() {
   const [sousTitre, setSousTitre] = useState('Echantillons prélevés par ERM le ')
   const [coucheApercu, setCoucheApercu] = useState<Couche>('CM')
   const [export_, setExport] = useState<'standard' | 'expert' | null>(null)
-  const input = useRef<HTMLInputElement>(null)
 
   // Conversion only for masses per support: concentrations given by the lab
   // (canisters, Radiello…) are used as they are.
@@ -419,12 +414,6 @@ export default function ResultatsLabo() {
     }
   }
 
-  function deposer(e: DragEvent) {
-    e.preventDefault()
-    setSurvol(false)
-    void charger(e.dataTransfer.files[0])
-  }
-
   const avertissement = matrice && lecture ? avertissementMatrice(matrice, lecture) : null
   const parametresApercu = lecture?.parametres[conversion ? coucheApercu : 'CM'] ?? []
   const toutSelectionne = points.length > 0 && selectionnes.length === points.length
@@ -488,34 +477,17 @@ export default function ResultatsLabo() {
               <h2 className="etape">
                 <span>2</span> Fichier du laboratoire
               </h2>
-              <div
-                className={`depot${survol ? ' depot--survol' : ''}`}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setSurvol(true)
-                }}
-                onDragLeave={() => setSurvol(false)}
-                onDrop={deposer}
-              >
-                <input
-                  ref={input}
-                  type="file"
-                  accept=".xlsx,.xlsm,.xls,.csv"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    void charger(e.target.files?.[0])
-                    e.target.value = ''
-                  }}
-                />
-                <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture du fichier…' : 'Déposez ici le fichier du laboratoire'}</p>
-                <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  Excel (.xlsx, .xls) ou CSV — la disposition du fichier est reconnue automatiquement. Le fichier est lu dans votre
-                  navigateur et n'est envoyé nulle part.
-                </p>
-                <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
-                  Choisir un fichier
-                </button>
-              </div>
+              <ZoneDepot
+                titre="Déposez ici le fichier du laboratoire"
+                aide={
+                  <>
+                    Excel (.xlsx, .xls) ou CSV — la disposition du fichier est reconnue automatiquement. Le fichier est lu dans votre
+                    navigateur et n'est envoyé nulle part.
+                  </>
+                }
+                chargement={chargement}
+                onFichiers={(fs) => void charger(fs[0])}
+              />
             </>
           )}
 

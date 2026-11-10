@@ -21,6 +21,7 @@
 
 import { PAR_ID, type ClasseCov, type Substance } from './substances.ts'
 import type { Milieu } from './unites.ts'
+import { nombreFr } from '../format.ts'
 
 export interface Resultat {
   /** In the reference unit (mg/m³, mg C/m³ for total VOC, mg/l). */
@@ -136,7 +137,7 @@ function sommer(rs: (Resultat | null)[], facteurs: number[] = []): Borne | null 
 }
 
 const fois = (b: Borne | null, f: number): Borne | null => (b ? { bas: b.bas * f, haut: b.haut * f } : null)
-const fr = (x: number) => Number(x.toPrecision(3)).toLocaleString('fr-FR', { maximumFractionDigits: 6 })
+const fr = (x: number) => nombreFr(x, 6)
 
 type Comparaison = 'gt' | 'ge'
 const franchi = (x: number, seuil: number, c: Comparaison) => (c === 'gt' ? x > seuil : x >= seuil)

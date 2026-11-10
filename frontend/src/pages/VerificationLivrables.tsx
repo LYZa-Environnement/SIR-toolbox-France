@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState, type DragEvent } from 'react'
+import { useMemo, useState } from 'react'
 import { preparer, verifier, type Decision, type Resultat, type Statut } from '../lib/livrables/controles'
 import { lireDocument, type Document } from '../lib/livrables/extraction'
 import { categories, PAR_ID } from '../lib/livrables/referentiels'
 import type { Point, Source } from '../lib/livrables/controles'
+import ZoneDepot from '../components/ZoneDepot'
 
 /** A source as a link, or as plain text when it has no public page (the standard). */
 function LienSource({ s }: { s: Source }) {
@@ -45,12 +46,10 @@ export default function VerificationLivrables() {
   const [texteColle, setTexteColle] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
-  const [survol, setSurvol] = useState(false)
   const [decisions, setDecisions] = useState<Record<string, Decision>>({})
   const [commentaires, setCommentaires] = useState<Record<string, string>>({})
   const [filtre, setFiltre] = useState<'tous' | 'problemes'>('tous')
   const [export_, setExport] = useState(false)
-  const input = useRef<HTMLInputElement>(null)
 
   const referentiel = (typeId && PAR_ID.get(typeId)) || null
   /** General requirements of the standard added to the checklist. */
@@ -87,12 +86,6 @@ export default function VerificationLivrables() {
     if (lus.length) setTexteColle('')
     if (erreurs.length) setErreur(erreurs.join(' '))
     setChargement(false)
-  }
-
-  function deposer(e: DragEvent) {
-    e.preventDefault()
-    setSurvol(false)
-    void charger(e.dataTransfer.files)
   }
 
   const livrables: Document[] = useMemo(
@@ -203,35 +196,25 @@ export default function VerificationLivrables() {
               <h2 className="etape">
                 <span>2</span> Document{referentiel.pieces ? 's' : ''} à vérifier
               </h2>
-              <div
-                className={`depot${survol ? ' depot--survol' : ''}`}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setSurvol(true)
-                }}
-                onDragLeave={() => setSurvol(false)}
-                onDrop={deposer}
-              >
-                <input
-                  ref={input}
-                  type="file"
-                  accept=".pdf,.docx,.txt"
-                  multiple
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    void charger(e.target.files)
-                    e.target.value = ''
-                  }}
-                />
-                <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture…' : docs.length ? 'Ajoutez un autre document du livrable' : 'Déposez ici le livrable'}</p>
-                <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  PDF (avec texte, non scanné), Word (.docx) ou texte ; un livrable en plusieurs documents se dépose en plusieurs fichiers,
-                  vérifiés ensemble{referentiel.pieces ? ` (ici : ${referentiel.pieces.map((p) => p.libelle.toLowerCase()).join(', ')})` : ''}.
-                </p>
-                <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
-                  {docs.length ? 'Ajouter un document' : 'Choisir un ou plusieurs fichiers'}
-                </button>
-              </div>
+              <ZoneDepot
+                titre={docs.length ? 'Ajoutez un autre document du livrable' : 'Déposez ici le livrable'}
+                aide={
+                  <>
+                    PDF (avec texte, non scanné), Word (.docx) ou texte ; un livrable en plusieurs documents se dépose en plusieurs fichiers,
+                    vérifiés ensemble{referentiel.pieces ? ` (ici : ${referentiel.pieces.map((p) => p.libelle.toLowerCase()).join(', ')})` : ''}.
+                  </>
+                }
+                chargement={chargement}
+                libelleChargement="Lecture…"
+                accept=".pdf,.docx,.txt"
+                multiple
+                onFichiers={(fs) => void charger(fs)}
+                actions={(choisir) => (
+                  <button type="button" className="btn" onClick={choisir} disabled={chargement}>
+                    {docs.length ? 'Ajouter un document' : 'Choisir un ou plusieurs fichiers'}
+                  </button>
+                )}
+              />
               {erreur && (
                 <p role="alert" className="alerte">
                   {erreur}
