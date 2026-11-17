@@ -11,6 +11,8 @@ export interface AutreCampagne extends InfoCampagne {
   lecture: Lecture
   fichier: string
   controles: string[]
+  /** The campaign's lab files as read, merged into `lecture`. */
+  bruts: { nom: string; lecture: Lecture }[]
 }
 
 interface Props {
@@ -18,7 +20,8 @@ interface Props {
   campagnes: Campagne[]
   ouvrages: Ouvrage[]
   onInfo: (i: number, info: Partial<InfoCampagne>) => void
-  onAjouter: (f: File) => Promise<string | null>
+  /** Lab files for an existing campaign (its index), or for a new one (null) — chosen together, one campaign. */
+  onAjouter: (f: File[], campagne: number | null) => Promise<string | null>
   onRetirer: (i: number) => void
   onOuvrages: (o: Ouvrage[]) => void
   facteur: number
@@ -34,11 +37,15 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const plusieurs = campagnes.length > 1
+  /** Where the next file goes: a new campaign ('') or an existing one (its index). */
+  const [cible, setCible] = useState('')
+  const nouvellePossible = campagnes.length < MAX
+  const cibleEffective = cible === '' && !nouvellePossible ? '0' : cible
 
-  async function ajouter(f: File | undefined) {
-    if (!f) return
+  async function ajouter(f: File[]) {
+    if (!f.length) return
     setChargement(true)
-    setErreur(await onAjouter(f))
+    setErreur(await onAjouter(f, cibleEffective === '' ? null : Number(cibleEffective)))
     setChargement(false)
   }
 
@@ -120,19 +127,31 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
       <input
         ref={input}
         type="file"
+        multiple
         accept=".xlsx,.xlsm,.xls,.csv"
         style={{ display: 'none' }}
         onChange={(e) => {
-          void ajouter(e.target.files?.[0])
+          void ajouter([...(e.target.files ?? [])])
           e.target.value = ''
         }}
       />
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', fontSize: '0.85rem' }}>
-        {campagnes.length < MAX && (
-          <button type="button" className="btn btn--petit" onClick={() => input.current?.click()} disabled={chargement}>
-            {chargement ? 'Lecture…' : plusieurs ? 'Ajouter une autre campagne' : 'Ajouter une campagne à comparer'}
-          </button>
-        )}
+        <label className="qualite-seuil">
+          Ajouter des fichiers à{' '}
+          <select value={cibleEffective} onChange={(e) => setCible(e.target.value)} aria-label="Campagne à laquelle ajouter le fichier">
+            {nouvellePossible && <option value="">une nouvelle campagne</option>}
+            {campagnes.map((c, i) => (
+              <option key={i} value={String(i)}>
+                la campagne {i + 1}
+                {i === 0 ? ' (fichier principal)' : ''}
+                {c.date ? ` du ${new Date(`${c.date}T12:00:00`).toLocaleDateString('fr-FR')}` : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="button" className="btn btn--petit" onClick={() => input.current?.click()} disabled={chargement}>
+          {chargement ? 'Lecture…' : 'Choisir le ou les fichiers'}
+        </button>
         {plusieurs && (
           <label className="qualite-seuil">
             Évolution retenue à partir d'un facteur{' '}

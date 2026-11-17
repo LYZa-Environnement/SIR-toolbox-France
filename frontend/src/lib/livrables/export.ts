@@ -20,12 +20,16 @@ const COULEURS: Record<Statut, { fond: string; texte: string }> = {
 
 export interface RapportVerification {
   referentiel: Referentiel
-  document: Document
+  documents: Document[]
   resultats: Resultat[]
   statut: (r: Resultat) => Statut
 }
 
 function lien(ws: Worksheet, r: number, c: number, s: Source) {
+  if (!s.url) {
+    ecrire(ws, r, c, s.libelle, { taille: 8, wrap: true })
+    return
+  }
   const cell = ecrire(ws, r, c, s.libelle, { taille: 8, wrap: true, couleur: 'FF1F4E79', souligne: true })
   cell.value = { text: s.libelle, hyperlink: s.url }
 }
@@ -35,7 +39,7 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
   const wb = new ExcelJS.Workbook()
   wb.creator = 'ERM SIR Toolbox France'
   const ws = wb.addWorksheet('Vérification', { views: [{ showGridLines: false }] })
-  ecrire(ws, 1, 1, `Vérification ${rp.referentiel.titre} — ${rp.document.nom}`, { gras: true, taille: 12, bord: false })
+  ecrire(ws, 1, 1, `Vérification ${rp.referentiel.titre} — ${rp.documents.map((d) => d.nom).join(' + ')}`, { gras: true, taille: 12, bord: false })
   ecrire(ws, 2, 1, `${rp.referentiel.description} Vérifié le ${new Date().toLocaleDateString('fr-FR')} avec SIR Toolbox France.`, { italique: true, taille: 9, bord: false })
   let r = 4
   const comptes = new Map<Statut, number>()
@@ -76,7 +80,7 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
       LIBELLES[st],
       x.point.exigence,
       x.verdict.detail ?? '',
-      (x.verdict.extraits ?? []).map((e) => `p. ${e.page} : « ${e.texte} »`).join('\n'),
+      (x.verdict.extraits ?? []).map((e) => `${e.document ? `${e.document}, ` : ''}p. ${e.page} : « ${e.texte} »`).join('\n'),
       st === 'present' || st === 'sans-objet' ? '' : [x.point.aide, x.point.correction ? `Formulation du modèle : « ${x.point.correction} »` : ''].filter(Boolean).join('\n'),
       x.commentaire,
     ]
@@ -93,7 +97,7 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
     // One source per line in the last column; the first as a link.
     const [premiere, ...autres] = x.point.sources
     if (premiere) lien(ws, r, 12, premiere)
-    if (autres.length) ws.getCell(r, 12).note = autres.map((s) => `${s.libelle} : ${s.url}`).join('\n')
+    if (autres.length) ws.getCell(r, 12).note = autres.map((s) => (s.url ? `${s.libelle} : ${s.url}` : s.libelle)).join('\n')
     r++
   }
   r++
@@ -105,10 +109,14 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
   wsS.getColumn(2).width = 90
   ecrire(wsS, 1, 1, 'Sources officielles citées', { gras: true, taille: 12, bord: false })
   const vues = new Map<string, Source>()
-  for (const s of [...rp.referentiel.cadre, ...rp.resultats.flatMap((x) => x.point.sources)]) vues.set(s.url, s)
+  for (const s of [...rp.referentiel.cadre, ...rp.resultats.flatMap((x) => x.point.sources)]) vues.set(s.url || s.libelle, s)
   let k = 3
   for (const s of vues.values()) {
     ecrire(wsS, k, 1, s.libelle, { taille: 9 })
+    if (!s.url) {
+      ecrire(wsS, k++, 2, 'Pas de page publique (norme AFNOR)', { taille: 9, italique: true })
+      continue
+    }
     const c = ecrire(wsS, k++, 2, s.url, { taille: 9, couleur: 'FF1F4E79', souligne: true })
     c.value = { text: s.url, hyperlink: s.url }
   }

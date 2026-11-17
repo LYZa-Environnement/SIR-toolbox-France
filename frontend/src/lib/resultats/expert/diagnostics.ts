@@ -212,7 +212,7 @@ export function degradations(lecture: Lecture, echantillons: string[], versMicro
 
 // ---- PAH --------------------------------------------------------------------------------
 
-const HAP: Record<string, { variantes: string[]; cycles: number; b2?: boolean }> = {
+export const HAP: Record<string, { variantes: string[]; cycles: number; b2?: boolean }> = {
   Nap: { variantes: ['naphtalene', 'naphthalene'], cycles: 2 },
   Acy: { variantes: ['acenaphtylene', 'acenaphthylene'], cycles: 3 },
   Ace: { variantes: ['acenaphtene', 'acenaphthene'], cycles: 3 },

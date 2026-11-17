@@ -25,6 +25,7 @@ export const S = {
   independanceTravaux: arrete('Arrêté du 9 février 2022, art. 90 (indépendance ATTES-TRAVAUX)', 'LEGIARTI000045231582'),
   livrableTravaux: arrete('Arrêté du 9 février 2022, art. 95 (livrable ATTES-TRAVAUX)', 'LEGIARTI000045231597'),
   modeleTravaux: arrete('Arrêté du 9 février 2022, art. 97 (modèle ATTES-TRAVAUX)', 'LEGIARTI000045231601'),
+  article50: { libelle: 'Arrêté du 9 février 2022, art. 50 (référence à la certification dans les livrables)', url: 'https://www.legifrance.gouv.fr/loda/id/JORFTEXT000045220761' },
   annulation2018: { libelle: 'Conseil d’État, 21 juillet 2021, n° 428437 (annulation de l’arrêté du 19 décembre 2018 au 1er mars 2022)', url: 'https://aida.ineris.fr/reglementation/decision-ndeg-428437-210721-conseil-detat-statuant-contentieux' },
   lneCertificats: { libelle: 'LNE — liste des certificats « SSP ATTES – Arrêté du 09/02/2022 »', url: 'https://www.lne.fr/recherche-certificats/fr/297' },
   lneRetraits: { libelle: 'LNE — certificats SSP réglementaires suspendus ou retirés', url: 'https://www.lne.fr/sites/default/files/bloc-telecharger/ssp-reglementaire-liste-suspensions-retraits.pdf' },

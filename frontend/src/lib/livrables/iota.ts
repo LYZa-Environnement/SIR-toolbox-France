@@ -314,7 +314,14 @@ export const REFERENTIEL_IOTA: Referentiel = {
   description: 'Dossier de déclaration au titre des articles L. 214-1 et suivants du code de l’environnement pour les opérations SSP : piézomètres et forages, pompages d’essai, pompage-traitement, rejets des eaux pompées.',
   cadre: [S.r21432, S.r2141, S.r21435, S.teleprocedure],
   points: POINTS,
+  // ERM files a declaration as three documents; the checks run on them together.
+  pieces: [
+    { libelle: 'Document d’incidences (dossier de déclaration)', motif: /document d.incidences?|etude d.incidences?|dossier de declaration/ },
+    { libelle: 'Évaluation des incidences Natura 2000', motif: /evaluation (simplifiee )?des incidences natura 2000|incidences natura 2000/ },
+    { libelle: 'Résumé non technique', motif: /resume non technique/ },
+  ],
   limites: [
+    'Les documents déposés ensemble (document d’incidences, évaluation Natura 2000, résumé non technique) sont vérifiés comme un seul dossier : une exigence satisfaite dans l’un d’eux l’est pour le dossier.',
     'Une recherche dans le texte dit si une information figure, pas si elle est juste : chaque point trouvé reste à relire.',
     'Au 31 décembre 2027, l’arrêté du 18 mars 2026 remplace celui du 11 septembre 2003 pour les forages (entreprise de forage certifiée, rapport de fin de travaux sous trois mois) : se référer à la date des travaux.',
     'Une opération rattachée à une installation classée relève de son arrêté préfectoral ICPE, non d’une déclaration IOTA autonome (L. 214-7).',

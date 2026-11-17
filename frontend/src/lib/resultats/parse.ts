@@ -13,9 +13,11 @@
  *   only a mass per support; rows with values but no unit (extraction date,
  *   sorbent batch, pre-treatment) are metadata and skipped; rows with
  *   nothing under the samples are family headings;
- * - in `support` mode, the control layer is announced either by a heading
- *   ("… ZONE DE CONTROLE", Eurofins) or by a sample-name suffix ("PzaB CC",
- *   Wessling).
+ * - in `support` mode, the control layer is announced by a heading
+ *   ("… ZONE DE CONTROLE", Eurofins), by a sample-name suffix ("PzaB CC",
+ *   Wessling), or row by row (Eurofins soil gas summaries: "> C8 - C10
+ *   inclus (zone 1)" / "(zone 2)", "Benzène" / "Benzène (2)" — zone 1 is
+ *   the measuring layer, zone 2 the control layer).
  *
  * Pure: takes a grid of raw cell values, so it runs in the browser and in
  * tests alike.
@@ -71,8 +73,8 @@ export interface Lecture {
 
 const UNITE_CONCENTRATION_AIR = /^\s*([nµμum]|mc)?g\s*\/\s*N?m\s*[3³]/i
 const UNITE_SUPPORT = /^\s*([nµμum]|mc)?g\s*\/\s*(support|supp?\.?|[ée]ch\.?|[ée]chantillon|tube|cartouche|badge|filtre|t[êe]te|m[ée]dia|cassette)\b/i
-// "mg O2/l", "mg N/l", "mg NO3/l", "mg P/l": water quality parameters given as an element or an ion.
-const UNITE = /^\s*(([nµμum]|mc)?g\s*(o\s*2|n-?no\s*[23]|no\s*[23]|p-?po\s*4|po\s*4|so\s*4|n|p|pt)?\s*\/\s*\S+|%|‰|°\s*c|ms\/m|µs\/cm|us\/cm|mv|upH|unit[ée]s?\s*ph|ntu|ufc)/i
+// "mg O2/l", "mg N/l", "mg NO3/l", "mg P/l", "µg F/l": parameters given as an element or an ion.
+const UNITE = /^\s*(([nµμum]|mc)?g\s*(o\s*2|n-?no\s*[23]|no\s*[23]|p-?po\s*4|po\s*4|so\s*4|n|p|pt|f)?\s*\/\s*\S+|%|‰|°\s*c|ms\/m|µs\/cm|us\/cm|mv|upH|unit[ée]s?\s*ph|ntu|ufc)/i
 const EN_TETE_UNITE = /^(unit[ée]s?|units?)$/i
 const EN_TETE_CAS = /^(n°?\s*)?cas(\s*n°?)?$/i
 const CAS = /^\d{2,7}-\d{2}-\d$/
@@ -81,6 +83,11 @@ const COLONNE_NON_ECHANTILLON = /^(n°?\s*)?cas\b|unit[ée]?s?\b|considered|comp
 const EN_TETE_TECHNIQUE = /^(lq|l\.\s*q\.?|limite de quantification|incertitude.*|m[ée]thode.*|n°?\s*cas|unit[ée]s?)$/i
 const CONTROLE = /zone\s+de\s+contr[ôo]le|couche\s+de\s+contr[ôo]le|\bzc\b/i
 const SUFFIXE_COUCHE = /[\s_-]+(CM|CC|ZM|ZC)$/i
+/** "… (zone 1)", "… (Zone 2)", "… - zone 2" at the end of a parameter name. */
+const ZONE_LIGNE = /\s*[-–]?\s*\(?\s*\bzone\s*([12])\s*\)?\s*$/i
+/** "Benzène (2)": the second zone, when "Benzène" is a row of its own. */
+const SECONDE_LIGNE = /\s*\(\s*2\s*\)\s*$/
+const ZONE_NOMMEE = /\s*[-–]?\s*\(?\s*(zone|couche)\s+de\s+(contr[ôo]le|mesure)\s*\)?\s*$/i
 const SANS_VALEUR = /^(-|-\/-|n\.?\s*[ad]\.?|na|nd|n\.?\s*m\.?|\/|—|–)$/i
 
 function texte(c: Cell): string {
@@ -118,6 +125,62 @@ function separerCouche(libelle: string): { nom: string; couche: Couche | null } 
   if (!m) return { nom: libelle, couche: null }
   const code = m[1].toUpperCase()
   return { nom: libelle.slice(0, m.index).trim(), couche: code === 'CC' || code === 'ZC' ? 'CC' : 'CM' }
+}
+
+/** The layer a row announces in its name, and the name without it. */
+function separerCoucheLigne(nom: string, nomsLignes: Set<string>): { nom: string; couche: Couche | null } {
+  const zone = ZONE_LIGNE.exec(nom)
+  if (zone) return { nom: nom.slice(0, zone.index).trim(), couche: zone[1] === '2' ? 'CC' : 'CM' }
+  const nommee = ZONE_NOMMEE.exec(nom)
+  if (nommee) return { nom: nom.slice(0, nommee.index).trim(), couche: CONTROLE.test(nommee[0]) ? 'CC' : 'CM' }
+  const seconde = SECONDE_LIGNE.exec(nom)
+  if (seconde) {
+    const base = nom.slice(0, seconde.index).trim()
+    if (nomsLignes.has(base.toLowerCase())) return { nom: base, couche: 'CC' }
+  }
+  return { nom, couche: null }
+}
+
+/** Plain compound names, for a family the lab gives no heading for. */
+const aplatirNom = (nom: string) =>
+  nom
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+const BTEX = /^(benzene|toluene|ethylbenzene|(ortho|o|meta|m|para|p|mp|metapara|metaetpara|paraetmeta)?xylenes?(totaux)?|sommedesxylenes|btex(totaux)?)$/
+const FRACTION_HC = /c\s*\d+\s*[-–àa]+\s*c?\s*\d+|mec\s*5|hydrocarbure/i
+
+/** When the lab gives no family at all (Eurofins soil gas summaries), the
+ *  usual ones by name: hydrocarbon fractions and BTEX (COHV are grouped by
+ *  `ordonnerCOHV`). */
+function familleParDefaut(nom: string): string {
+  if (BTEX.test(aplatirNom(nom))) return 'BTEX'
+  if (FRACTION_HC.test(nom)) return 'Hydrocarbures'
+  return ''
+}
+
+/** Ketones, whatever the lab calls them: MIBK, MEK, acetone, butanone… */
+const CETONE = /c[ée]tone|ketone|\b(mibk|mek|mik|mbk)\b|butanone|(pentan|hexan|heptan|octan)-?\d?-?one\b|cyclohexanone|isophorone/i
+const FAMILLE_CETONES = /c[ée]tone|ketone/i
+
+/**
+ * A ketone the lab files under another heading (« Acétates » for
+ * méthylisobutylcétone) goes to « Cétones »: after that family's last
+ * compound when the lab has one, else right after its original block.
+ */
+export function corrigerFamilles(liste: Parametre[]): Parametre[] {
+  const deplaces = liste.filter((p) => !p.somme && p.famille && CETONE.test(p.nom) && !FAMILLE_CETONES.test(p.famille))
+  if (!deplaces.length) return liste
+  let suite = liste.filter((p) => !deplaces.includes(p))
+  for (const p of deplaces) {
+    const cetones = suite.map((x, i) => (FAMILLE_CETONES.test(x.famille) ? i : -1)).filter((i) => i >= 0)
+    const origine = suite.map((x, i) => (x.famille === p.famille ? i : -1)).filter((i) => i >= 0)
+    const apres = cetones.length ? cetones[cetones.length - 1] : origine.length ? origine[origine.length - 1] : suite.length - 1
+    const famille = cetones.length ? suite[cetones[0]].famille : 'Cétones'
+    suite = [...suite.slice(0, apres + 1), { ...p, famille }, ...suite.slice(apres + 1)]
+  }
+  return suite
 }
 
 function normaliserFamille(titre: string): string {
@@ -279,13 +342,17 @@ export function lireGrille(brute: Cell[][], mode: Mode, feuille?: string): Lectu
   const unites = new Set<string>()
   let famille = ''
   let coucheSection: Couche = 'CM'
+  const nomsLignes = new Set(lignesDonnees.map((i) => texte(grille[i][colNom]).toLowerCase()))
   for (let i = ligneNoms + 1; i < grille.length; i++) {
     const r = grille[i]
     const unite = texte(r[colUnite])
     // Headings may sit in another column than the names (Eurofins LIMS puts
     // "Composés Volatils" under "Test", the names under "Paramètre").
-    const nom = texte(r[colNom]) || (unite ? '' : r.slice(0, colUnite).map(texte).find(Boolean) ?? '')
-    if (!nom) continue
+    const nomBrut = texte(r[colNom]) || (unite ? '' : r.slice(0, colUnite).map(texte).find(Boolean) ?? '')
+    if (!nomBrut) continue
+    // Zone 1 / zone 2 written on each row: the layer of that row only.
+    const ligne = mode === 'support' && unite ? separerCoucheLigne(nomBrut, nomsLignes) : { nom: nomBrut, couche: null }
+    const nom = ligne.nom
     // A heading has nothing under the samples; "Type de support / N° de lot"
     // has text there and is metadata, not a family.
     if (!unite && !colonnes.some((j) => texte(r[j]))) {
@@ -318,7 +385,7 @@ export function lireGrille(brute: Cell[][], mode: Mode, feuille?: string): Lectu
     for (const j of colonnes) {
       const mesure = lireMesure(r[j])
       const { point, couche } = parColonne.get(j)!
-      const c: Couche = couche ?? coucheSection
+      const c: Couche = couche ?? ligne.couche ?? coucheSection
       if (!parametres[c].some((p) => p.cle === cle)) parametres[c].push(parametre)
       if (!mesure) continue
       ;(valeurs[c][point.nom] ??= {})[cle] = mesure
@@ -326,6 +393,10 @@ export function lireGrille(brute: Cell[][], mode: Mode, feuille?: string): Lectu
   }
 
   if (!parametres.CM.length && !parametres.CC.length) throw new LectureImpossible('Aucun résultat exploitable dans ce fichier.')
+  if (mode === 'support' && [...parametres.CM, ...parametres.CC].every((p) => !p.famille)) {
+    for (const c of ['CM', 'CC'] as Couche[]) parametres[c] = parametres[c].map((p) => ({ ...p, famille: familleParDefaut(p.nom) }))
+  }
+  for (const c of ['CM', 'CC'] as Couche[]) parametres[c] = corrigerFamilles(parametres[c])
   return {
     points,
     parametres,

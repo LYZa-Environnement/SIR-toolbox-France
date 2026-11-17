@@ -30,11 +30,13 @@ import {
 } from './qualite.ts'
 import { argb, BANDEAU, barre, ETAT, echelle, GROUPES, TEINTES_FAMILLES } from './couleurs.ts'
 import { statistiques, valeursCompose } from './stats.ts'
-import { dessinerCamembert, HAUTEUR, LARGEUR } from './camembert.ts'
+import { acronyme } from './acronymes.ts'
+import { dessinerCamembert, dessinerEchelle, HAUTEUR, LARGEUR } from './camembert.ts'
 import { signatures } from './signatures.ts'
 import type { Position } from './expert/amontAval.ts'
 import type { DonneesCampagnes } from './feuillesCampagnes.ts'
 import { libelleProfondeur, lireProfondeur } from './expert/profondeur.ts'
+import { LIBELLES_VERDICT, type QualitePoint } from './qualiteGaz.ts'
 
 export interface Legende {
   titre: string
@@ -56,6 +58,13 @@ export interface OptionsExport {
   guides: Record<string, { valeur: number; source: string } | null>
   /** Header of the comparison column, e.g. "Valeur repère R1". */
   libelleGuide: string
+  /** No reference values chosen: no comparison sheet. */
+  sansReference?: boolean
+  /** Groundwater: what the sampling sheets and the lab tell of the
+   *  aquifer (Conditions de la nappe), for its sheets. */
+  nappe?: import('../nappe/export.ts').Rapport
+  /** Soil gas: quality of the gas drawn, from the sampling sheets. */
+  qualiteGaz?: { points: QualitePoint[]; synthese: string[]; references: string[] }
   legende: Legende
   /** Sample types (blanks, duplicates), as confirmed by the user. */
   qualifications: Record<string, Qualification>
@@ -646,20 +655,26 @@ function colonneAuPixel(ws: Worksheet, px: number): number {
 
 function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   const echantillons = lecture.points.filter((p) => !estControle(opts.qualifications[p.nom])).map((p) => p.nom)
-  const familles = signatures(lecture, echantillons)
+  // Soils: the metals too.
+  const metaux = opts.libelleMatrice === 'sols'
+  const familles = signatures(lecture, echantillons, { metaux })
   const ws = wb.addWorksheet('Signatures', { views: [{ showGridLines: false }] })
   ws.getColumn(1).width = 26
   for (let c = 2; c <= 40; c++) ws.getColumn(c).width = 12
-  ecrire(ws, 1, 1, `${opts.titre} — signatures des composés organiques`, { gras: true, taille: 12, bord: false })
+  ecrire(ws, 1, 1, `${opts.titre} — signatures des composés organiques${metaux ? ' et des métaux' : ''}`, { gras: true, taille: 12, bord: false })
   ecrire(
     ws,
     2,
     1,
-    'Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés. Les échantillons sont ordonnés par similarité de composition : classification hiérarchique (lien moyen) sur la distance de Bray-Curtis entre profils, 0 pour deux profils identiques, 1 pour deux profils sans composé commun.',
+    `Part de chaque composé quantifié dans le total de sa famille, par échantillon (hors échantillons de contrôle qualité). Les totaux et sommes du laboratoire sont exclus ; les résultats <LQ comptent pour zéro. Sur les graphiques, les composés de moins de 3 % sont regroupés ; la surface de chaque camembert est proportionnelle au total de l’échantillon, sur une échelle commune à la famille (le plus fort total au plus grand camembert), pour comparer les ouvrages entre eux ou sur une carte ; les composés y sont désignés par leur abréviation usuelle, rappelée sous chaque tableau. Les échantillons sont ordonnés par similarité de composition : classification hiérarchique (lien moyen) sur la distance de Bray-Curtis entre profils, 0 pour deux profils identiques, 1 pour deux profils sans composé commun.${
+      metaux
+        ? ' Métaux : une seule famille, sur le sol brut (hors éluat de lixiviation), sans les éléments majeurs (fer, aluminium, manganèse, calcium…) dont les teneurs en g/kg masqueraient les éléments traces ; désignés par leur symbole chimique. Un profil dominé par le plomb, le zinc ou le cuivre évoque des remblais ou une activité ; la comparaison au fond géochimique local reste nécessaire pour conclure.'
+        : ''
+    }`,
     { italique: true, taille: 9, bord: false },
   )
   if (!familles.length) {
-    ecrire(ws, 4, 1, 'Aucune famille de composés organiques avec au moins deux composés et un résultat quantifié.', { bord: false })
+    ecrire(ws, 4, 1, `Aucune famille de composés organiques${metaux ? ' ni de métaux' : ''} avec au moins deux composés et un résultat quantifié.`, { bord: false })
     return
   }
   let r = 4
@@ -688,14 +703,23 @@ function feuilleSignatures(wb: Workbook, lecture: Lecture, opts: OptionsExport) 
     // The heavier a compound in a sample, the deeper its cell; totals as bars.
     echelle(ws, premiere, r - 1, 2, teinte, largeur - 1)
     barre(ws, premiere, r - 2, largeur, teinte)
+    const abreges = f.composes.filter((c) => acronyme(c.nom) !== c.nom).map((c) => `${acronyme(c.nom)} : ${c.nom}`)
+    if (abreges.length) ecrire(ws, r++, 1, `Abréviations des graphiques — ${abreges.join(' ; ')}.`, { italique: true, taille: 8, bord: false })
     r++
 
-    // Pies: all samples together first, then one per sample, three per row.
-    const pies = [f.ensemble, ...f.echantillons]
+    // Pies: all samples together first (full size), the scale of the
+    // family, then one per sample with its area proportional to its total
+    // — three per row.
+    const totalMax = Math.max(...f.echantillons.map((s) => s.total))
+    const images = [
+      dessinerCamembert(f.ensemble, ordre, f.unite, `${f.famille} — ensemble des échantillons`),
+      dessinerEchelle(totalMax, f.unite, `${f.famille} — échelle des surfaces`),
+      ...f.echantillons.map((s) => dessinerCamembert(s, ordre, f.unite, s.echantillon, totalMax)),
+    ]
+    const pies = images
     const lignes = Math.ceil(HAUTEUR / 20) + 1
     let dessinees = 0
-    pies.forEach((s, k) => {
-      const image = dessinerCamembert(s, ordre, f.unite, s === f.ensemble ? `${f.famille} — ensemble des échantillons` : s.echantillon)
+    images.forEach((image, k) => {
       if (!image) return
       const id = wb.addImage({ base64: image, extension: 'png' })
       const ligne = r + Math.floor(k / 3) * lignes
@@ -849,14 +873,91 @@ function feuilleQualite(wb: Workbook, lecture: Lecture, opts: OptionsExport) {
   )
 }
 
+/** Quality of the soil gas drawn, point by point, with the campaign summary. */
+function feuilleQualiteGaz(wb: Workbook, q: NonNullable<OptionsExport['qualiteGaz']>, titre: string) {
+  const ws = wb.addWorksheet('Qualité gaz du sol', { views: [{ state: 'frozen', xSplit: 1, ySplit: 0, showGridLines: false }] })
+  ecrire(ws, 1, 1, `${titre} — qualité des gaz du sol captés`, { gras: true, taille: 12, bord: false })
+  let r = 3
+  for (const t of q.synthese) {
+    ws.mergeCells(r, 1, r, 9)
+    ecrire(ws, r, 1, t, { bord: false, wrap: true })
+    ws.getRow(r).height = Math.max(15, Math.ceil(t.length / 140) * 14)
+    r++
+  }
+  r++
+  const titres: [string, number][] = [
+    ['Point', 12],
+    ['Lecture', 22],
+    ['O2 (%)', 9],
+    ['CO2 (ppm)', 11],
+    ['Évolution O2 (pt)', 11],
+    ['Évolution CO2 (%)', 11],
+    ['PID max (ppm)', 10],
+    ['H2S / CO max (ppm) · LIE (%)', 16],
+    ['Constats', 110],
+  ]
+  ws.getRow(r).height = 30
+  titres.forEach(([t, l], j) => {
+    ws.getColumn(j + 1).width = l
+    ecrire(ws, r, j + 1, t, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true })
+  })
+  r++
+  const couleur: Record<QualitePoint['verdict'], (typeof ETAT)[keyof typeof ETAT] | null> = {
+    representatif: ETAT.ok,
+    'a-verifier': ETAT.vigilance,
+    'air-ambiant': ETAT.alerte,
+    'non-evalue': null,
+  }
+  const n = (x: number | null, d = 1) => (x === null ? '-' : Number(x.toFixed(d)))
+  for (const p of q.points) {
+    const e = couleur[p.verdict]
+    const constats = p.constats.map((c) => c.texte).join('\n')
+    const valeurs: (string | number)[] = [
+      p.ouvrage,
+      LIBELLES_VERDICT[p.verdict],
+      n(p.o2),
+      p.co2 === null ? '-' : p.co2Superieur ? `> ${Math.round(p.co2)}` : Math.round(p.co2),
+      n(p.deltaO2),
+      p.deltaCo2 === null ? '-' : Math.round(p.deltaCo2 * 100),
+      n(p.pidMax),
+      `${p.h2sMax ?? '-'} / ${p.coMax ?? '-'} · ${p.lieMax ?? '-'}`,
+      constats,
+    ]
+    valeurs.forEach((v, j) => {
+      ecrire(ws, r, j + 1, v, {
+        h: j === 0 || j === 1 || j === 8 ? 'left' : 'center',
+        gras: j === 0,
+        wrap: j === 8,
+        taille: j === 8 ? 9 : 10,
+        ...(j === 1 && e ? { fond: e.fond, couleur: e.texte } : {}),
+      })
+    })
+    ws.getRow(r).height = Math.max(15, p.constats.length * 13)
+    r++
+  }
+  r++
+  ecrire(ws, r++, 1, 'Références et seuils :', { gras: true, taille: 9, bord: false })
+  for (const t of q.references) {
+    ws.mergeCells(r, 1, r, 9)
+    ecrire(ws, r, 1, t, { taille: 9, bord: false, wrap: true })
+    ws.getRow(r).height = Math.max(13, Math.ceil(t.length / 160) * 13)
+    r++
+  }
+}
+
 export async function construireClasseur(lecture: Lecture, opts: OptionsExport): Promise<Workbook> {
   const { default: ExcelJS } = await import('exceljs')
   const wb = new ExcelJS.Workbook()
   wb.calcProperties.fullCalcOnLoad = true
   feuille(wb, 'Mis en forme', lecture, opts, false)
-  feuille(wb, 'Valeurs guides ERM', lecture, opts, true)
+  if (!opts.sansReference) feuille(wb, 'Valeurs guides ERM', lecture, opts, true)
   feuilleAnalyse(wb, lecture, opts)
   feuilleQualite(wb, lecture, opts)
+  if (opts.qualiteGaz) feuilleQualiteGaz(wb, opts.qualiteGaz, opts.titre)
+  if (opts.nappe) {
+    const { ajouterFeuillesNappe } = await import('../nappe/export.ts')
+    ajouterFeuillesNappe(wb, opts.nappe, !!opts.expert)
+  }
   if (opts.campagnes) {
     const { ajouterFeuillesCampagnes } = await import('./feuillesCampagnes.ts')
     ajouterFeuillesCampagnes(wb, opts.campagnes, opts.titre)

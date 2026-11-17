@@ -8,6 +8,13 @@
  *
  * Totals and aggregates ("BTEX totaux", "xylènes", sums) are left out so
  * that nothing is counted twice; results below the LQ count as zero.
+ *
+ * Soils: the metals too, as one family (« Métaux », whatever the lab's
+ * sections), on the solid only — not the leachate (ISDI éluat) — and
+ * without the major elements (iron, aluminium, manganese, calcium…), whose
+ * grams per kilogram would hide the trace metals: a profile led by lead,
+ * zinc and copper reads as fill or an activity, one close to the local
+ * background as natural.
  */
 
 import { facteurUnite } from './guides.ts'
@@ -34,12 +41,23 @@ export interface SignatureFamille {
   ensemble: Signature
 }
 
+export const FAMILLE_METAUX = 'Métaux'
+const METAUX = /m[ée]ta(l|ux)|\betm\b|[ée]l[ée]ments?\s+traces?/i
+const LIXIVIATION = /lixiv|[ée]luat|leach/i
+/** Major elements of soils, left out of the metal signature. */
+const MAJEURS = /^(fer|iron|alumini?um|mangan[èe]se|manganese|calcium|magn[ée]sium|sodium|potassium|titane|titanium|silicium|silicon|strontium|phosphore)\b/i
+
 const NON_ORGANIQUE = /m[ée]ta(l|ux)|inorgan|\bions?\b|anions?|cations?|physico|lixiv|[ée]luat|divers|cyanure|\betm\b|[ée]l[ée]ments?|param[èe]tres? g[ée]n[ée]raux|pr[ée]paration|pr[ée]traitement|mati[èe]re s[èe]che/i
 
-export function signatures(lecture: Lecture, echantillons: string[]): SignatureFamille[] {
+export function signatures(lecture: Lecture, echantillons: string[], options: { metaux?: boolean } = {}): SignatureFamille[] {
   const familles = new Map<string, Parametre[]>()
   for (const p of lecture.parametres.CM) {
-    if (!p.famille || NON_ORGANIQUE.test(p.famille) || p.somme || !/g\s*\//i.test(p.unite)) continue
+    if (!p.famille || p.somme || !/g\s*\//i.test(p.unite)) continue
+    if (options.metaux && METAUX.test(p.famille) && !LIXIVIATION.test(p.famille)) {
+      if (!MAJEURS.test(p.nom.trim()) && !/\/\s*l\b/i.test(p.unite)) familles.set(FAMILLE_METAUX, [...(familles.get(FAMILLE_METAUX) ?? []), p])
+      continue
+    }
+    if (NON_ORGANIQUE.test(p.famille)) continue
     // The COHV degradation chains are one family here: a single pie shows
     // the whole chlorinated-solvent signature, chains side by side.
     const famille = /^COHV —/.test(p.famille) ? 'COHV' : p.famille
@@ -73,7 +91,8 @@ export function signatures(lecture: Lecture, echantillons: string[]): SignatureF
       ensemble: { echantillon: 'Ensemble des échantillons', total: partsEnsemble.reduce((a, p) => a + p.valeur, 0), parts: partsEnsemble },
     })
   }
-  return out
+  // The metals after the organic families.
+  return out.sort((a, b) => Number(a.famille === FAMILLE_METAUX) - Number(b.famille === FAMILLE_METAUX))
 }
 
 /** Bray-Curtis dissimilarity of two compositions in proportions:
