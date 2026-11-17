@@ -50,6 +50,8 @@ export default function VerificationLivrables() {
   const [commentaires, setCommentaires] = useState<Record<string, string>>({})
   const [filtre, setFiltre] = useState<'tous' | 'problemes'>('tous')
   const [export_, setExport] = useState(false)
+  /** Deliverable families unfolded by the viewer: all folded at first. */
+  const [ouvertes, setOuvertes] = useState<Set<string>>(new Set())
   const input = useRef<HTMLInputElement>(null)
 
   const referentiel = (typeId && PAR_ID.get(typeId)) || null
@@ -156,10 +158,48 @@ export default function VerificationLivrables() {
           <h2 className="etape">
             <span>1</span> Type de livrable
           </h2>
-          {categories().map(([cat, rs]) => (
-            <div key={cat} style={{ marginBottom: '1.25rem' }}>
-              <h3 style={{ margin: '0 0 0.5rem', fontSize: '1rem' }}>{cat}</h3>
-              <div className="grid grid--3 choix" role="radiogroup" aria-label={cat}>
+          {categories().map(([cat, rs], i) => {
+            const ouverte = ouvertes.has(cat)
+            const choisi = rs.find((r) => r.id === typeId)
+            const id = `livrables-${i}`
+            return (
+            <section key={cat} className={`categorie categorie--compacte livrable--${i % 6}`} aria-labelledby={`${id}-titre`}>
+              <header className="categorie__entete">
+                <button
+                  type="button"
+                  className="categorie__bascule"
+                  aria-expanded={ouverte}
+                  aria-controls={id}
+                  onClick={() =>
+                    setOuvertes((o) => {
+                      const suite = new Set(o)
+                      if (suite.has(cat)) suite.delete(cat)
+                      else suite.add(cat)
+                      return suite
+                    })
+                  }
+                >
+                  <span className="categorie__etape">
+                    {rs.length} type{rs.length > 1 ? 's' : ''} de livrable
+                  </span>
+                  <h3 id={`${id}-titre`} className="categorie__titre">
+                    {cat}
+                  </h3>
+                  <span className="categorie__chevron" aria-hidden="true">
+                    {ouverte ? '▾' : '▸'}
+                  </span>
+                </button>
+                {!ouverte && (
+                  <p className="categorie__texte">
+                    {choisi ? (
+                      <span className="categorie__replie">Sélectionné : {choisi.titre}</span>
+                    ) : (
+                      rs.map((r) => r.titre.split(' — ')[0]).join(' · ')
+                    )}
+                  </p>
+                )}
+              </header>
+              <div id={id} className="grid grid--3 choix" role="radiogroup" aria-label={cat} hidden={!ouverte}>
                 {rs.map((r) => (
                   <button
                     key={r.id}
@@ -179,8 +219,9 @@ export default function VerificationLivrables() {
                   </button>
                 ))}
               </div>
-            </div>
-          ))}
+            </section>
+            )
+          })}
 
           {referentiel && (
             <>

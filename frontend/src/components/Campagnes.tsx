@@ -20,8 +20,8 @@ interface Props {
   campagnes: Campagne[]
   ouvrages: Ouvrage[]
   onInfo: (i: number, info: Partial<InfoCampagne>) => void
-  /** A lab file for an existing campaign (its index), or for a new one (null). */
-  onAjouter: (f: File, campagne: number | null) => Promise<string | null>
+  /** Lab files for an existing campaign (its index), or for a new one (null) — chosen together, one campaign. */
+  onAjouter: (f: File[], campagne: number | null) => Promise<string | null>
   onRetirer: (i: number) => void
   onOuvrages: (o: Ouvrage[]) => void
   facteur: number
@@ -42,8 +42,8 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
   const nouvellePossible = campagnes.length < MAX
   const cibleEffective = cible === '' && !nouvellePossible ? '0' : cible
 
-  async function ajouter(f: File | undefined) {
-    if (!f) return
+  async function ajouter(f: File[]) {
+    if (!f.length) return
     setChargement(true)
     setErreur(await onAjouter(f, cibleEffective === '' ? null : Number(cibleEffective)))
     setChargement(false)
@@ -127,16 +127,17 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
       <input
         ref={input}
         type="file"
+        multiple
         accept=".xlsx,.xlsm,.xls,.csv"
         style={{ display: 'none' }}
         onChange={(e) => {
-          void ajouter(e.target.files?.[0])
+          void ajouter([...(e.target.files ?? [])])
           e.target.value = ''
         }}
       />
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', fontSize: '0.85rem' }}>
         <label className="qualite-seuil">
-          Ajouter un fichier à{' '}
+          Ajouter des fichiers à{' '}
           <select value={cibleEffective} onChange={(e) => setCible(e.target.value)} aria-label="Campagne à laquelle ajouter le fichier">
             {nouvellePossible && <option value="">une nouvelle campagne</option>}
             {campagnes.map((c, i) => (
@@ -149,7 +150,7 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
           </select>
         </label>
         <button type="button" className="btn btn--petit" onClick={() => input.current?.click()} disabled={chargement}>
-          {chargement ? 'Lecture…' : 'Choisir le fichier'}
+          {chargement ? 'Lecture…' : 'Choisir le ou les fichiers'}
         </button>
         {plusieurs && (
           <label className="qualite-seuil">

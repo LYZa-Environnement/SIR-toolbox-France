@@ -1,8 +1,8 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { lireNombre } from '../../lib/resultats/calc'
 import type { Cell, Lecture } from '../../lib/resultats/parse'
 import type { Rapport } from '../../lib/nappe/export'
-import TransportBiochlor from './TransportBiochlor'
+import { VisuelsNappe } from './VisuelsNappe'
 import { associationAuto, construireJeu, decalageFiches } from '../../lib/nappe/donnees'
 import {
   BAREME_CLASSES,
@@ -23,7 +23,6 @@ import { cleOuvrage, lireFiches, type FicheTerrain } from '../../lib/nappe/fiche
 import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../../lib/nappe/parametres'
 import { SOURCES } from '../../lib/nappe/sources'
 import { LIBELLES_ETAT, synthetiser, type Etat, type Synthese } from '../../lib/nappe/synthese'
-import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../../lib/nappe/transport'
 import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../../lib/nappe/recap'
 
 type Feuille = { nom: string; grille: Cell[][] }
@@ -65,58 +64,25 @@ const COULEUR_NIVEAU: Record<Niveau, string> = { alerte: 'var(--level-elevee)', 
 const fr = (x: number | null | undefined, d = 2) =>
   x === null || x === undefined || !Number.isFinite(x) ? '-' : Number(x.toPrecision(3)).toLocaleString('fr-FR', { maximumFractionDigits: d })
 
-function Depot({ titre, aide, multiple, chargement, onFichiers }: { titre: string; aide: ReactNode; multiple?: boolean; chargement: boolean; onFichiers: (f: File[]) => void }) {
-  const [survol, setSurvol] = useState(false)
-  const input = useRef<HTMLInputElement>(null)
-  const deposer = (e: DragEvent) => {
-    e.preventDefault()
-    setSurvol(false)
-    onFichiers([...e.dataTransfer.files])
-  }
-  return (
-    <div
-      className={`depot${survol ? ' depot--survol' : ''}`}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setSurvol(true)
-      }}
-      onDragLeave={() => setSurvol(false)}
-      onDrop={deposer}
-    >
-      <input
-        ref={input}
-        type="file"
-        multiple={multiple}
-        accept=".xlsx,.xlsm,.xls,.csv"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          onFichiers([...(e.target.files ?? [])])
-          e.target.value = ''
-        }}
-      />
-      <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture…' : titre}</p>
-      <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>{aide}</p>
-      <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
-        Choisir {multiple ? 'des fichiers' : 'un fichier'}
-      </button>
-    </div>
-  )
-}
-
 /**
  * Groundwater conditions, within Résultats labo (groundwater): the sampling
  * sheets of the campaign read with the lab file already loaded there —
  * physico-chemical conditions, purge quality, natural attenuation (USEPA
- * 1998 screening, redox processes) and BIOCHLOR inputs. What it computes is
- * handed back (`onRapport`) for the sheets of the Résultats labo export.
+ * 1998 screening, redox processes). The sheets are chosen at step 2 of the
+ * page (`aCharger`); what is computed goes back (`onRapport`) for the
+ * Excel files of the export section.
  */
 export function ConditionsNappe({
   labo: laboFourni,
-  numero,
+  aCharger,
+  retrait,
   onRapport,
 }: {
   labo: { lecture: Lecture; nom: string } | null
-  numero: number
+  /** Sheet workbooks to read, a new array for each choice. */
+  aCharger: File[] | null
+  /** Changes when the user removes the sheets from step 2. */
+  retrait: number
   onRapport?: (rp: Rapport | null) => void
 }) {
   const [fiches, setFiches] = useState<FicheTerrain[]>([])
@@ -133,11 +99,7 @@ export function ConditionsNappe({
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState<'fiches' | null>(null)
   const [projet, setProjet] = useState('')
-  const [export_, setExport] = useState(false)
-  const [hydro, setHydro] = useState<SaisieHydro>(HYDRO_DEFAUT)
-  const [exportRecap, setExportRecap] = useState(false)
   const [copie, setCopie] = useState(false)
-  const [avecBiochlor, setAvecBiochlor] = useState(false)
 
   async function chargerFiches(fs: File[]) {
     if (!fs.length) return
@@ -192,7 +154,6 @@ export function ConditionsNappe({
   }, [evaluations, jeu])
 
   const synthese = useMemo(() => synthetiser(jeu, evaluations), [jeu, evaluations])
-  const transport = useMemo(() => calculerTransport(hydro, jeu, plusContamine?.ouvrage.cle ?? ''), [hydro, jeu, plusContamine])
 
   const fichesMesurees = fiches.filter((f) => !f.vide)
   const fichesVides = fiches.filter((f) => f.vide)
@@ -225,41 +186,26 @@ export function ConditionsNappe({
     evaluations,
     options,
     synthese,
-    transport: avecBiochlor && transport.vx !== null ? transport : undefined,
     recap: recap.ouvrages ? { recap, synthese: syntheseRecap } : undefined,
   }
-  }, [fiches, evaluations, projet, fichiersFiches, laboFourni, dec, fond, plusContamine, complets, requisSite, limitesSite, analysesSite, jeu, options, synthese, avecBiochlor, transport, recap, syntheseRecap])
+  }, [fiches, evaluations, projet, fichiersFiches, laboFourni, dec, fond, plusContamine, complets, requisSite, limitesSite, analysesSite, jeu, options, synthese, recap, syntheseRecap])
 
   useEffect(() => {
     onRapport?.(rapport)
   }, [rapport, onRapport])
 
-  async function exporter() {
-    if (!rapport) return
-    setExport(true)
-    try {
-      const { telechargerRapport } = await import('../../lib/nappe/export')
-      const date = new Date().toISOString().slice(0, 10)
-      await telechargerRapport(rapport, `Conditions nappe${projet ? ` - ${projet}` : ''} - ${date}.xlsx`)
-    } finally {
-      setExport(false)
-    }
-  }
-
-  async function exporterRecap() {
-    setExportRecap(true)
-    try {
-      const { telechargerRecap } = await import('../../lib/nappe/export')
-      const date = new Date().toISOString().slice(0, 10)
-      await telechargerRecap(
-        `Récapitulatif des paramètres de terrain${projet ? ` — ${projet}` : ''}`,
-        { recap, synthese: syntheseRecap },
-        `Recap parametres terrain${projet ? ` - ${projet}` : ''} - ${date}.xlsx`,
-      )
-    } finally {
-      setExportRecap(false)
-    }
-  }
+  // Sheets chosen at step 2 of the page.
+  useEffect(() => {
+    if (aCharger?.length) void chargerFiches(aCharger)
+    // chargerFiches only reads state setters and the current offset.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aCharger])
+  useEffect(() => {
+    if (!retrait) return
+    setFiches([])
+    setFichiersFiches([])
+    setIgnores([])
+  }, [retrait])
 
   async function copierSynthese() {
     try {
@@ -276,208 +222,25 @@ export function ConditionsNappe({
   const optionsOuvrages = [...new Map([...fiches.map((f) => [cleOuvrage(f.ouvrage), f.ouvrage] as const), ...jeu.ouvrages.map((o) => [o.cle, o.nom] as const)]).entries()]
 
   return (
-    <>
-      <section className="section section--muted">
-        <div className="container">
-          <h2 className="etape">
-            <span>{numero}</span> Fiches de prélèvement et conditions de la nappe (facultatif)
-          </h2>
-          <p className="lede" style={{ marginBottom: '1.25rem' }}>
-            Chargez les fiches de prélèvement de la campagne : conditions physico-chimiques de la nappe (pH, redox, oxygène dissous, conductivité,
-            température en fin de purge), qualité des purges et, avec les résultats du laboratoire chargés ci-dessus, processus redox dominant,
-            criblage de la déchloration réductrice selon le protocole USEPA 1998, devenir du chlorure de vinyle et données d'entrée de BIOCHLOR.
-            L'export Excel des résultats reçoit les onglets « Conditions physico-chimiques » et « Qualité des purges » (et, en export expert,
-            l'atténuation naturelle).
-          </p>
-
-          <h3 className="sous-etape">Fiches de prélèvement</h3>
-          <Depot
-            titre="Déposez ici le classeur des fiches de prélèvement"
-            aide="Une fiche par onglet (modèle ERM ou équivalent) : tableau de purge avec pH, redox mesuré et corrigé, oxygène dissous, conductivité, température. Plusieurs classeurs possibles."
-            multiple
-            chargement={chargement === 'fiches'}
-            onFichiers={chargerFiches}
-          />
-          {fiches.length > 0 && (
-            <div className="card" style={{ marginTop: '1rem', maxWidth: '48rem' }}>
-              <strong>{fichiersFiches.join(', ')}</strong>
-              <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
-                {fiches.length} fiche{fiches.length > 1 ? 's' : ''} lue{fiches.length > 1 ? 's' : ''}, dont {fichesMesurees.length} avec des mesures.
-                {fichesVides.length > 0 && ` Sans mesure (ignorées) : ${fichesVides.map((f) => f.onglet).join(', ')}.`}
-                {ignores.length > 0 && ` Onglets non reconnus : ${ignores.join(', ')}.`}
-              </p>
-              <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                Valeur retenue : dernière lecture complète de la purge. Écart « redox corrigé − mesuré » lu sur les fiches :{' '}
-                {decalagesFiches.length ? decalagesFiches.map((d) => `${fr(d, 1)} mV`).join(', ') : 'non renseigné'}.
-              </p>
-              <button
-                type="button"
-                className="btn btn--ghost btn--petit"
-                style={{ marginTop: '0.5rem' }}
-                onClick={() => {
-                  setFiches([])
-                  setFichiersFiches([])
-                  setIgnores([])
-                }}
-              >
-                Retirer les fiches
-              </button>
-            </div>
-          )}
-
-          {labo.lecture && fiches.length > 0 && <h3 className="sous-etape">Résultats du laboratoire et ouvrages</h3>}
-          {erreur && (
-            <p role="alert" className="alerte">
-              {erreur}
-            </p>
-          )}
-          {labo.erreur && (
-            <p role="alert" className="alerte">
-              {labo.erreur}
-            </p>
-          )}
-          {labo.lecture && fiches.length > 0 && (
-            <div className="card" style={{ marginTop: '1rem', maxWidth: '60rem' }}>
-              <strong>{labo.lecture.nom}</strong>
-              {labo.notes.map((n) => (
-                <p key={n} style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  {n}
-                </p>
-              ))}
-              <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
-                Paramètres reconnus :{' '}
-                {Object.entries(jeu.reconnus)
-                  .map(([id, l]) => `${PARAMS.find((p) => p.id === id)?.libelle} ← ${l!.join(', ')}`)
-                  .join(' ; ') || 'aucun'}
-              </p>
-              {jeu.unitesIgnorees.length > 0 && (
-                <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--level-elevee)' }}>Unités non comprises, lignes écartées : {jeu.unitesIgnorees.join(', ')}</p>
-              )}
-              <details className="qualif" style={{ marginTop: '0.75rem' }} open={echantillons.some((p) => !fiches.some((f) => cleOuvrage(f.ouvrage) === associationAuto(p.nom, fiches)))}>
-                <summary>Correspondance des échantillons avec les ouvrages ({echantillons.length})</summary>
-                <div className="tableau-defile" style={{ maxHeight: '20rem', marginTop: '0.5rem' }}>
-                  <table className="tableau">
-                    <thead>
-                      <tr>
-                        <th>Échantillon du laboratoire</th>
-                        <th>Ouvrage</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {echantillons.map((p) => {
-                        const auto = associationAuto(p.nom, fiches)
-                        const v = association[p.nom] ?? auto
-                        const connu = fiches.some((f) => cleOuvrage(f.ouvrage) === v)
-                        return (
-                          <tr key={p.nom}>
-                            <td>{p.nom}</td>
-                            <td>
-                              <select value={v} onChange={(e) => setAssociation((a) => ({ ...a, [p.nom]: e.target.value }))}>
-                                {!connu && v && <option value={v}>{p.nom} (sans fiche)</option>}
-                                {optionsOuvrages
-                                  .filter(([cle]) => cle !== v || connu)
-                                  .map(([cle, nom]) => (
-                                    <option key={cle} value={cle}>
-                                      {nom}
-                                    </option>
-                                  ))}
-                                <option value="">— ne pas utiliser —</option>
-                              </select>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            </div>
-          )}
-
-          {fiches.length > 0 && (
-            <>
-          <h3 className="sous-etape">Réglages</h3>
-          <div className="grid grid--3" style={{ alignItems: 'end' }}>
-            <label className="champ">
-              Projet / site (optionnel)
-              <input value={projet} onChange={(e) => setProjet(e.target.value)} placeholder="ex. 0659943 — site X" />
-            </label>
-            <label className="champ">
-              Écart redox mesuré → Eh (mV)
-              <input inputMode="decimal" value={decalage} onChange={(e) => setDecalage(e.target.value)} placeholder="ex. 212 (Ag/AgCl, KCl 3 M)" />
-            </label>
-            <label className="champ">
-              Ajouter un ouvrage (saisie manuelle)
-              <span style={{ display: 'flex', gap: '0.4rem' }}>
-                <input value={nouvelOuvrage} onChange={(e) => setNouvelOuvrage(e.target.value)} placeholder="ex. Pz12" />
-                <button
-                  type="button"
-                  className="btn btn--petit"
-                  disabled={!nouvelOuvrage.trim()}
-                  onClick={() => {
-                    setAjouts((a) => [...a, nouvelOuvrage.trim()])
-                    setNouvelOuvrage('')
-                  }}
-                >
-                  Ajouter
-                </button>
-              </span>
-            </label>
-          </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0 0' }}>
-            Le protocole USEPA note le redox mesuré contre l'électrode Ag/AgCl ; l'écart ne sert qu'à afficher Eh (électrode normale à hydrogène).
-          </p>
-
-            </>
-          )}
-
-          {jeu.ouvrages.length > 0 && fiches.length > 0 && (
-            <div className="grid grid--2" style={{ marginTop: '1rem', gap: '1rem' }}>
-              <details className="qualif card">
-                <summary>Ouvrages de fond — amont, hors panache ({fond.length})</summary>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0' }}>
-                  Référence des critères « &gt; 2 × le fond » (chlorures, alcalinité, CO₂) : médiane des ouvrages cochés.
-                </p>
-                <div style={{ columns: '3 9rem', fontSize: '0.88rem' }}>
-                  {jeu.ouvrages.map((o) => (
-                    <label key={o.cle} style={{ display: 'block' }}>
-                      <input
-                        type="checkbox"
-                        checked={fond.includes(o.cle)}
-                        onChange={(e) => setFond((f) => (e.target.checked ? [...f, o.cle] : f.filter((x) => x !== o.cle)))}
-                      />{' '}
-                      {o.nom}
-                    </label>
-                  ))}
-                </div>
-              </details>
-              <details className="qualif card">
-                <summary>Composés rejetés ou produits de dégradation</summary>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0' }}>
-                  Un composé fille ne rapporte de points que s'il n'était pas présent dans le produit rejeté (note a/ du tableau 2.3).
-                </p>
-                {COMPOSES_FILIATION.map((c) => (
-                  <label key={c.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline', fontSize: '0.88rem', marginTop: '0.3rem' }}>
-                    <select value={statuts[c.id]} onChange={(e) => setStatuts((s) => ({ ...s, [c.id]: e.target.value as Statut }))}>
-                      <option value="auto">Automatique</option>
-                      <option value="filiation">Produit de dégradation</option>
-                      <option value="rejete">Rejeté (produit source)</option>
-                    </select>
-                    <span>
-                      <strong>{c.libelle}</strong> — {c.regle}
-                    </span>
-                  </label>
-                ))}
-              </details>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {evaluations.length > 0 && fiches.length > 0 && (
-        <section className="section section--muted">
-          <div className="container">
-            <h3 className="sous-etape">Synthèse générale</h3>
+    <div className="nappe">
+      {erreur && (
+        <p role="alert" className="alerte">
+          {erreur}
+        </p>
+      )}
+      {chargement === 'fiches' && <p className="pfas-muet">Lecture des fiches…</p>}
+      {!fiches.length ? (
+        <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--color-muted)', maxWidth: '52rem' }}>
+          Chargez les fiches de prélèvement de la campagne à l’étape 2 : conditions physico-chimiques de la nappe (pH, redox, oxygène dissous,
+          conductivité, température en fin de purge), qualité des purges et, avec les résultats du laboratoire, processus redox dominant et
+          criblage de la déchloration réductrice (USEPA 1998).
+        </p>
+      ) : (
+        <>
+          <VisuelsNappe jeu={jeu} evaluations={evaluations} synthese={synthese} />
+          {evaluations.length > 0 && (
+            <details className="sous-volet">
+              <summary>Synthèse générale et récapitulatif des paramètres de terrain</summary>
             <SyntheseGenerale s={synthese} />
             {recap.ouvrages > 0 && (
               <div className="card recap-terrain" style={{ marginTop: '1.5rem' }}>
@@ -529,9 +292,6 @@ export function ConditionsNappe({
                   </p>
                 )}
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-                  <button type="button" className="btn btn--petit" onClick={() => void exporterRecap()} disabled={exportRecap}>
-                    {exportRecap ? 'Préparation…' : 'Télécharger le tableau récapitulatif (Excel)'}
-                  </button>
                   {syntheseRecap.length > 0 && (
                     <button type="button" className="btn btn--ghost btn--petit" onClick={() => void copierSynthese()}>
                       {copie ? 'Synthèse copiée' : 'Copier la synthèse'}
@@ -540,14 +300,11 @@ export function ConditionsNappe({
                 </div>
               </div>
             )}
-          </div>
-        </section>
-      )}
-
-      {evaluations.length > 0 && fiches.length > 0 && (
-        <section className="section">
-          <div className="container">
-            <h3 className="sous-etape">Conditions par ouvrage</h3>
+            </details>
+          )}
+          {evaluations.length > 0 && (
+            <details className="sous-volet">
+              <summary>Conditions par ouvrage : déchloration réductrice, criblage USEPA, processus redox</summary>
             <div className="grid grid--3" style={{ gap: '1rem', marginBottom: '1rem' }}>
               <div className="card">
                 <span className="eyebrow">Zone la plus contaminée</span>
@@ -739,52 +496,164 @@ export function ConditionsNappe({
                 </table>
               </div>
             </details>
-          </div>
-        </section>
-      )}
+            </details>
+          )}
+          <details className="sous-volet">
+            <summary>Fiches, correspondance avec le laboratoire et réglages</summary>
+          {fiches.length > 0 && (
+            <div className="card" style={{ marginTop: '1rem', maxWidth: '48rem' }}>
+              <strong>{fichiersFiches.join(', ')}</strong>
+              <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
+                {fiches.length} fiche{fiches.length > 1 ? 's' : ''} lue{fiches.length > 1 ? 's' : ''}, dont {fichesMesurees.length} avec des mesures.
+                {fichesVides.length > 0 && ` Sans mesure (ignorées) : ${fichesVides.map((f) => f.onglet).join(', ')}.`}
+                {ignores.length > 0 && ` Onglets non reconnus : ${ignores.join(', ')}.`}
+              </p>
+              <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                Valeur retenue : dernière lecture complète de la purge. Écart « redox corrigé − mesuré » lu sur les fiches :{' '}
+                {decalagesFiches.length ? decalagesFiches.map((d) => `${fr(d, 1)} mV`).join(', ') : 'non renseigné'}.
+              </p>
+            </div>
+          )}
 
-      {evaluations.length > 0 && fiches.length > 0 && (
-        <section className="section section--muted">
-          <div className="container">
-            <h3 className="sous-etape">Données d'entrée BIOCHLOR (option)</h3>
-            <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', maxWidth: '48rem' }}>
-              <input type="checkbox" checked={avecBiochlor} onChange={(e) => setAvecBiochlor(e.target.checked)} />
-              <span>
-                <strong>Préparer une modélisation BIOCHLOR</strong>
-                <span style={{ display: 'block', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  Usage expert : vitesse de l'eau, porosité, retard et constantes de biodégradation à renseigner, pour un modèle de transport du
-                  panache (USEPA / AFCEE). Inutile pour décrire les conditions de la nappe.
-                </span>
+          {labo.lecture && fiches.length > 0 && <h3 className="sous-etape">Résultats du laboratoire et ouvrages</h3>}
+          {labo.lecture && fiches.length > 0 && (
+            <div className="card" style={{ marginTop: '1rem', maxWidth: '60rem' }}>
+              <strong>{labo.lecture.nom}</strong>
+              {labo.notes.map((n) => (
+                <p key={n} style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                  {n}
+                </p>
+              ))}
+              <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
+                Paramètres reconnus :{' '}
+                {Object.entries(jeu.reconnus)
+                  .map(([id, l]) => `${PARAMS.find((p) => p.id === id)?.libelle} ← ${l!.join(', ')}`)
+                  .join(' ; ') || 'aucun'}
+              </p>
+              {jeu.unitesIgnorees.length > 0 && (
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--level-elevee)' }}>Unités non comprises, lignes écartées : {jeu.unitesIgnorees.join(', ')}</p>
+              )}
+              <details className="qualif" style={{ marginTop: '0.75rem' }} open={echantillons.some((p) => !fiches.some((f) => cleOuvrage(f.ouvrage) === associationAuto(p.nom, fiches)))}>
+                <summary>Correspondance des échantillons avec les ouvrages ({echantillons.length})</summary>
+                <div className="tableau-defile" style={{ maxHeight: '20rem', marginTop: '0.5rem' }}>
+                  <table className="tableau">
+                    <thead>
+                      <tr>
+                        <th>Échantillon du laboratoire</th>
+                        <th>Ouvrage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {echantillons.map((p) => {
+                        const auto = associationAuto(p.nom, fiches)
+                        const v = association[p.nom] ?? auto
+                        const connu = fiches.some((f) => cleOuvrage(f.ouvrage) === v)
+                        return (
+                          <tr key={p.nom}>
+                            <td>{p.nom}</td>
+                            <td>
+                              <select value={v} onChange={(e) => setAssociation((a) => ({ ...a, [p.nom]: e.target.value }))}>
+                                {!connu && v && <option value={v}>{p.nom} (sans fiche)</option>}
+                                {optionsOuvrages
+                                  .filter(([cle]) => cle !== v || connu)
+                                  .map(([cle, nom]) => (
+                                    <option key={cle} value={cle}>
+                                      {nom}
+                                    </option>
+                                  ))}
+                                <option value="">— ne pas utiliser —</option>
+                              </select>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </div>
+          )}
+
+          {fiches.length > 0 && (
+            <>
+          <h3 className="sous-etape">Réglages</h3>
+          <div className="grid grid--3" style={{ alignItems: 'end' }}>
+            <label className="champ">
+              Projet / site (optionnel)
+              <input value={projet} onChange={(e) => setProjet(e.target.value)} placeholder="ex. 0659943 — site X" />
+            </label>
+            <label className="champ">
+              Écart redox mesuré → Eh (mV)
+              <input inputMode="decimal" value={decalage} onChange={(e) => setDecalage(e.target.value)} placeholder="ex. 212 (Ag/AgCl, KCl 3 M)" />
+            </label>
+            <label className="champ">
+              Ajouter un ouvrage (saisie manuelle)
+              <span style={{ display: 'flex', gap: '0.4rem' }}>
+                <input value={nouvelOuvrage} onChange={(e) => setNouvelOuvrage(e.target.value)} placeholder="ex. Pz12" />
+                <button
+                  type="button"
+                  className="btn btn--petit"
+                  disabled={!nouvelOuvrage.trim()}
+                  onClick={() => {
+                    setAjouts((a) => [...a, nouvelOuvrage.trim()])
+                    setNouvelOuvrage('')
+                  }}
+                >
+                  Ajouter
+                </button>
               </span>
             </label>
-            {avecBiochlor && (
-              <div style={{ marginTop: '1.25rem' }}>
-                <TransportBiochlor h={hydro} setH={setHydro} calc={transport} ouvrages={jeu.ouvrages} sourceDefaut={plusContamine?.ouvrage.cle ?? ''} />
-              </div>
-            )}
           </div>
-        </section>
-      )}
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0 0' }}>
+            Le protocole USEPA note le redox mesuré contre l'électrode Ag/AgCl ; l'écart ne sert qu'à afficher Eh (électrode normale à hydrogène).
+          </p>
 
-      {evaluations.length > 0 && fiches.length > 0 && (
-        <section className="section">
-          <div className="container">
-            <h3 className="sous-etape">Rapport complet des conditions de la nappe</h3>
-            <button type="button" className="btn" onClick={() => void exporter()} disabled={export_}>
-              {export_ ? 'Préparation…' : 'Télécharger le rapport Excel'}
-            </button>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-              Onglets : synthèse générale et classement, récapitulatif des paramètres de terrain (min, max, moyenne et synthèse), synthèse par ouvrage, score USEPA critère par critère, paramètres de terrain et
-              stabilisation, données utilisées{avecBiochlor && transport.vx !== null ? ', transport et saisies BIOCHLOR' : ''}, méthode et sources.
-            </p>
-          </div>
-        </section>
-      )}
+            </>
+          )}
 
-      {fiches.length > 0 && (
-      <section className="section">
-        <div className="container">
-          <h2 style={{ fontSize: '1.2rem' }}>Démarche</h2>
+          {jeu.ouvrages.length > 0 && fiches.length > 0 && (
+            <div className="grid grid--2" style={{ marginTop: '1rem', gap: '1rem' }}>
+              <details className="qualif card">
+                <summary>Ouvrages de fond — amont, hors panache ({fond.length})</summary>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0' }}>
+                  Référence des critères « &gt; 2 × le fond » (chlorures, alcalinité, CO₂) : médiane des ouvrages cochés.
+                </p>
+                <div style={{ columns: '3 9rem', fontSize: '0.88rem' }}>
+                  {jeu.ouvrages.map((o) => (
+                    <label key={o.cle} style={{ display: 'block' }}>
+                      <input
+                        type="checkbox"
+                        checked={fond.includes(o.cle)}
+                        onChange={(e) => setFond((f) => (e.target.checked ? [...f, o.cle] : f.filter((x) => x !== o.cle)))}
+                      />{' '}
+                      {o.nom}
+                    </label>
+                  ))}
+                </div>
+              </details>
+              <details className="qualif card">
+                <summary>Composés rejetés ou produits de dégradation</summary>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0' }}>
+                  Un composé fille ne rapporte de points que s'il n'était pas présent dans le produit rejeté (note a/ du tableau 2.3).
+                </p>
+                {COMPOSES_FILIATION.map((c) => (
+                  <label key={c.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline', fontSize: '0.88rem', marginTop: '0.3rem' }}>
+                    <select value={statuts[c.id]} onChange={(e) => setStatuts((s) => ({ ...s, [c.id]: e.target.value as Statut }))}>
+                      <option value="auto">Automatique</option>
+                      <option value="filiation">Produit de dégradation</option>
+                      <option value="rejete">Rejeté (produit source)</option>
+                    </select>
+                    <span>
+                      <strong>{c.libelle}</strong> — {c.regle}
+                    </span>
+                  </label>
+                ))}
+              </details>
+            </div>
+          )}
+          </details>
+          <details className="sous-volet">
+            <summary>Démarche et sources</summary>
           <div className="grid grid--3" style={{ gap: '1rem' }}>
             <div className="card">
               <span className="eyebrow">Ligne de preuve 1</span>
@@ -796,8 +665,7 @@ export function ConditionsNappe({
             <div className="card">
               <span className="eyebrow">Ligne de preuve 2 — cette section</span>
               <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
-                Processus identifiés et quantifiés : indicateurs géochimiques (criblage USEPA, processus redox), produits de dégradation, constantes
-                de biodégradation pour BIOCHLOR.
+                Processus identifiés et quantifiés : indicateurs géochimiques (criblage USEPA, processus redox), produits de dégradation.
               </p>
             </div>
             <div className="card">
@@ -813,10 +681,10 @@ export function ConditionsNappe({
               <li key={s.texte}>{s.url ? <a href={s.url} target="_blank" rel="noreferrer">{s.texte}</a> : s.texte}</li>
             ))}
           </ul>
-        </div>
-      </section>
+          </details>
+        </>
       )}
-    </>
+    </div>
   )
 }
 

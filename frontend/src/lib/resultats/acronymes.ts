@@ -20,6 +20,8 @@ const AUTRES: [string[], string][] = [
   [['methyltertbutylether', 'methyltertiobutylether', 'mtbe'], 'MTBE'],
   [['ethyltertbutylether', 'ethyltertiobutylether', 'etbe'], 'ETBE'],
   [['hexachlorobutadiene'], 'HCBD'],
+  [['methylisobutylcetone', 'methylisobutylketone', '4methyl2pentanone', '4methylpentan2one', 'mibk'], 'MIBK'],
+  [['methylethylcetone', 'methylethylketone', 'butanone', '2butanone', 'butan2one', 'mek'], 'MEK'],
   [['styrene'], 'Styrène'],
   // Metals: their chemical symbol.
   [['arsenic'], 'As'],

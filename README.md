@@ -36,7 +36,17 @@ livrables).
   impression PDF et export SVG.
 
 - **Résultats labo** (`frontend/src/pages/ResultatsLabo.tsx`) — mise en
-  forme des résultats d'analyses : choix de la matrice (eaux souterraines,
+  forme et lecture visuelle des résultats d'analyses. La page tient en
+  quatre étapes : matrice, fichiers (laboratoire et fiches de prélèvement),
+  résultats et interprétation, export. Les résultats s'ouvrent sur des tuiles
+  de chiffres clés cliquables, puis des volets colorés repliés par défaut
+  (`src/components/resultats/Volet.tsx`) : carte des résultats — échantillons
+  × composés colorés selon le rapport à la valeur de référence, cliquable
+  (`CarteResultats.tsx`, `src/lib/resultats/resume.ts`) —, conditions de
+  prélèvement, qualité des gaz du sol (nuage O2 / CO2, `NuageGaz.tsx`),
+  conditions de la nappe, campagnes, positions hydrauliques, contrôle
+  qualité, tableau, signatures ; tous les fichiers Excel sont proposés dans
+  la section Export finale. Choix de la matrice (eaux souterraines,
   sols, gaz du sol / air), chargement du fichier du laboratoire (ALS /
   Wessling, Eurofins, SGS — disposition reconnue automatiquement,
   `src/lib/resultats/parse.ts`), conversion µg/support → µg/m³ pour les gaz,
@@ -133,17 +143,10 @@ replient.
   synthèse de cinq phrases au plus sur les conditions physico-chimiques de
   la nappe (pH, minéralisation, oxygène et redox, température, qualité des
   mesures) ; téléchargeable seul en Excel ou inclus dans le rapport.
-  En option à cocher (usage expert), prépare les données d'entrée de BIOCHLOR (`biochlor.ts`, `transport.ts`,
-  `src/components/nappe/TransportBiochlor.tsx`) : vitesse de l'eau depuis la
-  vitesse de Darcy, K × gradient (gradient proposé d'après les cotes NGF des
-  fiches) ou une vitesse réelle connue, porosités et masse volumique types par
-  lithologie (USEPA 1998, tableaux C.3.1 et C.3.2), foc depuis le COT d'un
-  sol, dispersivité d'après la longueur du panache (Xu et Eckstein, 1995),
-  constantes de biodégradation entre deux ouvrages (normalisées par les
-  chlorures si disponibles, USEPA 1998 annexe C) et tableau des valeurs à
-  saisir dans BIOCHLOR, en unités SI et US ; chaque champ explique où
-  trouver la valeur. Inscrit le tout dans la démarche par
-  lignes de preuve (USEPA, MACAOH) et exporte un rapport Excel (`export.ts`).
+  Inscrit le tout dans la démarche par lignes de preuve (USEPA, MACAOH) et
+  exporte un rapport Excel (`export.ts`, ouvrages classés par nom). Diagramme
+  oxygène dissous – redox et matrice de stabilisation des purges, cliquables
+  (`src/components/nappe/VisuelsNappe.tsx`).
 - **Conformité des rejets** (`frontend/src/pages/ConformiteRejets.tsx`) —
   rejets d'une unité de traitement d'air ou d'eau comparés aux valeurs
   limites générales de l'arrêté du 2 février 1998 modifié
