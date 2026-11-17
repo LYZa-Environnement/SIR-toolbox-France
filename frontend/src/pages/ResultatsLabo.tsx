@@ -209,17 +209,40 @@ export default function ResultatsLabo() {
     setParFamille({})
   }
 
-  async function charger(f: File | undefined) {
-    if (!f || !matrice) return
+  /** Reads each file; those that cannot be read are reported, the others kept. */
+  async function lireTous(fs: File[], m: Matrice): Promise<{ lus: { nom: string; lecture: Lecture }[]; erreurs: string[]; derniere: unknown }> {
+    const lus: { nom: string; lecture: Lecture }[] = []
+    const erreurs: string[] = []
+    let derniere: unknown = null
+    for (const f of fs) {
+      try {
+        lus.push({ nom: f.name, lecture: await lireBrut(f, m) })
+      } catch (e) {
+        derniere = e
+        erreurs.push(messageLecture(f, e))
+      }
+    }
+    return { lus, erreurs, derniere }
+  }
+
+  /** The campaign's lab files — one, or several chosen together. */
+  async function charger(fs: File[]) {
+    if (!fs.length || !matrice) return
     setChargement(true)
     setErreur(null)
     try {
-      const brute = await lireBrut(f, matrice)
+      const { lus, erreurs, derniere } = await lireTous(fs, matrice)
+      if (!lus.length) {
+        if (fs.length === 1) throw derniere
+        throw new LectureImpossible(erreurs.join(' '))
+      }
+      const { lecture: brute, notes } = lus.length > 1 ? fusionnerLectures(lus) : { lecture: lus[0].lecture, notes: [] as string[] }
       const l = finaliser(brute, matrice)
       setLecture(l)
-      setFichier(f.name)
-      setFichiers([{ nom: f.name, lecture: brute }])
-      setNotesFusion([])
+      setFichier(lus.map((x) => x.nom).join(' + '))
+      setFichiers(lus)
+      setNotesFusion(notes)
+      if (erreurs.length) setErreur(`Fichier${erreurs.length > 1 ? 's' : ''} non lu${erreurs.length > 1 ? 's' : ''} : ${erreurs.join(' ')}`)
       setAssocManuelle({})
       setSaisies(fichesGaz ? saisiesFiches(l.points.map((p) => p.nom), fichesGaz.fiches, {}, sourceDuree, sourceDebit) : {})
       setSelection({})
@@ -273,14 +296,14 @@ export default function ResultatsLabo() {
       ? `${f.name} : ${e.message}`
       : `${f.name} n'a pas pu être lu. Vérifiez qu'il s'agit d'un classeur Excel (.xlsx, .xls) ou d'un CSV.`
 
-  async function ajouterFichier(f: File | undefined) {
-    if (!f || !matrice) return
+  async function ajouterFichier(fs: File[]) {
+    if (!fs.length || !matrice) return
     setChargement(true)
     setErreur(null)
     try {
-      reunir([...fichiers, { nom: f.name, lecture: await lireBrut(f, matrice) }])
-    } catch (e) {
-      setErreur(messageLecture(f, e))
+      const { lus, erreurs } = await lireTous(fs, matrice)
+      if (lus.length) reunir([...fichiers, ...lus])
+      if (erreurs.length) setErreur(erreurs.join(' '))
     } finally {
       setChargement(false)
     }
@@ -399,15 +422,18 @@ export default function ResultatsLabo() {
 
   /** A lab file for a campaign: a new one, the main one (index 0), or one
    *  of the others, merged with that campaign's earlier files. */
-  async function ajouterCampagne(f: File, cible: number | null): Promise<string | null> {
+  async function ajouterCampagne(fs: File[], cible: number | null): Promise<string | null> {
+    const { lus, erreurs } = await lireTous(fs, 'eau')
+    const message = erreurs.length ? `${erreurs.join(' ')} Si ce fichier vient bien d'un laboratoire, transmettez-le pour que son format soit pris en charge.` : null
+    if (!lus.length) return message
     try {
       if (cible === 0) {
-        reunir([...fichiers, { nom: f.name, lecture: await lireBrut(f, 'eau') }])
-        return null
+        reunir([...fichiers, ...lus])
+        return message
       }
-      const brute = await lireBrut(f, 'eau')
       const actuelle = cible === null ? null : autres[cible - 1]
-      const bruts = [...(actuelle?.bruts ?? []), { nom: f.name, lecture: brute }]
+      // Files chosen together make one campaign.
+      const bruts = [...(actuelle?.bruts ?? []), ...lus]
       const l = finaliser(fusionnerLectures(bruts).lecture, 'eau')
       const q = qualifierAuto(l.points)
       // Blanks and duplicates: what was set aside stays so; the new samples by name.
@@ -415,11 +441,9 @@ export default function ResultatsLabo() {
       const campagne: AutreCampagne = { date: actuelle?.date ?? '', regime: actuelle?.regime ?? null, lecture: l, fichier: bruts.map((x) => x.nom).join(' + '), controles, bruts }
       setAutres((a) => (cible === null ? [...a, campagne] : a.map((c, k) => (k === cible - 1 ? campagne : c))))
       setOuvragesManuels(null)
-      return null
+      return message
     } catch (e) {
-      return e instanceof LectureImpossible
-        ? `${f.name} : ${e.message} Si ce fichier vient bien d'un laboratoire, transmettez-le pour que son format soit pris en charge.`
-        : messageLecture(f, e)
+      return `${lus.map((x) => x.nom).join(', ')} : ${(e as Error).message}`
     }
   }
 
@@ -503,7 +527,7 @@ export default function ResultatsLabo() {
   function deposer(e: DragEvent) {
     e.preventDefault()
     setSurvol(false)
-    void charger(e.dataTransfer.files[0])
+    void charger([...e.dataTransfer.files])
   }
 
   const avertissement = matrice && lecture ? avertissementMatrice(matrice, lecture) : null
@@ -581,20 +605,22 @@ export default function ResultatsLabo() {
                 <input
                   ref={input}
                   type="file"
+                  multiple
                   accept=".xlsx,.xlsm,.xls,.csv"
                   style={{ display: 'none' }}
                   onChange={(e) => {
-                    void charger(e.target.files?.[0])
+                    void charger([...(e.target.files ?? [])])
                     e.target.value = ''
                   }}
                 />
-                <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture du fichier…' : 'Déposez ici le fichier du laboratoire'}</p>
+                <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture…' : 'Déposez ici le ou les fichiers du laboratoire'}</p>
                 <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  Excel (.xlsx, .xls) ou CSV — la disposition du fichier est reconnue automatiquement. Le fichier est lu dans votre
-                  navigateur et n'est envoyé nulle part.
+                  Excel (.xlsx, .xls) ou CSV — la disposition est reconnue automatiquement. Une campagne rendue en plusieurs fichiers :
+                  sélectionnez-les ensemble (Ctrl ou Maj + clic), ils sont réunis dans un même tableau. Les fichiers sont lus dans votre
+                  navigateur et ne sont envoyés nulle part.
                 </p>
                 <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
-                  Choisir un fichier
+                  Choisir un ou plusieurs fichiers
                 </button>
               </div>
             </>
@@ -653,10 +679,11 @@ export default function ResultatsLabo() {
               <input
                 ref={inputAjout}
                 type="file"
+                multiple
                 accept=".xlsx,.xlsm,.xls,.csv"
                 style={{ display: 'none' }}
                 onChange={(e) => {
-                  void ajouterFichier(e.target.files?.[0])
+                  void ajouterFichier([...(e.target.files ?? [])])
                   e.target.value = ''
                 }}
               />
@@ -665,7 +692,7 @@ export default function ResultatsLabo() {
                 même tableau (un échantillon présent dans deux fichiers garde une seule colonne).
               </p>
               <button type="button" className="btn btn--petit" style={{ marginTop: '0.5rem' }} onClick={() => inputAjout.current?.click()} disabled={chargement}>
-                {chargement ? 'Lecture…' : 'Ajouter un fichier de la même campagne'}
+                {chargement ? 'Lecture…' : 'Ajouter des fichiers de la même campagne'}
               </button>
             </div>
           )}
