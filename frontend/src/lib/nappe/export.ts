@@ -1,14 +1,12 @@
 /**
  * Excel report of the groundwater conditions: summary by well, the
  * USEPA (1998) screening criterion by criterion, the field parameters of
- * the sampling sheets, the data used, the BIOCHLOR transport inputs when
- * computed, and the method with its sources.
+ * the sampling sheets, the data used, and the method with its sources.
  */
 
 import type { Workbook, Worksheet } from 'exceljs'
 import { BANDEAU, ETAT } from '../resultats/couleurs.ts'
 import { ecrire, GRIS_FAMILLE, VERT_ENTETE } from '../resultats/export.ts'
-import { ETHENES } from './biochlor.ts'
 import type { Jeu } from './donnees.ts'
 import { BAREME_CLASSES, COMPOSES_FILIATION, LIBELLES_CLASSE, LIBELLES_FAVORABILITE, type Classe, type Evaluation, type Favorabilite, type Options } from './evaluation.ts'
 import { PARAMS_TERRAIN } from './fiches.ts'
@@ -16,7 +14,6 @@ import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from './parametres
 import { formatExtreme, formatMoyenne, type Recap } from './recap.ts'
 import { SOURCES } from './sources.ts'
 import { LIBELLES_ETAT, type Etat, type Synthese } from './synthese.ts'
-import type { Transport } from './transport.ts'
 
 export interface Rapport {
   titre: string
@@ -27,7 +24,6 @@ export interface Rapport {
   /** Limits shared by most wells. */
   limites: string[]
   synthese: Synthese
-  transport?: Transport
   /** Summary of the field parameters and its reading. */
   recap?: RecapTerrain
 }
@@ -121,7 +117,7 @@ function feuilleGenerale(wb: Workbook, rp: Rapport) {
     ['Conditions physico-chimiques', 0],
     ['Réserve sur la mesure', 0],
   ])
-  for (const c of rp.synthese.classement) {
+  for (const c of [...rp.synthese.classement].sort((a, b) => a.rang - b.rang)) {
     const cc = COULEUR_ETAT[c.etat]
     ecrire(ws, r, 1, c.rang, { taille: 9, h: 'center' })
     ecrire(ws, r, 2, c.nom, { taille: 9, gras: true })
@@ -389,63 +385,6 @@ function feuilleDonnees(wb: Workbook, rp: Rapport) {
   texte(ws, r, 'En bleu : valeurs saisies ou corrigées dans l’outil. La provenance de chaque valeur figure en commentaire.', { italique: true })
 }
 
-function feuilleTransport(wb: Workbook, rp: Rapport) {
-  const t = rp.transport
-  if (!t) return
-  const ws = wb.addWorksheet('Transport BIOCHLOR', { views: [{ showGridLines: false }] })
-  ecrire(ws, 1, 1, 'Données d’entrée BIOCHLOR et constantes de biodégradation de terrain (USEPA, 1998, annexe C)', { gras: true, taille: 11, bord: false })
-  let r = 3
-  ws.getColumn(1).width = 44
-  ws.getColumn(2).width = 30
-  ws.getColumn(3).width = 28
-  ws.getColumn(4).width = 24
-  r = bandeau(ws, r, 'Paramètres saisis et calculés', 4)
-  for (const [k, v] of t.parametres) {
-    ecrire(ws, r, 1, k, { taille: 9, fond: GRIS_FAMILLE, gras: true })
-    ws.mergeCells(r, 2, r, 4)
-    ecrire(ws, r++, 2, v, { taille: 9 })
-  }
-  r++
-  if (t.saisies.length) {
-    r = bandeau(ws, r, 'Valeurs à saisir dans BIOCHLOR', 4)
-    r = entetes(ws, r, [
-      ['Section', 0],
-      ['Champ', 0],
-      ['Valeur (SI)', 0],
-      ['Dans BIOCHLOR (unités US)', 0],
-    ])
-    for (const x of t.saisies) {
-      ;[x.section, x.champ, x.si, x.biochlor].forEach((v, j) => ecrire(ws, r, j + 1, v, { taille: 9, gras: j === 3 }))
-      r++
-    }
-    r++
-  }
-  if (t.taux) {
-    r = bandeau(ws, r, 'Constantes de biodégradation entre les deux ouvrages', 10)
-    r = entetes(ws, r, [
-      ['Composé', 0],
-      ['Koc (l/kg)', 0],
-      ['Retard R', 0],
-      ['Temps de transit (an)', 0],
-      ['CA (µg/l)', 11],
-      ['CB (µg/l)', 11],
-      ['CB corrigée (µg/l)', 12],
-      ['λ (1/an)', 10],
-      ['Littérature (USEPA 1998)', 18],
-      ['Remarque', 60],
-    ])
-    for (const x of t.taux) {
-      const e = ETHENES.find((y) => y.id === x.compose)!
-      const v: (string | number)[] = [e.libelle, nb(t.kocs[x.compose]), nb(x.retard), nb(x.temps), nb(x.cA), nb(x.cB), nb(x.cBcorr), nb(x.lambda), e.litterature, x.note ?? '-']
-      v.forEach((y, j) => ecrire(ws, r, j + 1, y, { taille: 9, h: j === v.length - 1 ? 'left' : 'center', wrap: j === v.length - 1, gras: j === 0 || j === 7 }))
-      r++
-    }
-    r++
-  }
-  r = texte(ws, r, 'q = K·i ; vx = q / ne ; R = 1 + ρb·Koc·foc / n ; t = distance / (vx / R) ; λ = −ln(CB,corr / CA) / t ; CB,corr = CB·TA/TB, T = Cl⁻ + 0,86 PCE + 0,81 TCE + 0,73 DCE + 0,57 CV (mg/l) ; αx = 0,83 (log10 L)^2,414 m.', { italique: true })
-  texte(ws, r, 'Les deux ouvrages doivent être sur une même ligne d’écoulement, dans le panache. Les valeurs types par lithologie (USEPA 1998, tableaux C.3.1 et C.3.2) sont à remplacer par des mesures dès que possible.', { italique: true })
-}
-
 /** Min, max (well in brackets) and mean of each field parameter, then a short reading. */
 function feuilleRecap(wb: Workbook, titre: string, { recap, synthese }: RecapTerrain) {
   const ws = wb.addWorksheet('Récapitulatif terrain', { views: [{ showGridLines: false }] })
@@ -561,9 +500,9 @@ function feuilleConditionsVisuelle(wb: Workbook, rp: Rapport) {
   ;(rp.recap?.synthese.length ? rp.recap.synthese : rp.synthese.site).forEach(paragraphe)
   r++
 
-  r = bandeau(ws, r, 'Conditions par ouvrage, du plus réducteur au plus oxydant', largeur)
+  r = bandeau(ws, r, 'Conditions par ouvrage (rang : du plus réducteur, 1, au plus oxydant)', largeur)
   r = entetes(ws, r, [
-    ['Rang', 6],
+    ['Rang redox', 6],
     ['Ouvrage', 14],
     ['État physico-chimique', 18],
     ['pH', 7],
@@ -749,16 +688,27 @@ function feuilleQualitePurges(wb: Workbook, rp: Rapport) {
  * The groundwater sheets added to the Résultats labo workbook: the visual
  * summary of the physico-chemical conditions and the purge quality; with
  * the expert export, natural attenuation too (summary by well, USEPA
- * screening, BIOCHLOR inputs when computed, method and sources).
+ * screening, method and sources). Wells in the order of their names.
  */
-export function ajouterFeuillesNappe(wb: Workbook, rp: Rapport, expert: boolean) {
+export function ajouterFeuillesNappe(wb: Workbook, brut: Rapport, expert: boolean) {
+  const rp = parOuvrage(brut)
   feuilleConditionsVisuelle(wb, rp)
   feuilleQualitePurges(wb, rp)
   if (expert) {
     feuilleSynthese(wb, rp)
     feuilleScore(wb, rp)
-    if (rp.transport) feuilleTransport(wb, rp)
     feuilleMethode(wb)
+  }
+}
+
+const parNom = (a: string, b: string) => a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' })
+
+/** Wells in the order of their names (Pz1, Pz2, Pz10) in every sheet. */
+function parOuvrage(rp: Rapport): Rapport {
+  return {
+    ...rp,
+    evaluations: [...rp.evaluations].sort((a, b) => parNom(a.ouvrage.nom, b.ouvrage.nom)),
+    synthese: { ...rp.synthese, classement: [...rp.synthese.classement].sort((a, b) => parNom(a.nom, b.nom)) },
   }
 }
 
@@ -776,7 +726,8 @@ export async function telechargerRecap(titre: string, rt: RecapTerrain, nomFichi
   await telecharger(wb, nomFichier)
 }
 
-export async function telechargerRapport(rp: Rapport, nomFichier: string) {
+export async function telechargerRapport(brut: Rapport, nomFichier: string) {
+  const rp = parOuvrage(brut)
   const wb = await classeur()
   feuilleGenerale(wb, rp)
   if (rp.recap) feuilleRecap(wb, `${rp.titre} — récapitulatif des paramètres de terrain`, rp.recap)
@@ -784,7 +735,6 @@ export async function telechargerRapport(rp: Rapport, nomFichier: string) {
   feuilleScore(wb, rp)
   feuilleTerrain(wb, rp)
   feuilleDonnees(wb, rp)
-  feuilleTransport(wb, rp)
   feuilleMethode(wb)
   await telecharger(wb, nomFichier)
 }

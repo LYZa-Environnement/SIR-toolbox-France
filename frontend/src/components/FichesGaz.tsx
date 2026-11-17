@@ -1,42 +1,15 @@
-import { useRef, useState } from 'react'
-import type { Cell, Point } from '../lib/resultats/parse'
+import type { Point } from '../lib/resultats/parse'
+import type { EtatFichesGaz } from '../lib/resultats/lireFichesGaz'
 import {
   LIBELLES_DEBIT,
   LIBELLES_DUREE,
-  lireFichesGaz,
   retenir,
-  type FicheGaz,
   type SourceDebit,
   type SourceDuree,
 } from '../lib/resultats/fichesGaz'
-import { QualiteGaz } from './QualiteGaz'
-
-export interface EtatFichesGaz {
-  fiches: FicheGaz[]
-  fichiers: string[]
-  ignores: string[]
-}
 
 const fr = (x: number | null, chiffres = 3) => (x === null ? '—' : x.toLocaleString('fr-FR', { maximumFractionDigits: chiffres }))
 const dateFr = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? d.split('-').reverse().join('/') : d || '—')
-
-/** Reads the sampling sheet workbooks (one sheet per tab). */
-async function lireClasseurs(liste: File[]): Promise<EtatFichesGaz> {
-  const XLSX = await import('xlsx')
-  const etat: EtatFichesGaz = { fiches: [], fichiers: [], ignores: [] }
-  for (const f of liste) {
-    const classeur = XLSX.read(await f.arrayBuffer(), { type: 'array' })
-    const feuilles = classeur.SheetNames.map((nom) => ({
-      nom,
-      grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
-    }))
-    const { fiches, ignores } = lireFichesGaz(feuilles)
-    etat.fiches.push(...fiches)
-    etat.ignores.push(...ignores.map((o) => (liste.length > 1 ? `${f.name} › ${o}` : o)))
-    etat.fichiers.push(f.name)
-  }
-  return etat
-}
 
 /**
  * Sampling sheets of the soil gas campaign: duration and flows of each
@@ -49,8 +22,6 @@ export function FichesGaz({
   association,
   sourceDuree,
   sourceDebit,
-  onCharger,
-  onRetirer,
   onAssocier,
   onSourceDuree,
   onSourceDebit,
@@ -61,36 +32,40 @@ export function FichesGaz({
   association: Record<string, number>
   sourceDuree: SourceDuree
   sourceDebit: SourceDebit
-  onCharger: (etat: EtatFichesGaz) => void
-  onRetirer: () => void
   onAssocier: (echantillon: string, fiche: number) => void
   onSourceDuree: (s: SourceDuree) => void
   onSourceDebit: (s: SourceDebit) => void
 }) {
-  const input = useRef<HTMLInputElement>(null)
-  const [chargement, setChargement] = useState(false)
-  const [erreur, setErreur] = useState<string | null>(null)
-
-  async function charger(liste: File[]) {
-    if (!liste.length) return
-    setChargement(true)
-    setErreur(null)
-    try {
-      const lu = await lireClasseurs(liste)
-      if (!lu.fiches.length) {
-        setErreur(
-          `Aucune fiche de prélèvement reconnue dans ${liste.map((f) => f.name).join(', ')} : chaque onglet doit porter le débit d'échantillonnage ou le tableau de purge et d'échantillonnage (colonnes « Étape » et « Débit »).`,
-        )
-        return
-      }
-      onCharger(lu)
-    } catch {
-      setErreur("Le fichier n'a pas pu être lu. Vérifiez qu'il s'agit d'un classeur Excel (.xlsx, .xls).")
-    } finally {
-      setChargement(false)
-    }
+  if (!etat) {
+    return (
+      <p style={{ margin: '0 0 1rem', fontSize: '0.9rem', color: 'var(--color-muted)', maxWidth: '52rem' }}>
+        Chargez les fiches de prélèvement à l’étape 2 : la durée et les débits de chaque échantillon y sont lus et reportés dans le
+        tableau ci-dessous. Sinon, saisissez-les.
+      </p>
+    )
   }
+  return <FichesChargees {...{ points, etat, association, sourceDuree, sourceDebit, onAssocier, onSourceDuree, onSourceDebit }} />
+}
 
+function FichesChargees({
+  points,
+  etat,
+  association,
+  sourceDuree,
+  sourceDebit,
+  onAssocier,
+  onSourceDuree,
+  onSourceDebit,
+}: {
+  points: Point[]
+  etat: EtatFichesGaz
+  association: Record<string, number>
+  sourceDuree: SourceDuree
+  sourceDebit: SourceDebit
+  onAssocier: (echantillon: string, fiche: number) => void
+  onSourceDuree: (s: SourceDuree) => void
+  onSourceDebit: (s: SourceDebit) => void
+}) {
   const rapproches = etat ? points.filter((p) => (association[p.nom] ?? -1) >= 0) : []
   const utilisees = new Set(Object.values(association))
   const sansEchantillon = etat ? etat.fiches.filter((_, i) => !utilisees.has(i)) : []
@@ -103,38 +78,10 @@ export function FichesGaz({
   return (
     <div className="card" style={{ margin: '0 0 1.5rem' }}>
       <strong>Fiches de prélèvement</strong>
-      <p style={{ margin: '0.35rem 0 0.75rem', fontSize: '0.9rem', color: 'var(--color-muted)', maxWidth: '52rem' }}>
-        Chargez le classeur des fiches de prélèvement de gaz du sol ou d'air (une fiche par onglet) : la durée et les débits de chaque
-        échantillon y sont lus et reportés dans le tableau ci-dessous, l'échantillon étant rapproché de sa fiche par son nom
-        (corrigeable). Les valeurs reportées restent modifiables ; changer une option ou une fiche les remplace.
+      <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)', maxWidth: '52rem' }}>
+        Durée et débits de chaque échantillon lus sur sa fiche (rapprochement par le nom, corrigeable) et reportés dans le tableau
+        ci-dessous ; les valeurs reportées restent modifiables, changer une option ou une fiche les remplace.
       </p>
-      <input
-        ref={input}
-        type="file"
-        multiple
-        accept=".xlsx,.xlsm,.xls"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          void charger([...(e.target.files ?? [])])
-          e.target.value = ''
-        }}
-      />
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button type="button" className="btn btn--petit" onClick={() => input.current?.click()} disabled={chargement}>
-          {chargement ? 'Lecture…' : etat ? 'Charger d’autres fiches' : 'Charger les fiches de prélèvement'}
-        </button>
-        {etat && (
-          <button type="button" className="btn btn--petit btn--ghost" onClick={onRetirer}>
-            Retirer les fiches
-          </button>
-        )}
-      </div>
-      {erreur && (
-        <p role="alert" className="alerte">
-          {erreur}
-        </p>
-      )}
-
       {etat && (
         <>
           <p style={{ margin: '0.75rem 0 0', fontSize: '0.9rem' }}>
@@ -254,7 +201,6 @@ export function FichesGaz({
             </p>
           )}
 
-          <QualiteGaz fiches={etat.fiches} sourceDuree={sourceDuree} sourceDebit={sourceDebit} />
         </>
       )}
     </div>
