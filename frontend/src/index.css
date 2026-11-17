@@ -946,6 +946,41 @@ a.card:hover {
   background: var(--cat-soft);
   border-radius: 0 var(--radius) var(--radius) 0;
 }
+.categories__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+.categorie__bascule {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 1rem;
+  width: 100%;
+  cursor: pointer;
+}
+.categorie__bascule:focus-visible {
+  outline: 2px solid var(--cat);
+  outline-offset: 4px;
+}
+.categorie__bascule .categorie__etape,
+.categorie__bascule .categorie__titre {
+  grid-column: 1;
+}
+.categorie__chevron {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: 1.4rem;
+  color: var(--cat);
+}
+.categorie__replie {
+  color: var(--color-ink);
+}
+.categorie [hidden] {
+  display: none !important;
+}
 .categorie__titre {
   margin: 0.15rem 0 0.3rem;
   font-size: clamp(1.35rem, 1.15rem + 0.8vw, 1.8rem);
@@ -1750,4 +1785,22 @@ a.card:hover {
   display: block;
   height: 100%;
   background: #2a78d6;
+}
+
+/* ---- Mot de passe à l'entrée ---- */
+.porte {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: var(--color-section);
+}
+.porte__carte {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 24rem);
+}
+.porte__titre {
+  margin: 0;
+  font-size: 1.6rem;
 }

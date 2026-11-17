@@ -9,6 +9,7 @@ import { ordonnerCOHV } from '../lib/resultats/cohv'
 import { SignaturesApercu } from '../components/Signatures'
 import { FichesGaz, type EtatFichesGaz } from '../components/FichesGaz'
 import { ficheDe, libelleDates, retenir, type FicheGaz, type SourceDebit, type SourceDuree } from '../lib/resultats/fichesGaz'
+import { evaluerQualite, REFERENCES_QUALITE, syntheseQualite } from '../lib/resultats/qualiteGaz'
 import { PositionsHydrauliques } from '../components/PositionsHydrauliques'
 import { Campagnes, type AutreCampagne, type InfoCampagne } from '../components/Campagnes'
 import { associer, composes, type Campagne, type Ouvrage } from '../lib/resultats/campagnes'
@@ -160,6 +161,8 @@ export default function ResultatsLabo() {
   const [unite, setUnite] = useState<UniteSortie>('µg/m³')
   const [metaux, setMetaux] = useState<ContexteMetaux>('sur site')
   const [repere, setRepere] = useState<Repere>('r1')
+  /** No reference values at all: the table without comparison. */
+  const [sansReference, setSansReference] = useState(false)
   const [surcharges, setSurcharges] = useState<Record<string, string>>({})
   const [parFamille, setParFamille] = useState<Record<string, string>>({})
   const [qualifications, setQualifications] = useState<Record<string, Qualification>>({})
@@ -318,17 +321,17 @@ export default function ResultatsLabo() {
   /** ERM value per parameter, in the row's unit or the output unit. */
   const automatiques = useMemo(() => {
     const g: Record<string, { valeur: number; source: string } | null> = {}
-    if (!lecture || !matrice) return g
+    if (!lecture || !matrice || sansReference) return g
     for (const c of ['CM', 'CC'] as const) {
       for (const p of lecture.parametres[c]) g[p.cle] = valeurGuideEn(matrice, p, { metaux, repere }, conversion ? unite : p.unite)
     }
     return g
-  }, [lecture, matrice, metaux, repere, conversion, unite])
+  }, [lecture, matrice, metaux, repere, conversion, unite, sansReference])
 
   /** Families holding parameters without an ERM value — where the user
    *  fills in the project's own value (e.g. what ERM experience gave). */
   const famillesSansValeur = useMemo(() => {
-    if (!lecture || matrice !== 'sol') return []
+    if (!lecture || matrice !== 'sol' || sansReference) return []
     const parFam = new Map<string, { manquants: string[]; unite: string }>()
     for (const c of conversion ? (['CM', 'CC'] as const) : (['CM'] as const)) {
       for (const p of lecture.parametres[c]) {
@@ -341,12 +344,12 @@ export default function ResultatsLabo() {
       }
     }
     return [...parFam.entries()].map(([famille, e]) => ({ famille, ...e }))
-  }, [lecture, matrice, automatiques, conversion, unite])
+  }, [lecture, matrice, automatiques, conversion, unite, sansReference])
 
   /** Retained value: per-parameter entry, else ERM value, else family entry. */
   const guides = useMemo(() => {
     const g: Record<string, { valeur: number; source: string } | null> = {}
-    if (!lecture) return g
+    if (!lecture || sansReference) return g
     for (const c of ['CM', 'CC'] as const) {
       for (const p of lecture.parametres[c]) {
         const saisie = surcharges[p.cle]
@@ -360,7 +363,7 @@ export default function ResultatsLabo() {
       }
     }
     return g
-  }, [lecture, surcharges, parFamille, automatiques])
+  }, [lecture, surcharges, parFamille, automatiques, sansReference])
 
   // Other campaigns of the same wells (groundwater).
   const campagnes = useMemo((): Campagne[] => {
@@ -379,14 +382,14 @@ export default function ResultatsLabo() {
    *  main file's, else the ERM value in the compound's unit. */
   const guidesCampagnes = useMemo(() => {
     const g: Record<string, { valeur: number; source: string } | null> = {}
-    if (!campagnes.length || !matrice) return g
+    if (!campagnes.length || !matrice || sansReference) return g
     for (const c of composes(campagnes)) {
       const principal = c.parametres[0]
       const ref = c.parametres.find((x) => x && x.unite === c.unite)!
       g[c.cle] = principal && principal.unite === c.unite ? (guides[principal.cle] ?? null) : valeurGuideEn(matrice, ref, { metaux, repere }, c.unite)
     }
     return g
-  }, [campagnes, guides, matrice, metaux, repere])
+  }, [campagnes, guides, matrice, metaux, repere, sansReference])
 
   /** A lab file for a campaign: a new one, the main one (index 0), or one
    *  of the others, merged with that campaign's earlier files. */
@@ -451,6 +454,13 @@ export default function ResultatsLabo() {
     })
   }
 
+  /** The soil gas quality sheet, when sampling sheets with readings are loaded. */
+  function qualiteGazExport() {
+    if (!conversion || !fichesGaz || !fichesGaz.fiches.some((f) => f.mesures.length)) return undefined
+    const points = fichesGaz.fiches.map((f) => evaluerQualite(f, sourceDuree, sourceDebit))
+    return { points, synthese: syntheseQualite(points), references: REFERENCES_QUALITE }
+  }
+
   async function exporter(expert: boolean) {
     if (!lecture || !matrice) return
     setExport(expert ? 'expert' : 'standard')
@@ -466,6 +476,8 @@ export default function ResultatsLabo() {
           prelevements,
           guides,
           libelleGuide: matrice === 'air' ? `Valeur repère ${repere.toUpperCase()}` : 'Valeur de comparaison',
+          sansReference,
+          qualiteGaz: qualiteGazExport(),
           legende: legendeGuides(matrice, options),
           qualifications,
           seuilDoublon,
@@ -848,32 +860,40 @@ export default function ResultatsLabo() {
               <span>{conversion ? 4 : 3}</span> Valeurs guides et tableau
             </h2>
 
-            <div className="grid grid--4" style={{ margin: '1.25rem 0 0.75rem', alignItems: 'end' }}>
-              {matrice === 'sol' && (
-                <>
-                  <label className="champ">
-                    Métaux
-                    <select value={metaux} onChange={(e) => setMetaux(e.target.value as ContexteMetaux)}>
-                      <option value="sur site">Sur site (bruit de fond)</option>
-                      <option value="hors site">Hors site (seuil de vigilance)</option>
-                    </select>
-                  </label>
-                </>
-              )}
-              {matrice === 'air' && (
-                <label className="champ">
-                  Valeur repère
-                  <select value={repere} onChange={(e) => setRepere(e.target.value as Repere)}>
-                    <option value="r1">R1</option>
-                    <option value="r2">R2</option>
-                    <option value="r3">R3</option>
-                  </select>
-                </label>
-              )}
+            <div className="grid grid--2" style={{ margin: '1.25rem 0 0.75rem', alignItems: 'end', maxWidth: '52rem' }}>
+              <label className="champ">
+                Valeurs de référence
+                <select
+                  value={sansReference ? 'aucune' : matrice === 'sol' ? metaux : matrice === 'air' ? repere : 'erm'}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setSansReference(v === 'aucune')
+                    if (matrice === 'sol' && v !== 'aucune') setMetaux(v as ContexteMetaux)
+                    if (matrice === 'air' && v !== 'aucune') setRepere(v as Repere)
+                  }}
+                >
+                  {matrice === 'eau' && <option value="erm">Valeurs indicatives ERM — eaux souterraines</option>}
+                  {matrice === 'sol' && (
+                    <>
+                      <option value="sur site">Valeurs ERM sols — métaux : bruit de fond (réutilisation sur site)</option>
+                      <option value="hors site">Valeurs ERM sols — métaux : seuil de vigilance (usage hors site)</option>
+                    </>
+                  )}
+                  {matrice === 'air' && (
+                    <>
+                      <option value="r1">Valeurs repères R1 — air intérieur</option>
+                      <option value="r2">Valeurs repères R2 — air intérieur</option>
+                      <option value="r3">Valeurs repères R3 — air intérieur</option>
+                    </>
+                  )}
+                  <option value="aucune">Aucune valeur de référence</option>
+                </select>
+              </label>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', maxWidth: '52rem' }}>
-              Les valeurs guides sont retrouvées par n° CAS ou par nom. Chacune peut être corrigée dans le tableau ci-dessous : une
-              valeur saisie remplace la valeur ERM (« - » pour n'en retenir aucune).
+              {sansReference
+                ? "Résultats restitués sans comparaison : pas de colonne de valeur de référence, pas d'onglet « Valeurs guides ERM » dans l'export."
+                : "Les valeurs de référence sont retrouvées par n° CAS ou par nom. Chacune peut être corrigée dans le tableau ci-dessous : une valeur saisie remplace la valeur ERM (« - » pour n'en retenir aucune)."}
             </p>
 
             {famillesSansValeur.length > 0 && (
@@ -947,10 +967,14 @@ export default function ResultatsLabo() {
                   <tr>
                     <th rowSpan={conversion ? 2 : 1}>Composé</th>
                     {!conversion && <th>Unité</th>}
-                    <th rowSpan={conversion ? 2 : 1}>
-                      {conversion ? `Valeur repère ${repere.toUpperCase()} (${unite})` : 'Valeur guide'}
-                    </th>
-                    <th rowSpan={conversion ? 2 : 1}>Source</th>
+                    {!sansReference && (
+                      <>
+                        <th rowSpan={conversion ? 2 : 1}>
+                          {conversion ? `Valeur repère ${repere.toUpperCase()} (${unite})` : 'Valeur guide'}
+                        </th>
+                        <th rowSpan={conversion ? 2 : 1}>Source</th>
+                      </>
+                    )}
                     {retenus.map((p) => (
                       <th key={p.nom} colSpan={conversion ? 2 : 1}>
                         {p.nom}
@@ -959,7 +983,7 @@ export default function ResultatsLabo() {
                   </tr>
                   {matrice === 'sol' && retenus.some((p) => lireProfondeur(p.nom)) && (
                     <tr>
-                      <th colSpan={4}>Profondeur (m)</th>
+                      <th colSpan={sansReference ? 2 : 4}>Profondeur (m)</th>
                       {retenus.map((p) => {
                         const z = lireProfondeur(p.nom)
                         return <th key={p.nom}>{z ? libelleProfondeur(z) : '-'}</th>
@@ -980,19 +1004,21 @@ export default function ResultatsLabo() {
                       key={pa.cle}
                       afficher={i === 0 || parametresApercu[i - 1].famille !== pa.famille}
                       famille={pa.famille}
-                      colonnes={(conversion ? 3 : 4) + (conversion ? 2 : 1) * retenus.length}
+                      colonnes={(conversion ? 1 : 2) + (sansReference ? 0 : 2) + (conversion ? 2 : 1) * retenus.length}
                     >
                       <tr>
                         <th scope="row" style={{ fontStyle: pa.somme ? 'italic' : undefined, textAlign: pa.somme ? 'right' : undefined }}>
                           {pa.nom}
                         </th>
                         {!conversion && <td>{pa.unite}</td>}
-                        <CelluleGuide
-                          parametre={pa}
-                          guide={guides[pa.cle]}
-                          saisie={surcharges[pa.cle]}
-                          onChange={(v) => setSurcharges({ ...surcharges, [pa.cle]: v })}
-                        />
+                        {!sansReference && (
+                          <CelluleGuide
+                            parametre={pa}
+                            guide={guides[pa.cle]}
+                            saisie={surcharges[pa.cle]}
+                            onChange={(v) => setSurcharges({ ...surcharges, [pa.cle]: v })}
+                          />
+                        )}
                         {retenus.map((p) => {
                           const m = lecture.valeurs[conversion ? coucheApercu : 'CM'][p.nom]?.[pa.cle]
                           const g = guides[pa.cle]
@@ -1031,8 +1057,14 @@ export default function ResultatsLabo() {
             </div>
 
             <p className="legende-apercu">
-              <span className="tableau__lq">&lt;0,10</span> inférieur à la LQ · <span className="tableau__depasse">12</span> supérieur à la
-              valeur de comparaison · <span className="tableau__lq tableau__lq-sup">&lt;20</span> LQ supérieure à la valeur de comparaison
+              <span className="tableau__lq">&lt;0,10</span> inférieur à la LQ
+              {!sansReference && (
+                <>
+                  {' '}
+                  · <span className="tableau__depasse">12</span> supérieur à la valeur de comparaison ·{' '}
+                  <span className="tableau__lq tableau__lq-sup">&lt;20</span> LQ supérieure à la valeur de comparaison
+                </>
+              )}
             </p>
 
             <AnalyseApercu
@@ -1048,8 +1080,8 @@ export default function ResultatsLabo() {
               <div className="card export">
                 <strong>Export standard</strong>
                 <p>
-                  « Tableau X - Résultats {libelle}.xlsx » : mis en forme, valeurs guides ERM, analyse par composé et contrôle
-                  qualité.
+                  « Tableau X - Résultats {libelle}.xlsx » : mis en forme{sansReference ? '' : ', valeurs guides ERM'}, analyse par
+                  composé et contrôle qualité.
                 </p>
                 <button type="button" className="btn" onClick={() => exporter(false)} disabled={!!export_ || !retenus.length}>
                   {export_ === 'standard' ? 'Préparation…' : 'Télécharger le tableau Excel'}

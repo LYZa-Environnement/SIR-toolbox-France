@@ -2,6 +2,14 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<script>
+/* Mot de passe à l'entrée (voir src/lib/acces.ts) : sans accès, retour à l'accueil. */
+try {
+  if (localStorage.getItem('sir-toolbox.acces') !== '3f2e41698faf89521ef696f7084d49903c9a58fbed85a7816e3545d955e58811') throw 0
+} catch (e) {
+  location.replace('./#/?retour=' + encodeURIComponent(location.pathname.split('/').pop()))
+}
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Logs de forage · SIR Toolbox</title>
 <script src="vendor/xlsx.full.min.js"></script>
