@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { comparer, type EtatTri } from '../../lib/tri'
 import { convertir, volumeLitres, type Prelevement, type UniteSortie } from '../../lib/resultats/calc'
 import { acronyme } from '../../lib/resultats/acronymes'
 import type { Lecture, Parametre } from '../../lib/resultats/parse'
@@ -27,10 +28,10 @@ interface Ligne {
 type Filtre = 'depassements' | 'quantifies' | 'tous'
 
 const CLASSES = [
-  { max: 0.1, fond: '#e2f8f2', texte: '#1f6b45', libelle: '< 10 % de la référence' },
+  { max: 0.1, fond: '#e2f8f2', texte: '#1f6b45', libelle: '< 10 % de la valeur de comparaison' },
   { max: 0.5, fond: '#b9e6d8', texte: '#1f6b45', libelle: '10 à 50 %' },
   { max: 1, fond: '#7fcdb5', texte: '#0d2421', libelle: '50 à 100 %' },
-  { max: 10, fond: '#f4c27a', texte: '#5a3a00', libelle: '1 à 10 fois la référence' },
+  { max: 10, fond: '#f4c27a', texte: '#5a3a00', libelle: '1 à 10 fois la valeur de comparaison' },
   { max: Infinity, fond: '#e07a5f', texte: '#ffffff', libelle: 'plus de 10 fois' },
 ]
 
@@ -111,10 +112,29 @@ export function CarteResultats({
   const [filtre, setFiltre] = useState<Filtre>(totalDepassements ? 'depassements' : 'quantifies')
   const [choix, setChoix] = useState<{ cle: string; e: string } | null>(null)
   const [colonne, setColonne] = useState<string | null>(null)
+  /** Rows by highest ratio (default with comparison values), by name, or by one sample's result. */
+  const [tri, setTri] = useState<EtatTri | null>(avecReference ? { cle: 'ratio', sens: 'desc' } : null)
+  const basculerTri = (cle: string, premier: 'asc' | 'desc' = 'desc') =>
+    setTri((t) => (t?.cle === cle ? { cle, sens: t.sens === 'asc' ? 'desc' : 'asc' } : { cle, sens: premier }))
+  const trierEchantillon = (e: string) => {
+    setColonne(e)
+    basculerTri(`e:${e}`)
+  }
 
   const visibles = lignes
     .filter((l) => (filtre === 'depassements' ? l.depassements > 0 : filtre === 'quantifies' ? l.quantifies > 0 : true))
-    .sort((a, b) => (avecReference ? (b.ratioMax ?? -1) - (a.ratioMax ?? -1) : 0))
+    .map((l, i) => ({ l, i }))
+    .sort((a, b) => {
+      if (!tri) return a.i - b.i
+      const v = (x: Ligne) => {
+        if (tri.cle === 'nom') return x.p.nom
+        if (tri.cle === 'ratio') return x.ratioMax ?? (avecReference ? null : x.max)
+        const c = x.cellules[tri.cle.slice(2)]
+        return c ? (c.inferieur ? -1 / (1 + c.valeur) : c.ratio ?? c.valeur) : null
+      }
+      return comparer(v(a.l), v(b.l), tri.sens) || a.i - b.i
+    })
+    .map((x) => x.l)
   const parEchantillon = echantillons
     .map((e) => ({ e, n: lignes.reduce((k, l) => k + (l.cellules[e]?.ratio !== null && !l.cellules[e]?.inferieur && (l.cellules[e]?.ratio ?? 0) > 1 ? 1 : 0), 0) }))
     .filter((x) => x.n > 0)
@@ -143,19 +163,19 @@ export function CarteResultats({
           totalDepassements ? (
             <p>
               <strong>
-                {totalDepassements} résultat{totalDepassements > 1 ? 's' : ''} au-dessus de la valeur de référence
+                {totalDepassements} résultat{totalDepassements > 1 ? 's' : ''} au-dessus de la valeur de comparaison
               </strong>{' '}
               pour {composesDepasses.length} composé{composesDepasses.length > 1 ? 's' : ''} ({composesDepasses.slice(0, 5).map((l) => acronyme(l.p.nom)).join(', ')}
               {composesDepasses.length > 5 ? '…' : ''}).
             </p>
           ) : (
             <p>
-              <strong>Aucun résultat au-dessus des valeurs de référence.</strong>
+              <strong>Aucun résultat au-dessus des valeurs de comparaison.</strong>
             </p>
           )
         ) : (
           <p>
-            <strong>{lignes.filter((l) => l.quantifies).length} composés quantifiés</strong> sur {lignes.length} — sans valeur de référence, la couleur
+            <strong>{lignes.filter((l) => l.quantifies).length} composés quantifiés</strong> sur {lignes.length} — sans valeur de comparaison, la couleur
             situe chaque résultat dans la gamme du composé.
           </p>
         )}
@@ -197,11 +217,22 @@ export function CarteResultats({
           <table className="carte__table">
             <thead>
               <tr>
-                <th className="carte__coin">{avecReference ? 'Composé · maximum / référence' : 'Composé'}</th>
+                <th className="carte__coin">
+                  <button type="button" className={`tri${tri?.cle === 'nom' ? ' tri--actif' : ''}`} onClick={() => basculerTri('nom', 'asc')}>
+                    Composé <span className="tri__fleche">{tri?.cle === 'nom' ? (tri.sens === 'asc' ? '▲' : '▼') : '↕'}</span>
+                  </button>
+                  <button type="button" className={`tri${tri?.cle === 'ratio' ? ' tri--actif' : ''}`} onClick={() => basculerTri('ratio')}>
+                    {avecReference ? 'Maximum / valeur de comparaison' : 'Maximum'}{' '}
+                    <span className="tri__fleche">{tri?.cle === 'ratio' ? (tri.sens === 'asc' ? '▲' : '▼') : '↕'}</span>
+                  </button>
+                </th>
                 {echantillons.map((e) => (
                   <th key={e} className={`carte__ech${colonne === e ? ' carte__ech--actif' : ''}`} scope="col">
-                    <button type="button" onClick={() => setColonne(colonne === e ? null : e)} title={e}>
-                      <span>{e}</span>
+                    <button type="button" onClick={() => trierEchantillon(e)} title={`${e} — cliquer pour classer les composés selon cet échantillon`}>
+                      <span>
+                        {e}
+                        {tri?.cle === `e:${e}` ? (tri.sens === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </span>
                     </button>
                   </th>
                 ))}
@@ -212,10 +243,10 @@ export function CarteResultats({
                 const b = barre(l.ratioMax)
                 return (
                   <tr key={l.p.cle} className={choix?.cle === l.p.cle ? 'carte__ligne--active' : undefined}>
-                    <th scope="row" className="carte__compose" title={`${l.p.nom}${l.guide ? ` — référence ${fr(l.guide.valeur)} ${l.unite} (${l.guide.source})` : ''}`}>
+                    <th scope="row" className="carte__compose" title={`${l.p.nom}${l.guide ? ` — valeur de comparaison ${fr(l.guide.valeur)} ${l.unite} (${l.guide.source})` : ''}`}>
                       <span className="carte__nom">{l.p.nom}</span>
                       {b !== null && (
-                        <span className="carte__barre" aria-label={`Maximum : ${fr(l.ratioMax!)} fois la référence`}>
+                        <span className="carte__barre" aria-label={`Maximum : ${fr(l.ratioMax!)} fois la valeur de comparaison`}>
                           <i style={{ width: `${b * 100}%`, background: (l.ratioMax ?? 0) > 1 ? '#e07a5f' : '#7fcdb5' }} />
                           <b aria-hidden="true" />
                           <em>{court(l.ratioMax!)}</em>
@@ -233,7 +264,7 @@ export function CarteResultats({
                               type="button"
                               style={{ background: k.fond, color: k.texte }}
                               onClick={() => setChoix(actif ? null : { cle: l.p.cle, e })}
-                              title={`${e} — ${l.p.nom} : ${c.inferieur ? '<' : ''}${fr(c.valeur)} ${l.unite}${c.ratio !== null && !c.inferieur ? ` (${fr(c.ratio)} × réf.)` : ''}`}
+                              title={`${e} — ${l.p.nom} : ${c.inferieur ? '<' : ''}${fr(c.valeur)} ${l.unite}${c.ratio !== null && !c.inferieur ? ` (${fr(c.ratio)} × val. de comparaison)` : ''}`}
                               aria-label={`${e}, ${l.p.nom}`}
                             >
                               {c.inferieur ? '' : c.ratio !== null && c.ratio > 1 ? court(c.ratio) : ''}
@@ -264,7 +295,7 @@ export function CarteResultats({
             </span>
             {ligneChoisie.guide && (
               <span className="puce puce--neutre">
-                Référence {fr(ligneChoisie.guide.valeur)} {ligneChoisie.unite} ({ligneChoisie.guide.source})
+                Valeur de comparaison {fr(ligneChoisie.guide.valeur)} {ligneChoisie.unite} ({ligneChoisie.guide.source})
               </span>
             )}
             <button type="button" className="btn btn--ghost btn--petit" onClick={() => setChoix(null)}>
@@ -274,17 +305,17 @@ export function CarteResultats({
           <p>
             {celluleChoisie.inferieur
               ? celluleChoisie.ratio !== null && celluleChoisie.ratio > 1
-                ? 'Non quantifié, mais la limite de quantification dépasse la valeur de référence : la comparaison n’est pas concluante.'
+                ? 'Non quantifié, mais la limite de quantification dépasse la valeur de comparaison : la comparaison n’est pas concluante.'
                 : 'Non quantifié : inférieur à la limite de quantification du laboratoire.'
               : celluleChoisie.ratio === null
-                ? `Pas de valeur de référence pour ce composé. Le résultat représente ${fr((celluleChoisie.valeur / (ligneChoisie.max || 1)) * 100)} % du maximum mesuré pour ce composé.`
+                ? `Pas de valeur de comparaison pour ce composé. Le résultat représente ${fr((celluleChoisie.valeur / (ligneChoisie.max || 1)) * 100)} % du maximum mesuré pour ce composé.`
                 : celluleChoisie.ratio > 1
-                  ? `Dépasse la valeur de référence : ${fr(celluleChoisie.ratio)} fois celle-ci.`
-                  : `Sous la valeur de référence : ${fr(celluleChoisie.ratio * 100)} % de celle-ci.`}
+                  ? `Dépasse la valeur de comparaison : ${fr(celluleChoisie.ratio)} fois celle-ci.`
+                  : `Sous la valeur de comparaison : ${fr(celluleChoisie.ratio * 100)} % de celle-ci.`}
           </p>
           <p className="visuels__muet">
             {ligneChoisie.quantifies} échantillon{ligneChoisie.quantifies > 1 ? 's' : ''} quantifié{ligneChoisie.quantifies > 1 ? 's' : ''} sur {echantillons.length}
-            {ligneChoisie.guide ? `, ${ligneChoisie.depassements} au-dessus de la référence` : ''}.
+            {ligneChoisie.guide ? `, ${ligneChoisie.depassements} au-dessus de la valeur de comparaison` : ''}.
           </p>
         </div>
       )}
@@ -298,11 +329,11 @@ export function CarteResultats({
           ))}
         {(!avecReference || lignes.some((l) => !l.guide && l.quantifies)) && (
           <span style={{ background: 'linear-gradient(90deg, #e5edf8, #2f5f9e)', color: '#fff' }}>
-            {avecReference ? 'sans valeur de référence : ' : ''}du plus faible au plus fort du composé
+            {avecReference ? 'sans valeur de comparaison : ' : ''}du plus faible au plus fort du composé
           </span>
         )}
         <span style={{ background: '#f1f3f3', color: '#8a9694' }}>&lt; LQ</span>
-        {avecReference && <span className="carte__legende-lqsup">LQ &gt; référence</span>}
+        {avecReference && <span className="carte__legende-lqsup">LQ &gt; valeur de comparaison</span>}
       </p>
     </div>
   )

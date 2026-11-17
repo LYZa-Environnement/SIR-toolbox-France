@@ -50,16 +50,25 @@ livrables).
   résultats et interprétation, export. Les résultats s'ouvrent sur des tuiles
   de chiffres clés cliquables, puis des volets colorés repliés par défaut
   (`src/components/resultats/Volet.tsx`) : carte des résultats — échantillons
-  × composés colorés selon le rapport à la valeur de référence, cliquable
+  × composés colorés selon le rapport à la valeur de comparaison, cliquable
   (`CarteResultats.tsx`, `src/lib/resultats/resume.ts`) —, conditions de
   prélèvement, qualité des gaz du sol (nuage O2 / CO2, `NuageGaz.tsx`),
   conditions de la nappe, campagnes, positions hydrauliques, contrôle
-  qualité, tableau, signatures ; tous les fichiers Excel sont proposés dans
-  la section Export finale. Choix de la matrice (eaux souterraines,
+  qualité, tableau, signatures et familles de points ; tous les fichiers
+  Excel sont proposés dans la section Export finale. Les tableaux de la page
+  se trient par leurs en-têtes de colonne (`src/lib/tri.ts`). Familles de
+  points (`src/lib/resultats/familles.ts`, `FamillesOuvrages.tsx`) : tous
+  les composés analysés et les paramètres de terrain, centrés-réduits,
+  classification de Ward, nombre de familles par la silhouette, carte des
+  deux premiers axes d'une ACP, dendrogramme et profils. Positions
+  hydrauliques : charge = altitude NGF du repère − niveau statique initial
+  (fiches), profil amont → aval des ouvrages avec les concentrations,
+  positions proposées d'après les cotes (`hydraulique.ts`,
+  `ProfilHydraulique.tsx`). Choix de la matrice (eaux souterraines,
   sols, gaz du sol / air), chargement du fichier du laboratoire (ALS /
   Wessling, Eurofins, SGS — disposition reconnue automatiquement,
   `src/lib/resultats/parse.ts`), conversion µg/support → µg/m³ pour les gaz,
-  valeurs de référence au choix (dont aucune), qualité des gaz du sol captés
+  valeurs de comparaison au choix (dont aucune), qualité des gaz du sol captés
   d'après les mesures O2, CO2, H2S, CO, LIE et PID des fiches
   (`src/lib/resultats/qualiteGaz.ts`, guide BRGM / INERIS 2016), règles de
   débit du tableau 11 de ce guide,

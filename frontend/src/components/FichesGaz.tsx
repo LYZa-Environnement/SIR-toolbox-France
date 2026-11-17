@@ -1,5 +1,7 @@
 import type { Point } from '../lib/resultats/parse'
 import type { EtatFichesGaz } from '../lib/resultats/lireFichesGaz'
+import { useTri } from '../lib/tri'
+import { EnTete } from './Tri'
 import {
   LIBELLES_DEBIT,
   LIBELLES_DUREE,
@@ -75,6 +77,26 @@ function FichesChargees({
         .filter((x) => x.alertes.length)
     : []
 
+  const lignes = points.map((p) => {
+    const i = association[p.nom] ?? -1
+    const f = i >= 0 ? etat.fiches[i] : null
+    return { p, i, f, r: f ? retenir(f, sourceDuree, sourceDebit) : null }
+  })
+  const { tries, tri, trier } = useTri(lignes, {
+    nom: (x) => x.p.nom,
+    fiche: (x) => x.f?.ouvrage,
+    date: (x) => x.f?.date,
+    erm: (x) => x.f?.dureeErm,
+    pompe: (x) => x.f?.dureePompe,
+    horaires: (x) => x.f?.dureeHoraires,
+    consigne: (x) => x.f?.debitConsigne,
+    releve: (x) => x.f?.releves[x.f.releves.length - 1]?.debit,
+    volFiche: (x) => x.f?.volumeFiche,
+    volCalc: (x) => x.r?.volume,
+    controles: (x) => (x.r ? x.r.alertes.length : null),
+  })
+  const th = { tri, onTrier: trier }
+
   return (
     <div className="card" style={{ margin: '0 0 1.5rem' }}>
       <strong>Fiches de prélèvement</strong>
@@ -125,24 +147,21 @@ function FichesChargees({
             <table className="tableau">
               <thead>
                 <tr>
-                  <th>Échantillon</th>
-                  <th>Fiche</th>
-                  <th>Date</th>
-                  <th title={LIBELLES_DUREE.erm}>Durée ERM (min)</th>
-                  <th title={LIBELLES_DUREE.pompe}>Durée pompe (min)</th>
-                  <th title={LIBELLES_DUREE.horaires}>Horaires (min)</th>
-                  <th>Débit d'échantillonnage (L/min)</th>
-                  <th>Débits relevés (L/min)</th>
-                  <th>Volume fiche (L)</th>
-                  <th>Volume calculé (L)</th>
-                  <th>Contrôles</th>
+                  <EnTete cle="nom" {...th}>Échantillon</EnTete>
+                  <EnTete cle="fiche" {...th}>Fiche</EnTete>
+                  <EnTete cle="date" {...th}>Date</EnTete>
+                  <EnTete cle="erm" {...th} title={LIBELLES_DUREE.erm}>Durée ERM (min)</EnTete>
+                  <EnTete cle="pompe" {...th} title={LIBELLES_DUREE.pompe}>Durée pompe (min)</EnTete>
+                  <EnTete cle="horaires" {...th} title={LIBELLES_DUREE.horaires}>Horaires (min)</EnTete>
+                  <EnTete cle="consigne" {...th}>Débit d'échantillonnage (L/min)</EnTete>
+                  <EnTete cle="releve" {...th}>Débits relevés (L/min)</EnTete>
+                  <EnTete cle="volFiche" {...th}>Volume fiche (L)</EnTete>
+                  <EnTete cle="volCalc" {...th}>Volume calculé (L)</EnTete>
+                  <EnTete cle="controles" {...th}>Contrôles</EnTete>
                 </tr>
               </thead>
               <tbody>
-                {points.map((p) => {
-                  const i = association[p.nom] ?? -1
-                  const f = i >= 0 ? etat.fiches[i] : null
-                  const r = f ? retenir(f, sourceDuree, sourceDebit) : null
+                {tries.map(({ p, i, f, r }) => {
                   const gras = (s: SourceDuree) => (r?.sourceDuree === s ? { fontWeight: 700, color: 'var(--color-ink)' } : undefined)
                   return (
                     <tr key={p.nom}>

@@ -142,7 +142,7 @@ export function Echelle({
 
 function Reperes({ reperes, matrice }: { reperes: Repere[]; matrice: Matrice }) {
   if (!reperes.length) {
-    return <p className="pfas-note">Aucune valeur de référence publiée n’a été retenue pour cette grandeur : les résultats se lisent entre échantillons et par rapport à l’amont.</p>
+    return <p className="pfas-note">Aucune valeur de comparaison publiée n’a été retenue pour cette grandeur : les résultats se lisent entre échantillons et par rapport à l’amont.</p>
   }
   return (
     <ul className="pfas-reperes">
