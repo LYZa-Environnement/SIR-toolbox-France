@@ -65,7 +65,7 @@ const CATEGORIES: Categorie[] = [
         accroche: 'Sondages et piézomètres',
         description:
           "Générez les logs de sondages et de piézomètres au format ERM depuis le classeur de saisie : lithologie, équipement, PID, niveau d'eau, échantillons et résultats d'analyses.",
-        points: ['Contrôles de cohérence avant diffusion', 'Impression PDF et export SVG'],
+        points: ['Un log par page, valeurs guides ERM', 'Contrôles de cohérence, impression PDF et SVG'],
         page: 'logs-forage.html',
       },
     ],
