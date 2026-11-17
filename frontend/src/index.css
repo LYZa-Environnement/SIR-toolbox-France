@@ -1810,3 +1810,43 @@ a.card:hover {
   margin: 1.75rem 0 0.75rem;
   font-size: 1.1rem;
 }
+
+/* Vérification de livrables: one colour per family of deliverables,
+   folded like the home page categories, at the size of a step. */
+.categorie--compacte {
+  margin-top: 1rem;
+}
+.categorie--compacte .categorie__entete {
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 1rem;
+}
+.categorie--compacte .categorie__titre {
+  font-size: 1.15rem;
+}
+.categorie--compacte .choix {
+  margin-bottom: 0.5rem;
+}
+.livrable--0 {
+  --cat: #00756a;
+  --cat-soft: #e2f8f2;
+}
+.livrable--1 {
+  --cat: #2f5f9e;
+  --cat-soft: #e5edf8;
+}
+.livrable--2 {
+  --cat: #8a5a12;
+  --cat-soft: #f6ecd9;
+}
+.livrable--3 {
+  --cat: #6b4c9a;
+  --cat-soft: #efe9f7;
+}
+.livrable--4 {
+  --cat: #9c3d2e;
+  --cat-soft: #f8e4df;
+}
+.livrable--5 {
+  --cat: #4a5a6b;
+  --cat-soft: #e9edf1;
+}
