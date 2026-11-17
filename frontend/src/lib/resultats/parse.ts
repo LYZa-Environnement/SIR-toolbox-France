@@ -160,6 +160,29 @@ function familleParDefaut(nom: string): string {
   return ''
 }
 
+/** Ketones, whatever the lab calls them: MIBK, MEK, acetone, butanone… */
+const CETONE = /c[ée]tone|ketone|\b(mibk|mek|mik|mbk)\b|butanone|(pentan|hexan|heptan|octan)-?\d?-?one\b|cyclohexanone|isophorone/i
+const FAMILLE_CETONES = /c[ée]tone|ketone/i
+
+/**
+ * A ketone the lab files under another heading (« Acétates » for
+ * méthylisobutylcétone) goes to « Cétones »: after that family's last
+ * compound when the lab has one, else right after its original block.
+ */
+export function corrigerFamilles(liste: Parametre[]): Parametre[] {
+  const deplaces = liste.filter((p) => !p.somme && p.famille && CETONE.test(p.nom) && !FAMILLE_CETONES.test(p.famille))
+  if (!deplaces.length) return liste
+  let suite = liste.filter((p) => !deplaces.includes(p))
+  for (const p of deplaces) {
+    const cetones = suite.map((x, i) => (FAMILLE_CETONES.test(x.famille) ? i : -1)).filter((i) => i >= 0)
+    const origine = suite.map((x, i) => (x.famille === p.famille ? i : -1)).filter((i) => i >= 0)
+    const apres = cetones.length ? cetones[cetones.length - 1] : origine.length ? origine[origine.length - 1] : suite.length - 1
+    const famille = cetones.length ? suite[cetones[0]].famille : 'Cétones'
+    suite = [...suite.slice(0, apres + 1), { ...p, famille }, ...suite.slice(apres + 1)]
+  }
+  return suite
+}
+
 function normaliserFamille(titre: string): string {
   return titre
     .replace(/\(?\s*(zone|couche)\s+de\s+(contr[ôo]le|mesure)\s*\)?/gi, '')
@@ -373,6 +396,7 @@ export function lireGrille(brute: Cell[][], mode: Mode, feuille?: string): Lectu
   if (mode === 'support' && [...parametres.CM, ...parametres.CC].every((p) => !p.famille)) {
     for (const c of ['CM', 'CC'] as Couche[]) parametres[c] = parametres[c].map((p) => ({ ...p, famille: familleParDefaut(p.nom) }))
   }
+  for (const c of ['CM', 'CC'] as Couche[]) parametres[c] = corrigerFamilles(parametres[c])
   return {
     points,
     parametres,
