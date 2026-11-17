@@ -40,6 +40,15 @@ livrables).
   sols, gaz du sol / air), chargement du fichier du laboratoire (ALS /
   Wessling, Eurofins, SGS — disposition reconnue automatiquement,
   `src/lib/resultats/parse.ts`), conversion µg/support → µg/m³ pour les gaz,
+  zones de mesure et de contrôle des tubes lues aussi ligne par ligne
+  (synthèses Eurofins gaz du sol : « (zone 1) » / « (zone 2) », « Benzène » /
+  « Benzène (2) » ; zone 1 = mesure, zone 2 = contrôle),
+  durée et débits de prélèvement repris des fiches de prélèvement de gaz du
+  sol (`src/lib/resultats/fichesGaz.ts` : une fiche par onglet, échantillons
+  rapprochés par leur nom, durée mesurée par ERM, affichée sur la pompe ou
+  tirée des horaires au choix, débits relevés en début et fin
+  d'échantillonnage ; durées discordantes, dérive du débit et écart au
+  volume noté sur la fiche signalés),
   et export Excel « Tableau X - Résultats [matrice] » avec un onglet mis en
   forme et un onglet comparé aux valeurs guides ERM (mise en forme
   conditionnelle, sources sous le tableau). Une campagne rendue en
