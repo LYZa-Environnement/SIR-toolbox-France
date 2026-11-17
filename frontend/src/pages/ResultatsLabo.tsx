@@ -7,6 +7,8 @@ import { ajouterSommesCalculees } from '../lib/resultats/sommes'
 import { fusionnerLectures } from '../lib/resultats/fusion'
 import { ordonnerCOHV } from '../lib/resultats/cohv'
 import { SignaturesApercu } from '../components/Signatures'
+import { FichesGaz, type EtatFichesGaz } from '../components/FichesGaz'
+import { ficheDe, libelleDates, retenir, type FicheGaz, type SourceDebit, type SourceDuree } from '../lib/resultats/fichesGaz'
 import { PositionsHydrauliques } from '../components/PositionsHydrauliques'
 import { Campagnes, type AutreCampagne, type InfoCampagne } from '../components/Campagnes'
 import { associer, composes, type Campagne, type Ouvrage } from '../lib/resultats/campagnes'
@@ -45,6 +47,29 @@ const CHAMPS: { champ: Champ; libelle: string; aide: string }[] = [
 ]
 
 const vide: Saisie = { duree: '', debitDebut: '', debitFin: '' }
+
+const SOUS_TITRE_DEFAUT = 'Echantillons prélevés par ERM le '
+
+const enTexte = (x: number | null) => (x === null ? '' : String(Math.round(x * 1e6) / 1e6).replace('.', ','))
+
+/** Duration and flows read on the sampling sheets, as entries of the
+ *  sampling table — for the samples matched to a sheet. */
+function saisiesFiches(
+  noms: string[],
+  fiches: FicheGaz[],
+  manuelle: Record<string, number>,
+  sourceDuree: SourceDuree,
+  sourceDebit: SourceDebit,
+): Record<string, Saisie> {
+  const suite: Record<string, Saisie> = {}
+  for (const nom of noms) {
+    const i = manuelle[nom] ?? ficheDe(nom, fiches)
+    if (i < 0 || !fiches[i]) continue
+    const r = retenir(fiches[i], sourceDuree, sourceDebit)
+    suite[nom] = { duree: enTexte(r.duree), debitDebut: enTexte(r.debitDebut), debitFin: enTexte(r.debitFin) }
+  }
+  return suite
+}
 
 /** Usual values for soils, given as examples only (mg/kg MS). */
 function exempleFamille(famille: string): string | null {
@@ -148,7 +173,12 @@ export default function ResultatsLabo() {
   const [ouvragesManuels, setOuvragesManuels] = useState<Ouvrage[] | null>(null)
   const [facteurEvolution, setFacteurEvolution] = useState(2)
   const [titre, setTitre] = useState('')
-  const [sousTitre, setSousTitre] = useState('Echantillons prélevés par ERM le ')
+  const [sousTitre, setSousTitre] = useState(SOUS_TITRE_DEFAUT)
+  /** Soil gas sampling sheets, and the samples matched to them by hand. */
+  const [fichesGaz, setFichesGaz] = useState<EtatFichesGaz | null>(null)
+  const [assocManuelle, setAssocManuelle] = useState<Record<string, number>>({})
+  const [sourceDuree, setSourceDuree] = useState<SourceDuree>('erm')
+  const [sourceDebit, setSourceDebit] = useState<SourceDebit>('releves')
   const [coucheApercu, setCoucheApercu] = useState<Couche>('CM')
   const [export_, setExport] = useState<'standard' | 'expert' | null>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -183,7 +213,8 @@ export default function ResultatsLabo() {
       setFichier(f.name)
       setFichiers([{ nom: f.name, lecture: brute }])
       setNotesFusion([])
-      setSaisies({})
+      setAssocManuelle({})
+      setSaisies(fichesGaz ? saisiesFiches(l.points.map((p) => p.nom), fichesGaz.fiches, {}, sourceDuree, sourceDebit) : {})
       setSelection({})
       setExclus({})
       setAAppliquer(vide)
@@ -219,6 +250,10 @@ export default function ResultatsLabo() {
     setLecture(l)
     setFichier(liste.map((x) => x.nom).join(' + '))
     setNotesFusion(notes)
+    if (fichesGaz) {
+      const remplis = saisiesFiches(l.points.map((p) => p.nom), fichesGaz.fiches, assocManuelle, sourceDuree, sourceDebit)
+      setSaisies((s) => ({ ...remplis, ...s }))
+    }
     setQualifications((q) => ({ ...qualifierAuto(l.points), ...q }))
     const detectees = positionsAuto(l.points)
     setPositions((p) => ({ ...detectees, ...p }))
@@ -252,6 +287,33 @@ export default function ResultatsLabo() {
     [points, saisies],
   )
   const sansVolume = conversion ? retenus.filter((p) => volumeLitres(prelevements[p.nom]) === null) : []
+  const associationFiches = useMemo(
+    () => (fichesGaz ? Object.fromEntries(points.map((p) => [p.nom, assocManuelle[p.nom] ?? ficheDe(p.nom, fichesGaz.fiches)])) : {}),
+    [fichesGaz, points, assocManuelle],
+  )
+
+  /** Sheet values written over the entries of the given samples. */
+  function remplirDepuisFiches(etat: EtatFichesGaz, manuelle: Record<string, number>, sD: SourceDuree, sDb: SourceDebit, noms = points.map((p) => p.nom)) {
+    const remplis = saisiesFiches(noms, etat.fiches, manuelle, sD, sDb)
+    setSaisies((s) => ({ ...s, ...remplis }))
+  }
+
+  function chargerFiches(lu: EtatFichesGaz) {
+    const etat = fichesGaz
+      ? { fiches: [...fichesGaz.fiches, ...lu.fiches], fichiers: [...fichesGaz.fichiers, ...lu.fichiers], ignores: [...fichesGaz.ignores, ...lu.ignores] }
+      : lu
+    setFichesGaz(etat)
+    remplirDepuisFiches(etat, assocManuelle, sourceDuree, sourceDebit)
+    const dates = libelleDates(etat.fiches)
+    if (dates && sousTitre.trim() === SOUS_TITRE_DEFAUT.trim()) setSousTitre(`Echantillons prélevés par ERM ${dates}`)
+  }
+
+  function associerFiche(nom: string, fiche: number) {
+    const manuelle = { ...assocManuelle, [nom]: fiche }
+    setAssocManuelle(manuelle)
+    if (fiche < 0) setSaisies((s) => ({ ...s, [nom]: vide }))
+    else if (fichesGaz) remplirDepuisFiches(fichesGaz, manuelle, sourceDuree, sourceDebit, [nom])
+  }
 
   /** ERM value per parameter, in the row's unit or the output unit. */
   const automatiques = useMemo(() => {
@@ -647,10 +709,33 @@ export default function ResultatsLabo() {
               <span>3</span> Conditions de prélèvement
             </h2>
             <p className="lede" style={{ marginBottom: '1.25rem' }}>
-              Volume prélevé = débit × durée ; avec un débit de début et de fin, le débit retenu est leur moyenne. Cochez des
-              échantillons, saisissez durée et débit sur la ligne « Valeurs à appliquer », puis appliquez-les à la sélection. Une colonne
-              copiée depuis Excel peut aussi être collée directement dans la première case.
+              Volume prélevé = débit × durée ; avec un débit de début et de fin, le débit retenu est leur moyenne. Les fiches de
+              prélèvement chargées ci-dessous renseignent durée et débits de chaque échantillon. Sinon, cochez des échantillons,
+              saisissez durée et débit sur la ligne « Valeurs à appliquer », puis appliquez-les à la sélection ; une colonne copiée
+              depuis Excel peut aussi être collée directement dans la première case.
             </p>
+
+            <FichesGaz
+              points={points}
+              etat={fichesGaz}
+              association={associationFiches}
+              sourceDuree={sourceDuree}
+              sourceDebit={sourceDebit}
+              onCharger={chargerFiches}
+              onRetirer={() => {
+                setFichesGaz(null)
+                setAssocManuelle({})
+              }}
+              onAssocier={associerFiche}
+              onSourceDuree={(s) => {
+                setSourceDuree(s)
+                if (fichesGaz) remplirDepuisFiches(fichesGaz, assocManuelle, s, sourceDebit)
+              }}
+              onSourceDebit={(s) => {
+                setSourceDebit(s)
+                if (fichesGaz) remplirDepuisFiches(fichesGaz, assocManuelle, sourceDuree, s)
+              }}
+            />
 
             <ExempleConversion lecture={lecture} prelevements={prelevements} unite={unite} />
 
