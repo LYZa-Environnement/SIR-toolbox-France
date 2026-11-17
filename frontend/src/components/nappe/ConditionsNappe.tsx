@@ -1,4 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useTri } from '../../lib/tri'
+import { EnTete } from '../Tri'
 import { lireNombre } from '../../lib/resultats/calc'
 import type { Cell, Lecture } from '../../lib/resultats/parse'
 import type { Rapport } from '../../lib/nappe/export'
@@ -217,6 +219,28 @@ export function ConditionsNappe({
     }
   }
 
+  const ORDRE_COND: Favorabilite[] = ['favorable', 'possible', 'limite', 'defavorable', 'indetermine']
+  const triE = useTri(evaluations, {
+    nom: (e) => e.ouvrage.nom,
+    ph: (e) => jeu.valeurs[e.ouvrage.cle]?.ph?.valeur,
+    orp: (e) => jeu.valeurs[e.ouvrage.cle]?.orp?.valeur,
+    od: (e) => jeu.valeurs[e.ouvrage.cle]?.od?.valeur,
+    ce: (e) => jeu.valeurs[e.ouvrage.cle]?.ce?.valeur,
+    t: (e) => jeu.valeurs[e.ouvrage.cle]?.t?.valeur,
+    conditions: (e) => ORDRE_COND.indexOf(e.lecture.conditions),
+    indices: (e) => e.lecture.indices.length,
+    redox: (e) => e.redox.categorie,
+    score: (e) => e.score.total,
+    vigilance: (e) => e.alertes.filter((a) => a.niveau !== 'info').length,
+  })
+  const triR = useTri(recap.lignes, {
+    libelle: (l) => l.libelle,
+    unite: (l) => l.unite,
+    n: (l) => l.n,
+    min: (l) => l.min?.valeur,
+    max: (l) => l.max?.valeur,
+    moyenne: (l) => l.moyenne,
+  })
   const saisir = (cle: string, id: string, v: string) => setSaisies((s) => ({ ...s, [`${cle}|${id}`]: v }))
   const echantillons = labo.lecture?.lecture.points ?? []
   const optionsOuvrages = [...new Map([...fiches.map((f) => [cleOuvrage(f.ouvrage), f.ouvrage] as const), ...jeu.ouvrages.map((o) => [o.cle, o.nom] as const)]).entries()]
@@ -252,16 +276,16 @@ export function ConditionsNappe({
                   <table className="tableau">
                     <thead>
                       <tr>
-                        <th>Paramètre</th>
-                        <th>Unité</th>
-                        <th>Ouvrages</th>
-                        <th>Minimum (ouvrage)</th>
-                        <th>Maximum (ouvrage)</th>
-                        <th>Moyenne</th>
+                        <EnTete cle="libelle" tri={triR.tri} onTrier={triR.trier}>Paramètre</EnTete>
+                        <EnTete cle="unite" tri={triR.tri} onTrier={triR.trier}>Unité</EnTete>
+                        <EnTete cle="n" tri={triR.tri} onTrier={triR.trier}>Ouvrages</EnTete>
+                        <EnTete cle="min" tri={triR.tri} onTrier={triR.trier}>Minimum (ouvrage)</EnTete>
+                        <EnTete cle="max" tri={triR.tri} onTrier={triR.trier}>Maximum (ouvrage)</EnTete>
+                        <EnTete cle="moyenne" tri={triR.tri} onTrier={triR.trier}>Moyenne</EnTete>
                       </tr>
                     </thead>
                     <tbody>
-                      {recap.lignes.map((l) => (
+                      {triR.tries.map((l) => (
                         <tr key={l.id}>
                           <td>
                             <strong>{l.libelle}</strong>
@@ -360,21 +384,21 @@ export function ConditionsNappe({
               <table className="tableau">
                 <thead>
                   <tr>
-                    <th>Ouvrage</th>
-                    <th>pH</th>
-                    <th title="Redox mesuré contre Ag/AgCl, et Eh">Redox (Eh) mV</th>
-                    <th>O₂ mg/l (sat.)</th>
-                    <th>CE µS/cm</th>
-                    <th>T °C</th>
-                    <th>Conditions (déchloration)</th>
-                    <th>Indices de dégradation</th>
-                    <th>Processus redox</th>
-                    <th title="Complet : nitrates, fer, sulfates et méthane disponibles">Score USEPA</th>
-                    <th>Vigilance</th>
+                    <EnTete cle="nom" tri={triE.tri} onTrier={triE.trier}>Ouvrage</EnTete>
+                    <EnTete cle="ph" tri={triE.tri} onTrier={triE.trier}>pH</EnTete>
+                    <EnTete cle="orp" tri={triE.tri} onTrier={triE.trier} title="Redox mesuré contre Ag/AgCl, et Eh">Redox (Eh) mV</EnTete>
+                    <EnTete cle="od" tri={triE.tri} onTrier={triE.trier}>O₂ mg/l (sat.)</EnTete>
+                    <EnTete cle="ce" tri={triE.tri} onTrier={triE.trier}>CE µS/cm</EnTete>
+                    <EnTete cle="t" tri={triE.tri} onTrier={triE.trier}>T °C</EnTete>
+                    <EnTete cle="conditions" tri={triE.tri} onTrier={triE.trier}>Conditions (déchloration)</EnTete>
+                    <EnTete cle="indices" tri={triE.tri} onTrier={triE.trier}>Indices de dégradation</EnTete>
+                    <EnTete cle="redox" tri={triE.tri} onTrier={triE.trier}>Processus redox</EnTete>
+                    <EnTete cle="score" tri={triE.tri} onTrier={triE.trier} title="Complet : nitrates, fer, sulfates et méthane disponibles">Score USEPA</EnTete>
+                    <EnTete cle="vigilance" tri={triE.tri} onTrier={triE.trier}>Vigilance</EnTete>
                   </tr>
                 </thead>
                 <tbody>
-                  {evaluations.map((e) => {
+                  {triE.tries.map((e) => {
                     const t = jeu.valeurs[e.ouvrage.cle] ?? {}
                     const actif = ouvert === e.ouvrage.cle
                     const alertes = e.alertes.filter((a) => a.niveau !== 'info').length

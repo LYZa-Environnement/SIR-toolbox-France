@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import { useTri } from '../lib/tri'
+import { EnTete } from './Tri'
 import type { FicheGaz, SourceDebit, SourceDuree } from '../lib/resultats/fichesGaz'
 import { evaluerQualite, LIBELLES_VERDICT, REFERENCES_QUALITE, syntheseQualite, type Niveau, type Verdict } from '../lib/resultats/qualiteGaz'
 
@@ -25,6 +27,18 @@ const signe = (x: number | null, chiffres = 1, suffixe = '') => (x === null ? '�
 export function QualiteGaz({ fiches, sourceDuree, sourceDebit }: { fiches: FicheGaz[]; sourceDuree: SourceDuree; sourceDebit: SourceDebit }) {
   const points = useMemo(() => fiches.map((f) => evaluerQualite(f, sourceDuree, sourceDebit)), [fiches, sourceDuree, sourceDebit])
   const synthese = useMemo(() => syntheseQualite(points), [points])
+  const ORDRE: Verdict[] = ['air-ambiant', 'a-verifier', 'non-evalue', 'representatif']
+  const { tries, tri, trier } = useTri(points, {
+    point: (p) => p.ouvrage,
+    lecture: (p) => ORDRE.indexOf(p.verdict),
+    o2: (p) => p.o2,
+    co2: (p) => p.co2,
+    evolution: (p) => p.deltaO2,
+    pid: (p) => p.pidMax,
+    gaz: (p) => Math.max(p.h2sMax ?? -1, p.coMax ?? -1, p.lieMax ?? -1),
+    constats: (p) => p.constats.filter((c) => c.niveau !== 'info').length,
+  })
+  const th = { tri, onTrier: trier }
   if (!fiches.some((f) => f.mesures.length)) {
     return (
       <p style={{ margin: '1.25rem 0 0', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
@@ -63,18 +77,18 @@ export function QualiteGaz({ fiches, sourceDuree, sourceDebit }: { fiches: Fiche
         <table className="tableau">
           <thead>
             <tr>
-              <th>Point</th>
-              <th>Lecture</th>
-              <th title="Dernière mesure plausible pendant l’échantillonnage, sinon fin de purge">O2 (%)</th>
-              <th title="Dernière mesure plausible pendant l’échantillonnage, sinon fin de purge">CO2 (ppm)</th>
-              <th title="Entre la fin de la purge (ou le début du prélèvement) et la fin du prélèvement">Évolution O2 / CO2</th>
-              <th>PID max (ppm)</th>
-              <th>H2S / CO (ppm) · LIE (%)</th>
-              <th>Constats</th>
+              <EnTete cle="point" {...th}>Point</EnTete>
+              <EnTete cle="lecture" {...th}>Lecture</EnTete>
+              <EnTete cle="o2" {...th} title="Dernière mesure plausible pendant l’échantillonnage, sinon fin de purge">O2 (%)</EnTete>
+              <EnTete cle="co2" {...th} title="Dernière mesure plausible pendant l’échantillonnage, sinon fin de purge">CO2 (ppm)</EnTete>
+              <EnTete cle="evolution" {...th} title="Entre la fin de la purge (ou le début du prélèvement) et la fin du prélèvement">Évolution O2 / CO2</EnTete>
+              <EnTete cle="pid" {...th}>PID max (ppm)</EnTete>
+              <EnTete cle="gaz" {...th}>H2S / CO (ppm) · LIE (%)</EnTete>
+              <EnTete cle="constats" {...th}>Constats</EnTete>
             </tr>
           </thead>
           <tbody>
-            {points.map((p) => (
+            {tries.map((p) => (
               <tr key={p.ouvrage}>
                 <th scope="row">{p.ouvrage}</th>
                 <td>

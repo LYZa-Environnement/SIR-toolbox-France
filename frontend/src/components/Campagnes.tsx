@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { useTri } from '../lib/tri'
+import { EnTete } from './Tri'
 import { LIBELLES_REGIME, type Campagne, type Ouvrage, type Regime } from '../lib/resultats/campagnes'
 import type { Lecture } from '../lib/resultats/parse'
 
@@ -36,6 +38,11 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
   const input = useRef<HTMLInputElement>(null)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const lignesOuvrages = ouvrages.map((o, ligne) => ({ o, ligne }))
+  const triO = useTri(lignesOuvrages, {
+    nom: (x) => x.o.nom,
+    ...Object.fromEntries(campagnes.map((_, i) => [`c${i}`, (x: { o: Ouvrage }) => x.o.echantillons[i]])),
+  })
   const plusieurs = campagnes.length > 1
   /** Where the next file goes: a new campaign ('') or an existing one (its index). */
   const [cible, setCible] = useState('')
@@ -197,14 +204,18 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
             <table className="tableau">
               <thead>
                 <tr>
-                  <th>Ouvrage</th>
+                  <EnTete cle="nom" tri={triO.tri} onTrier={triO.trier}>
+                    Ouvrage
+                  </EnTete>
                   {campagnes.map((_, i) => (
-                    <th key={i}>Campagne {i + 1}</th>
+                    <EnTete key={i} cle={`c${i}`} tri={triO.tri} onTrier={triO.trier}>
+                      Campagne {i + 1}
+                    </EnTete>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {ouvrages.map((o, ligne) => (
+                {triO.tries.map(({ o, ligne }) => (
                   <tr key={`${ligne}-${o.nom}`} className={o.echantillons.every(Boolean) ? 'tableau__selection' : undefined}>
                     <th scope="row" style={o.echantillons.filter(Boolean).length < 2 ? { color: 'var(--color-muted)', fontWeight: 400 } : undefined}>
                       {o.nom}

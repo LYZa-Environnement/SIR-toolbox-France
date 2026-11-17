@@ -50,7 +50,7 @@ livrables).
   résultats et interprétation, export. Les résultats s'ouvrent sur des tuiles
   de chiffres clés cliquables, puis des volets colorés repliés par défaut
   (`src/components/resultats/Volet.tsx`) : carte des résultats — échantillons
-  × composés colorés selon le rapport à la valeur de référence, cliquable
+  × composés colorés selon le rapport à la valeur de comparaison, cliquable
   (`CarteResultats.tsx`, `src/lib/resultats/resume.ts`) —, conditions de
   prélèvement, qualité des gaz du sol (nuage O2 / CO2, `NuageGaz.tsx`),
   conditions de la nappe, campagnes, positions hydrauliques, contrôle
@@ -59,7 +59,7 @@ livrables).
   sols, gaz du sol / air), chargement du fichier du laboratoire (ALS /
   Wessling, Eurofins, SGS — disposition reconnue automatiquement,
   `src/lib/resultats/parse.ts`), conversion µg/support → µg/m³ pour les gaz,
-  valeurs de référence au choix (dont aucune), qualité des gaz du sol captés
+  valeurs de comparaison au choix (dont aucune), qualité des gaz du sol captés
   d'après les mesures O2, CO2, H2S, CO, LIE et PID des fiches
   (`src/lib/resultats/qualiteGaz.ts`, guide BRGM / INERIS 2016), règles de
   débit du tableau 11 de ce guide,

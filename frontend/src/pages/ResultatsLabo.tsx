@@ -13,6 +13,8 @@ import { QualiteGaz } from '../components/QualiteGaz'
 import { CarteResultats } from '../components/resultats/CarteResultats'
 import { NuageGaz } from '../components/resultats/NuageGaz'
 import { Tuile, Volet, type TeinteVolet } from '../components/resultats/Volet'
+import { EnTete } from '../components/Tri'
+import { useTri } from '../lib/tri'
 import { acronyme } from '../lib/resultats/acronymes'
 import { resumer } from '../lib/resultats/resume'
 import { controleBlancs, controleDoublons, controlePercee } from '../lib/resultats/qualite'
@@ -461,6 +463,17 @@ export default function ResultatsLabo() {
   }
 
   // Pasting a column (or a block) copied from Excel fills the rows below.
+  // Sampling table, sortable; a pasted column fills the rows as displayed.
+  const triPrelevement = useTri(points, {
+    nom: (p) => p.nom,
+    duree: (p) => prelevements[p.nom]?.duree,
+    debitDebut: (p) => prelevements[p.nom]?.debitDebut,
+    debitFin: (p) => prelevements[p.nom]?.debitFin,
+    debit: (p) => debitMoyen(prelevements[p.nom]),
+    volume: (p) => volumeLitres(prelevements[p.nom]),
+    inclus: (p) => (exclus[p.nom] ? 0 : 1),
+  })
+
   function coller(e: ClipboardEvent<HTMLInputElement>, ligne: number, champ: Champ) {
     const texte = e.clipboardData.getData('text')
     if (!/[\n\t]/.test(texte.trim())) return
@@ -470,7 +483,7 @@ export default function ResultatsLabo() {
     setSaisies((s) => {
       const suite = { ...s }
       lignes.forEach((cols, i) => {
-        const p = points[ligne + i]
+        const p = triPrelevement.tries[ligne + i]
         if (!p) return
         cols.forEach((v, j) => {
           const c = CHAMPS[debut + j]
@@ -643,6 +656,21 @@ export default function ResultatsLabo() {
 
   const avertissement = matrice && lecture ? avertissementMatrice(matrice, lecture) : null
   const parametresApercu = lecture?.parametres[conversion ? coucheApercu : 'CM'] ?? []
+  const valeurApercu = (pa: Parametre, nom: string): number | null => {
+    const m = lecture?.valeurs[conversion ? coucheApercu : 'CM'][nom]?.[pa.cle]
+    if (!m || m.valeur === null) return null
+    if (!conversion) return m.inferieur ? -1 / (1 + m.valeur) : m.valeur
+    const c = convertir(m, pa, volumeLitres(prelevements[nom] ?? SANS_PRELEVEMENT), unite)
+    return c ? (c.inferieur ? -1 / (1 + c.valeur) : c.valeur) : null
+  }
+  // Sorting by a sample puts its quantified results first, the <LQ after.
+  const triApercu = useTri(parametresApercu, {
+    nom: (pa) => pa.nom,
+    unite: (pa) => pa.unite,
+    guide: (pa) => guides[pa.cle]?.valeur,
+    source: (pa) => guides[pa.cle]?.source,
+    ...Object.fromEntries(retenus.map((p) => [`e:${p.nom}`, (pa: Parametre) => valeurApercu(pa, p.nom)])),
+  })
   const toutSelectionne = points.length > 0 && selectionnes.length === points.length
 
   return (
@@ -838,7 +866,7 @@ export default function ResultatsLabo() {
             </p>
             <div className="grid grid--2" style={{ margin: '1.25rem 0 0.75rem', alignItems: 'end', maxWidth: '52rem' }}>
               <label className="champ">
-                Valeurs de référence
+                Valeurs de comparaison
                 <select
                   value={sansReference ? 'aucune' : matrice === 'sol' ? metaux : matrice === 'air' ? repere : 'erm'}
                   onChange={(e) => {
@@ -862,14 +890,14 @@ export default function ResultatsLabo() {
                       <option value="r3">Valeurs repères R3 — air intérieur</option>
                     </>
                   )}
-                  <option value="aucune">Aucune valeur de référence</option>
+                  <option value="aucune">Aucune valeur de comparaison</option>
                 </select>
               </label>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', maxWidth: '52rem' }}>
               {sansReference
-                ? "Résultats restitués sans comparaison : pas de colonne de valeur de référence, pas d'onglet « Valeurs guides ERM » dans l'export."
-                : "Les valeurs de référence sont retrouvées par n° CAS ou par nom. Chacune peut être corrigée dans le tableau ci-dessous : une valeur saisie remplace la valeur ERM (« - » pour n'en retenir aucune)."}
+                ? "Résultats restitués sans comparaison : pas de colonne de valeur de comparaison, pas d'onglet « Valeurs guides ERM » dans l'export."
+                : "Les valeurs de comparaison sont retrouvées par n° CAS ou par nom. Chacune peut être corrigée dans le tableau ci-dessous : une valeur saisie remplace la valeur ERM (« - » pour n'en retenir aucune)."}
             </p>
 
             <div className="tuiles">
@@ -880,11 +908,11 @@ export default function ResultatsLabo() {
                   teinte="brique"
                   etat={resume.depassements ? 'alerte' : 'ok'}
                   valeur={resume.depassements}
-                  libelle={`dépassement${resume.depassements > 1 ? 's' : ''} de la valeur de référence`}
+                  libelle={`dépassement${resume.depassements > 1 ? 's' : ''} de la valeur de comparaison`}
                   detail={
                     resume.max && resume.max.ratio > 1
-                      ? `${resume.composesDepasses.length} composé${resume.composesDepasses.length > 1 ? 's' : ''} · jusqu’à ${resume.max.ratio >= 10 ? Math.round(resume.max.ratio).toLocaleString('fr-FR') : fr(resume.max.ratio, 1)} fois la référence (${acronyme(resume.max.compose)}, ${resume.max.echantillon})`
-                      : 'tous les résultats sous la référence'
+                      ? `${resume.composesDepasses.length} composé${resume.composesDepasses.length > 1 ? 's' : ''} · jusqu’à ${resume.max.ratio >= 10 ? Math.round(resume.max.ratio).toLocaleString('fr-FR') : fr(resume.max.ratio, 1)} fois la valeur de comparaison (${acronyme(resume.max.compose)}, ${resume.max.echantillon})`
+                      : 'tous les résultats sous la valeur de comparaison'
                   }
                   onClick={() => ouvrir('carte')}
                 />
@@ -922,7 +950,7 @@ export default function ResultatsLabo() {
               id="carte"
               teinte="bleu"
               titre="Carte des résultats"
-              resume={sansReference ? 'Chaque résultat situé dans la gamme de son composé' : 'Chaque résultat comparé à sa valeur de référence, échantillon par échantillon'}
+              resume={sansReference ? 'Chaque résultat situé dans la gamme de son composé' : 'Chaque résultat comparé à sa valeur de comparaison, échantillon par échantillon'}
               ouvert={ouverts.has('carte')}
               onBasculer={() => basculer('carte')}
               badges={!sansReference && resume.depassements > 0 ? <span className="badge badge--elevee">{resume.depassements} dépassement{resume.depassements > 1 ? 's' : ''}</span> : undefined}
@@ -990,16 +1018,26 @@ export default function ResultatsLabo() {
                           onChange={(e) => setSelection(Object.fromEntries(points.map((p) => [p.nom, e.target.checked])))}
                         />
                       </th>
-                      <th>Échantillon</th>
+                      <EnTete cle="nom" tri={triPrelevement.tri} onTrier={triPrelevement.trier}>
+                        Échantillon
+                      </EnTete>
                       {CHAMPS.map((c) => (
-                        <th key={c.champ} title={c.aide}>
+                        <EnTete key={c.champ} cle={c.champ} tri={triPrelevement.tri} onTrier={triPrelevement.trier} title={c.aide}>
                           {c.libelle}
-                        </th>
+                        </EnTete>
                       ))}
-                      <th>Débit retenu (L/min)</th>
-                      <th>Volume (L)</th>
-                      <th>Volume (m³)</th>
-                      <th>Dans le tableau</th>
+                      <EnTete cle="debit" tri={triPrelevement.tri} onTrier={triPrelevement.trier}>
+                        Débit retenu (L/min)
+                      </EnTete>
+                      <EnTete cle="volume" tri={triPrelevement.tri} onTrier={triPrelevement.trier}>
+                        Volume (L)
+                      </EnTete>
+                      <EnTete cle="volume" tri={triPrelevement.tri} onTrier={triPrelevement.trier}>
+                        Volume (m³)
+                      </EnTete>
+                      <EnTete cle="inclus" tri={triPrelevement.tri} onTrier={triPrelevement.trier}>
+                        Dans le tableau
+                      </EnTete>
                     </tr>
                     <tr className="tableau__tous">
                       <td />
@@ -1032,7 +1070,7 @@ export default function ResultatsLabo() {
                     </tr>
                   </thead>
                   <tbody>
-                    {points.map((p, i) => {
+                    {triPrelevement.tries.map((p, i) => {
                       const pr = prelevements[p.nom]
                       const debit = debitMoyen(pr)
                       const vol = volumeLitres(pr)
@@ -1189,8 +1227,8 @@ export default function ResultatsLabo() {
             <Volet
               id="tableau"
               teinte="ocre"
-              titre="Tableau des résultats et valeurs de référence"
-              resume="L’aperçu du tableau Excel ; chaque valeur de référence peut y être corrigée"
+              titre="Tableau des résultats et valeurs de comparaison"
+              resume="L’aperçu du tableau Excel ; chaque valeur de comparaison peut y être corrigée"
               ouvert={ouverts.has('tableau')}
               onBasculer={() => basculer('tableau')}
             >
@@ -1251,20 +1289,28 @@ export default function ResultatsLabo() {
               <table className="tableau tableau--resultats">
                 <thead>
                   <tr>
-                    <th rowSpan={conversion ? 2 : 1}>Composé</th>
-                    {!conversion && <th>Unité</th>}
+                    <EnTete cle="nom" tri={triApercu.tri} onTrier={triApercu.trier} rowSpan={conversion ? 2 : 1}>
+                      Composé
+                    </EnTete>
+                    {!conversion && (
+                      <EnTete cle="unite" tri={triApercu.tri} onTrier={triApercu.trier}>
+                        Unité
+                      </EnTete>
+                    )}
                     {!sansReference && (
                       <>
-                        <th rowSpan={conversion ? 2 : 1}>
-                          {conversion ? `Valeur repère ${repere.toUpperCase()} (${unite})` : 'Valeur guide'}
-                        </th>
-                        <th rowSpan={conversion ? 2 : 1}>Source</th>
+                        <EnTete cle="guide" tri={triApercu.tri} onTrier={triApercu.trier} rowSpan={conversion ? 2 : 1}>
+                          {conversion ? `Valeur repère ${repere.toUpperCase()} (${unite})` : 'Valeur de comparaison'}
+                        </EnTete>
+                        <EnTete cle="source" tri={triApercu.tri} onTrier={triApercu.trier} rowSpan={conversion ? 2 : 1}>
+                          Source
+                        </EnTete>
                       </>
                     )}
                     {retenus.map((p) => (
-                      <th key={p.nom} colSpan={conversion ? 2 : 1}>
+                      <EnTete key={p.nom} cle={`e:${p.nom}`} tri={triApercu.tri} onTrier={triApercu.trier} colSpan={conversion ? 2 : 1}>
                         {p.nom}
-                      </th>
+                      </EnTete>
                     ))}
                   </tr>
                   {matrice === 'sol' && retenus.some((p) => lireProfondeur(p.nom)) && (
@@ -1285,10 +1331,10 @@ export default function ResultatsLabo() {
                   )}
                 </thead>
                 <tbody>
-                  {parametresApercu.map((pa, i) => (
+                  {triApercu.tries.map((pa, i) => (
                     <LigneFamille
                       key={pa.cle}
-                      afficher={i === 0 || parametresApercu[i - 1].famille !== pa.famille}
+                      afficher={!triApercu.tri && (i === 0 || triApercu.tries[i - 1].famille !== pa.famille)}
                       famille={pa.famille}
                       colonnes={(conversion ? 1 : 2) + (sansReference ? 0 : 2) + (conversion ? 2 : 1) * retenus.length}
                     >
@@ -1392,7 +1438,7 @@ export default function ResultatsLabo() {
                 teinte="bleu"
                 titre="Tableau des résultats"
                 nom={`Tableau X - Résultats ${libelle}.xlsx`}
-                description={`Mis en forme${sansReference ? '' : ', comparé aux valeurs de référence'}, analyse par composé, contrôle qualité${matrice === 'eau' && rapportNappe ? ', conditions physico-chimiques et qualité des purges' : ''}${qualiteGaz ? ', qualité des gaz du sol captés' : ''}.`}
+                description={`Mis en forme${sansReference ? '' : ', comparé aux valeurs de comparaison'}, analyse par composé, contrôle qualité${matrice === 'eau' && rapportNappe ? ', conditions physico-chimiques et qualité des purges' : ''}${qualiteGaz ? ', qualité des gaz du sol captés' : ''}.`}
                 enCours={export_ === 'standard'}
                 desactive={!!export_ || !retenus.length}
                 onTelecharger={() => exporter(false)}

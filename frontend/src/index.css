@@ -2387,3 +2387,39 @@ a.card:hover {
 .matrice__ligne--active .matrice__case {
   outline: 2px solid rgba(13, 36, 33, 0.45);
 }
+
+/* Sortable column headings. */
+.tri {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.tri:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.tri__fleche {
+  font-size: 0.7em;
+  opacity: 0.35;
+}
+.tri:hover .tri__fleche,
+.tri--actif .tri__fleche {
+  opacity: 1;
+}
+.tri--actif {
+  color: var(--color-accent);
+}
+
+.carte__coin .tri {
+  display: flex;
+  width: auto;
+  margin: 0.1rem 0;
+  font-size: 0.72rem;
+}
