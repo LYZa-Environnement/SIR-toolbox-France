@@ -9,6 +9,7 @@ import {
   type SourceDebit,
   type SourceDuree,
 } from '../lib/resultats/fichesGaz'
+import { QualiteGaz } from './QualiteGaz'
 
 export interface EtatFichesGaz {
   fiches: FicheGaz[]
@@ -252,6 +253,8 @@ export function FichesGaz({
               Fiches sans échantillon dans le fichier du laboratoire : {sansEchantillon.map((f) => f.ouvrage).join(', ')}.
             </p>
           )}
+
+          <QualiteGaz fiches={etat.fiches} sourceDuree={sourceDuree} sourceDebit={sourceDebit} />
         </>
       )}
     </div>

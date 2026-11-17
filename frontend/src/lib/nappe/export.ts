@@ -514,6 +514,254 @@ function feuilleMethode(wb: Workbook) {
   }
 }
 
+/** Colour scale over a column of the rows written, from `bas` to `haut` (through `milieu` when given). */
+function echelleCouleurs(ws: Worksheet, col: number, r0: number, r1: number, bas: string, haut: string, milieu?: { valeur?: number; couleur: string }) {
+  if (r1 < r0) return
+  const l = ws.getColumn(col).letter
+  ws.addConditionalFormatting({
+    ref: `${l}${r0}:${l}${r1}`,
+    rules: [
+      {
+        type: 'colorScale',
+        priority: 1,
+        cfvo: milieu
+          ? [{ type: 'min' }, milieu.valeur !== undefined ? { type: 'num', value: milieu.valeur } : { type: 'percentile', value: 50 }, { type: 'max' }]
+          : [{ type: 'min' }, { type: 'max' }],
+        color: milieu ? [{ argb: bas }, { argb: milieu.couleur }, { argb: haut }] : [{ argb: bas }, { argb: haut }],
+      },
+    ],
+  })
+}
+
+const BLEU = 'FF9DB9E0'
+const BLANC = 'FFFFFFFF'
+const ORANGE = 'FFF2B77E'
+const VERT_CLAIR = 'FFA9D5B5'
+const ROUGE = 'FFE58F84'
+
+/**
+ * Visual summary of the physico-chemical conditions: every well from the
+ * most reducing to the most oxidising, its state and its field values on
+ * colour scales, with the lab's chlorinated solvents and the conditions
+ * they meet — then the site figures and its reading.
+ */
+function feuilleConditionsVisuelle(wb: Workbook, rp: Rapport) {
+  const ws = wb.addWorksheet('Conditions physico-chimiques', { views: [{ showGridLines: false }] })
+  const largeur = 14
+  ecrire(ws, 1, 1, `${rp.titre} — conditions physico-chimiques`, { gras: true, taille: 12, bord: false })
+  ecrire(ws, 2, 1, 'Mesures de terrain en fin de purge (fiches de prélèvement), croisées avec les résultats du laboratoire.', { italique: true, taille: 9, bord: false })
+  let r = 4
+  const paragraphe = (t: string) => {
+    ws.mergeCells(r, 1, r, largeur)
+    ecrire(ws, r, 1, t, { taille: 9, wrap: true, bord: false })
+    ws.getRow(r).height = Math.ceil(t.length / 190) * 13 + 3
+    r++
+  }
+  r = bandeau(ws, r, 'Synthèse', largeur)
+  ;(rp.recap?.synthese.length ? rp.recap.synthese : rp.synthese.site).forEach(paragraphe)
+  r++
+
+  r = bandeau(ws, r, 'Conditions par ouvrage, du plus réducteur au plus oxydant', largeur)
+  r = entetes(ws, r, [
+    ['Rang', 6],
+    ['Ouvrage', 14],
+    ['État physico-chimique', 18],
+    ['pH', 7],
+    ['Redox mesuré (mV Ag/AgCl)', 10],
+    ['Eh (mV)', 8],
+    ['O2 dissous (mg/l)', 9],
+    ['Saturation O2 (%)', 9],
+    ['Conductivité (µS/cm)', 11],
+    ['Température (°C)', 10],
+    ['COHV (µmol/l)', 10],
+    ['Conditions pour la déchloration réductrice', 16],
+    ['Processus redox dominant', 22],
+    ['Description', 70],
+  ])
+  const r0 = r
+  const parCle = new Map(rp.evaluations.map((e) => [e.ouvrage.cle, e]))
+  for (const c of rp.synthese.classement) {
+    const e = parCle.get(c.cle)
+    const v = rp.jeu.valeurs[c.cle] ?? {}
+    const val = (id: 'ph' | 'orp' | 'od' | 'ce' | 't') => (v[id] ? Number(v[id]!.valeur.toPrecision(4)) : '-')
+    const ce = COULEUR_ETAT[c.etat]
+    const cc = e ? COULEUR_CONDITIONS[e.lecture.conditions] : null
+    const cellules: [string | number, Parameters<typeof ecrire>[4]][] = [
+      [c.rang, { h: 'center' }],
+      [c.nom, { gras: true }],
+      [LIBELLES_ETAT[c.etat], { gras: true, h: 'center', fond: ce.fond, couleur: ce.texte, wrap: true }],
+      [val('ph'), { h: 'center' }],
+      [val('orp'), { h: 'center' }],
+      [nb(e?.eh, 3), { h: 'center' }],
+      [val('od'), { h: 'center' }],
+      [nb(e?.saturationO2, 3), { h: 'center' }],
+      [val('ce'), { h: 'center' }],
+      [val('t'), { h: 'center' }],
+      [e && e.cohvMolaire > 0 ? Number(e.cohvMolaire.toPrecision(3)) : '-', { h: 'center' }],
+      [e ? LIBELLES_FAVORABILITE[e.lecture.conditions] : '-', { h: 'center', fond: cc?.fond, couleur: cc?.texte, wrap: true }],
+      [e ? e.redox.processus : '-', { wrap: true }],
+      [c.description + (c.reserve ? ` Réserve : ${c.reserve}` : ''), { wrap: true }],
+    ]
+    cellules.forEach(([x, o], j) => ecrire(ws, r, j + 1, x, { taille: 9, ...o }))
+    ws.getRow(r).height = Math.max(24, Math.ceil(c.description.length / 85) * 12 + 4)
+    r++
+  }
+  const r1 = r - 1
+  // Reducing in blue, oxidising in orange; mineralisation in green; contamination in red.
+  echelleCouleurs(ws, 4, r0, r1, BLEU, ORANGE, { valeur: 7, couleur: BLANC })
+  echelleCouleurs(ws, 5, r0, r1, BLEU, ORANGE, { couleur: BLANC })
+  echelleCouleurs(ws, 6, r0, r1, BLEU, ORANGE, { couleur: BLANC })
+  echelleCouleurs(ws, 7, r0, r1, BLEU, ORANGE, { couleur: BLANC })
+  echelleCouleurs(ws, 8, r0, r1, BLEU, ORANGE, { couleur: BLANC })
+  echelleCouleurs(ws, 9, r0, r1, BLANC, VERT_CLAIR)
+  echelleCouleurs(ws, 10, r0, r1, BLEU, ROUGE, { couleur: BLANC })
+  echelleCouleurs(ws, 11, r0, r1, BLANC, ROUGE)
+  ws.views = [{ state: 'frozen', xSplit: 2, ySplit: r0 - 1, showGridLines: false }]
+  r++
+
+  if (rp.recap) {
+    r = bandeau(ws, r, 'Récapitulatif des paramètres de terrain (entre parenthèses : ouvrage où la valeur est relevée)', largeur)
+    const titres = ['Paramètre', 'Unité', 'Ouvrages', 'Minimum (ouvrage)', 'Maximum (ouvrage)', 'Moyenne']
+    const cols = [2, 4, 5, 6, 9, 12]
+    titres.forEach((t, j) => ecrire(ws, r, cols[j], t, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true }))
+    ws.mergeCells(r, 2, r, 3)
+    ws.mergeCells(r, 6, r, 8)
+    ws.mergeCells(r, 9, r, 11)
+    ws.mergeCells(r, 12, r, 13)
+    r++
+    for (const l of rp.recap.recap.lignes) {
+      const x = [l.libelle, l.unite, l.n, formatExtreme(l.min, l.id), formatExtreme(l.max, l.id), formatMoyenne(l)]
+      x.forEach((y, j) => ecrire(ws, r, cols[j], y, { taille: 9, h: j === 0 ? 'left' : 'center', gras: j === 0 }))
+      ws.mergeCells(r, 2, r, 3)
+      ws.mergeCells(r, 6, r, 8)
+      ws.mergeCells(r, 9, r, 11)
+      ws.mergeCells(r, 12, r, 13)
+      r++
+    }
+    r++
+  }
+  if (rp.synthese.profils.length) {
+    r = bandeau(ws, r, 'Profils verticaux (ouvrages multi-niveaux)', largeur)
+    rp.synthese.profils.forEach((p) => paragraphe(`• ${p.texte}`))
+    r++
+  }
+  if (rp.synthese.singularites.length) {
+    r = bandeau(ws, r, 'Ouvrages singuliers', largeur)
+    rp.synthese.singularites.forEach((p) => paragraphe(`• ${p}`))
+    r++
+  }
+  paragraphe(
+    'Lecture des couleurs : du bleu (réducteur, peu oxygéné, froid) à l’orange ou au rouge (oxydant, oxygéné, chaud) ; conductivité du blanc (faible) au vert (élevée) ; COHV du blanc au rouge (le plus contaminé). État physico-chimique d’après l’oxygène dissous et le redox ensemble ; conditions pour la déchloration réductrice d’après les seuils USEPA (1998) ; processus redox dominant d’après McMahon et Chapelle (2008) quand nitrates, fer, manganèse et sulfates sont analysés.',
+  )
+}
+
+const RESERVE_MESURE = /sursatur|sonde|incohérent|stabilis|calibration|dérive|phase flottante|odeur|H2S/i
+
+/**
+ * Purge of each well: readings, stabilisation of each parameter on the
+ * last three readings (criteria of the sheet), calibration and drift of the
+ * probe, what was noted, and a verdict.
+ */
+function feuilleQualitePurges(wb: Workbook, rp: Rapport) {
+  const ws = wb.addWorksheet('Qualité des purges', { views: [{ showGridLines: false }] })
+  ecrire(ws, 1, 1, `${rp.titre} — qualité des purges`, { gras: true, taille: 12, bord: false })
+  const evals = rp.evaluations.filter((e) => e.ouvrage.fiche && !e.ouvrage.fiche.vide)
+  const LIB = { stable: 'Stable', instable: 'Non stabilisé', insuffisant: '< 3 lectures' } as const
+  const bilans = evals.map((e) => {
+    const f = e.ouvrage.fiche!
+    const mesures = PARAMS_TERRAIN.filter((p) => f.stabilite[p.id])
+    const instables = mesures.filter((p) => f.stabilite[p.id] === 'instable')
+    const insuffisants = mesures.filter((p) => f.stabilite[p.id] === 'insuffisant')
+    const verdict: { texte: string; c: { fond: string; texte: string } } = !mesures.length
+      ? { texte: 'Aucune lecture exploitable', c: { fond: 'FFEDEDED', texte: 'FF555555' } }
+      : instables.length
+        ? { texte: `Non stabilisée (${instables.map((p) => p.libelle.toLowerCase()).join(', ')})`, c: ETAT.vigilance }
+        : insuffisants.length === mesures.length
+          ? { texte: 'Moins de 3 lectures : stabilisation non vérifiable', c: { fond: 'FFEDEDED', texte: 'FF555555' } }
+          : { texte: insuffisants.length ? 'Stabilisée (paramètres partiellement suivis)' : 'Stabilisée', c: ETAT.ok }
+    return { e, f, instables, verdict }
+  })
+  let r = 3
+  const paragraphe = (t: string) => {
+    ws.mergeCells(r, 1, r, 12)
+    ecrire(ws, r, 1, t, { taille: 9, wrap: true, bord: false })
+    ws.getRow(r).height = Math.ceil(t.length / 170) * 13 + 3
+    r++
+  }
+  const stables = bilans.filter((b) => b.verdict.c === ETAT.ok)
+  const nonStab = bilans.filter((b) => b.instables.length)
+  paragraphe(
+    `${stables.length} purge${stables.length > 1 ? 's' : ''} stabilisée${stables.length > 1 ? 's' : ''} sur ${bilans.length}.` +
+      (nonStab.length ? ` Stabilisation non atteinte : ${nonStab.map((b) => `${b.f.ouvrage} (${b.instables.map((p) => p.libelle.toLowerCase()).join(', ')})`).join(' ; ')} — les valeurs de fin de purge de ces ouvrages sont à lire avec réserve.` : ''),
+  )
+  r++
+  r = entetes(ws, r, [
+    ['Ouvrage', 14],
+    ['Date', 11],
+    ['Lectures', 8],
+    ['Durée de purge (min)', 9],
+    ['Volume purgé (l)', 9],
+    ['Débit de purge', 9],
+    ['Niveau statique (m)', 9],
+    ...PARAMS_TERRAIN.map((p) => [`Stabilisation — ${p.libelle}`, 11] as [string, number]),
+    ['Bilan de la purge', 22],
+    ['Calibration / dérive de la sonde', 18],
+    ['Points de vigilance sur la mesure', 50],
+    ['Observations (couleur, odeur, turbidité…)', 45],
+  ])
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: r - 1, showGridLines: false }]
+  for (const { e, f, verdict } of bilans) {
+    const fin = f.lectures[f.ligneFinale]
+    let c = 1
+    const put = (x: string | number, o: Parameters<typeof ecrire>[4] = {}) => ecrire(ws, r, c++, x, { taille: 9, h: 'center', ...o })
+    put(f.ouvrage, { gras: true, h: 'left' })
+    put(f.date || '-')
+    put(f.lectures.filter((l) => l.ph !== null || l.orp !== null || l.od !== null).length)
+    put(nb(fin?.duree))
+    put(nb(fin?.volume))
+    put(nb(f.debitPurge))
+    put(nb(f.niveauStatique))
+    for (const p of PARAMS_TERRAIN) {
+      const st = f.stabilite[p.id]
+      const coul = st === 'stable' ? ETAT.ok : st === 'instable' ? ETAT.vigilance : null
+      put(st ? LIB[st] : '-', { fond: coul?.fond, couleur: coul?.texte })
+    }
+    put(verdict.texte, { gras: true, fond: verdict.c.fond, couleur: verdict.c.texte, wrap: true })
+    put([f.calibration && `Calibration : ${f.calibration}`, f.derive && `Dérive : ${f.derive}`].filter(Boolean).join(' ; ') || '-', { wrap: true, h: 'left' })
+    const vigilance = e.alertes.filter((a) => RESERVE_MESURE.test(a.texte)).map((a) => a.texte)
+    put(vigilance.join(' ; ') || '-', { wrap: true, h: 'left', couleur: vigilance.length ? ETAT.vigilance.texte : undefined })
+    put(f.observations.join(' ; ') || '-', { wrap: true, h: 'left' })
+    const long = Math.max(vigilance.join(' ').length / 60, f.observations.join(' ; ').length / 55, verdict.texte.length / 26)
+    ws.getRow(r).height = Math.max(15, Math.ceil(long) * 12 + 3)
+    r++
+  }
+  r++
+  const tol = evals[0]?.ouvrage.fiche?.tolerances
+  const v = (x: number) => String(x).replace('.', ',')
+  if (tol) {
+    paragraphe(
+      `Stabilisation jugée sur les trois dernières lectures de la purge : écart entre lectures successives au plus de ± ${v(tol.ph)} (pH), ± ${v(tol.orp)} mV (redox), ± ${v(tol.od)} mg/l (oxygène dissous), ± ${v(tol.ce)} % (± ${v(tol.ceFaible)} % sous 500 µS/cm) pour la conductivité et ± ${v(tol.t)} °C (critères de la fiche). Valeurs retenues : dernière lecture complète de la purge.`,
+    )
+  }
+}
+
+/**
+ * The groundwater sheets added to the Résultats labo workbook: the visual
+ * summary of the physico-chemical conditions and the purge quality; with
+ * the expert export, natural attenuation too (summary by well, USEPA
+ * screening, BIOCHLOR inputs when computed, method and sources).
+ */
+export function ajouterFeuillesNappe(wb: Workbook, rp: Rapport, expert: boolean) {
+  feuilleConditionsVisuelle(wb, rp)
+  feuilleQualitePurges(wb, rp)
+  if (expert) {
+    feuilleSynthese(wb, rp)
+    feuilleScore(wb, rp)
+    if (rp.transport) feuilleTransport(wb, rp)
+    feuilleMethode(wb)
+  }
+}
+
 async function classeur(): Promise<Workbook> {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()

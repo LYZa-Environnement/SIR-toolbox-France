@@ -11,8 +11,8 @@ Sur la page d'accueil (`frontend/src/pages/Accueil.tsx`), les outils sont
 regroupés en quatre catégories, une couleur chacune, dans l'ordre d'une
 étude : **1. Contexte du site et plan d'investigation** (Site Setting,
 données environnementales publiques, création maillage), **2. Données de
-terrain** (logs de forage, conditions de la nappe), **3. Résultats
-d'analyses et interprétation** (résultats labo, interprétation PFAS) et
+terrain** (logs de forage), **3. Résultats d'analyses et interprétation**
+(résultats labo, avec les conditions de la nappe, et interprétation PFAS) et
 **4. Contrôle de conformité** (conformité des rejets, vérification des
 livrables).
 
@@ -40,6 +40,10 @@ livrables).
   sols, gaz du sol / air), chargement du fichier du laboratoire (ALS /
   Wessling, Eurofins, SGS — disposition reconnue automatiquement,
   `src/lib/resultats/parse.ts`), conversion µg/support → µg/m³ pour les gaz,
+  valeurs de référence au choix (dont aucune), qualité des gaz du sol captés
+  d'après les mesures O2, CO2, H2S, CO, LIE et PID des fiches
+  (`src/lib/resultats/qualiteGaz.ts`, guide BRGM / INERIS 2016), règles de
+  débit du tableau 11 de ce guide,
   zones de mesure et de contrôle des tubes lues aussi ligne par ligne
   (synthèses Eurofins gaz du sol : « (zone 1) » / « (zone 2) », « Benzène » /
   « Benzène (2) » ; zone 1 = mesure, zone 2 = contrôle),
@@ -85,7 +89,15 @@ livrables).
   sources secondaires signalées), avec une explication des deux procédés de
   fabrication (électrochimique, télomérisation). Ouvrages classés par nom
   (Pz1, Pz2, Pz10). Exemple fictif intégré.
-- **Conditions de la nappe** (`frontend/src/pages/ConditionsNappe.tsx`) —
+Accès protégé par un mot de passe (`src/lib/acces.ts`, empreinte SHA-256 ;
+simple barrière, le site étant statique) ; les catégories de l'accueil se
+replient.
+
+- **Conditions de la nappe** (`frontend/src/components/nappe/ConditionsNappe.tsx`,
+  section de Résultats labo pour les eaux souterraines, qui reprend le fichier
+  du laboratoire déjà chargé ; onglets « Conditions physico-chimiques » —
+  synthèse visuelle, échelles de couleurs — et « Qualité des purges » dans
+  l'export, atténuation naturelle dans l'export expert) —
   interprétation des paramètres physico-chimiques au regard du devenir des
   solvants chlorés (`src/lib/nappe/`). Lit le classeur des fiches de
   prélèvement, une fiche par onglet (`fiches.ts` : tableau de purge repéré

@@ -30,6 +30,34 @@ export interface DebitReleve {
   debut: boolean
 }
 
+export type Etape = 'avant' | 'purge' | 'echantillonnage'
+
+/** One reading of the purge / sampling table (multigas meter, PID). */
+export interface MesureGaz {
+  etape: Etape
+  heure: string
+  /** First / last row of the sampling step. */
+  debutEchantillonnage: boolean
+  finEchantillonnage: boolean
+  pid: number | null
+  /** % vol. */
+  o2: number | null
+  /** ppmv. */
+  co2: number | null
+  /** CO2 above the meter's range (">8888"): `co2` is the lower bound. */
+  co2Superieur: boolean
+  /** ppm. */
+  h2s: number | null
+  /** % of the lower explosive limit. */
+  lie: number | null
+  /** ppm. */
+  co: number | null
+  /** % vol. */
+  ch4: number | null
+  /** %. */
+  humidite: number | null
+}
+
 export interface FicheGaz {
   onglet: string
   ouvrage: string
@@ -47,6 +75,11 @@ export interface FicheGaz {
   debitConsigne: number | null
   /** Pump flows read during the sampling step (L/min). */
   releves: DebitReleve[]
+  /** Every reading of the purge / sampling table, in order. */
+  mesures: MesureGaz[]
+  /** "Volume purgé" (L) and "Débit de purge" (L/min). */
+  volumePurge: number | null
+  debitPurge: number | null
   /** "Volume échantillonné" written on the sheet (L). */
   volumeFiche: number | null
   support: string
@@ -148,8 +181,35 @@ const valeur = (grille: Cell[][], motif: RegExp, portee?: number) => apres(grill
 
 const ML = /m\s*l\s*\/\s*min/i
 
-/** The purge / sampling table: flows read during the sampling step. */
-function lireReleves(grille: Cell[][]): { releves: DebitReleve[]; millilitres: boolean } | null {
+/** CO2 as written: ppm(v) unless the heading says % — brought to ppmv. */
+function co2Ppm(v: number | null, entete: string): number | null {
+  if (v === null) return null
+  return /%/.test(entete) && !/ppm/i.test(entete) ? v * 10000 : v
+}
+
+/** ">8888": a reading above the meter's range, as its lower bound. */
+function auDela(c: Cell): number | null {
+  const m = /^\s*>\s*([0-9]+(?:[.,][0-9]+)?)/.exec(texte(c))
+  return m ? Number(m[1].replace(',', '.')) : null
+}
+
+/** Relative humidity as a fraction (0,39) or a percentage (39). */
+const pourcent = (v: number | null) => (v === null ? null : v <= 1 ? v * 100 : v)
+
+const COLONNES_GAZ: [keyof MesureGaz, RegExp][] = [
+  ['pid', /\bpid\b|\bcov\b/i],
+  ['co2', /co\s*2|co₂|dioxyde/i],
+  ['o2', /^\s*o\s*2|^\s*o₂|oxyg/i],
+  ['h2s', /h\s*2\s*s|h₂s|sulfure/i],
+  ['lie', /\blel\b|\blie\b|explosiv/i],
+  ['ch4', /ch\s*4|ch₄|m[ée]thane/i],
+  ['co', /^\s*co\s*(\(|$)|monoxyde/i],
+  ['humidite', /humidit/i],
+]
+
+/** The purge / sampling table: the flows read during the sampling step,
+ *  and every multigas / PID reading. */
+function lireReleves(grille: Cell[][]): { releves: DebitReleve[]; mesures: MesureGaz[]; millilitres: boolean } | null {
   let h = -1
   let cEtape = -1
   let cDebit = -1
@@ -168,8 +228,16 @@ function lireReleves(grille: Cell[][]): { releves: DebitReleve[]; millilitres: b
   const cHeure = entete.findIndex((c) => /^heures?\b/i.test(texte(c)))
   const cRemarque = entete.findIndex((c) => /remarque|observation/i.test(texte(c)))
   const millilitres = ML.test(texte(entete[cDebit]))
+  const col: Partial<Record<keyof MesureGaz, number>> = {}
+  entete.forEach((c, j) => {
+    const t = texte(c)
+    if (!t || j === cDebit) return
+    const trouve = COLONNES_GAZ.find(([cle, motif]) => col[cle] === undefined && motif.test(t))
+    if (trouve) col[trouve[0]] = j
+  })
 
   const releves: DebitReleve[] = []
+  const mesures: MesureGaz[] = []
   let etape = ''
   let premiere = -1
   let fini = false
@@ -183,15 +251,36 @@ function lireReleves(grille: Cell[][]): { releves: DebitReleve[]; millilitres: b
     const echantillonnage =
       (/[ée]chantillonnage|pr[ée]l[èe]vement/i.test(etape) && !/avant|purge/i.test(etape)) ||
       /d[ée]but d.?[ée]chantillonnage/i.test(remarque)
-    if (!echantillonnage) continue
-    if (premiere < 0) premiere = i
-    const brut = nombre(r[cDebit])
-    if (brut !== null && brut > 0) {
-      releves.push({ heure: cHeure >= 0 ? texte(r[cHeure]) : '', debit: millilitres ? brut / 1000 : brut, debut: i === premiere })
+    const finEch = echantillonnage && /fin d.?[ée]chantillonnage/i.test(remarque)
+    if (echantillonnage && premiere < 0) premiere = i
+    const num = (k: keyof MesureGaz) => (col[k] === undefined ? null : nombre(r[col[k]!]))
+    const co2Brut = col.co2 === undefined ? null : r[col.co2]
+    const co2Sup = auDela(co2Brut)
+    const m: MesureGaz = {
+      etape: echantillonnage ? 'echantillonnage' : /avant/i.test(etape) ? 'avant' : 'purge',
+      heure: cHeure >= 0 ? texte(r[cHeure]) : '',
+      debutEchantillonnage: echantillonnage && i === premiere,
+      finEchantillonnage: finEch,
+      pid: num('pid'),
+      o2: num('o2'),
+      co2: co2Ppm(co2Sup ?? num('co2'), col.co2 === undefined ? '' : texte(entete[col.co2])),
+      co2Superieur: co2Sup !== null,
+      h2s: num('h2s'),
+      lie: num('lie'),
+      co: num('co'),
+      ch4: num('ch4'),
+      humidite: pourcent(num('humidite')),
     }
-    if (/fin d.?[ée]chantillonnage/i.test(remarque)) fini = true
+    if ((['pid', 'o2', 'co2', 'h2s', 'lie', 'co', 'ch4', 'humidite'] as const).some((k) => m[k] !== null) || m.debutEchantillonnage || m.finEchantillonnage) {
+      mesures.push(m)
+    }
+    if (echantillonnage) {
+      const brut = nombre(r[cDebit])
+      if (brut !== null && brut > 0) releves.push({ heure: m.heure, debit: millilitres ? brut / 1000 : brut, debut: i === premiere })
+    }
+    if (finEch) fini = true
   }
-  return { releves, millilitres }
+  return { releves, mesures, millilitres }
 }
 
 export function lireFicheGaz(grille: Cell[][], onglet: string): FicheGaz | null {
@@ -220,6 +309,9 @@ export function lireFicheGaz(grille: Cell[][], onglet: string): FicheGaz | null 
     dureeHoraires,
     debitConsigne: consigne === null || consigne <= 0 ? null : millilitresConsigne ? consigne / 1000 : consigne,
     releves: table?.releves ?? [],
+    mesures: table?.mesures ?? [],
+    volumePurge: nombre(valeur(grille, /volume purg/i, 2)),
+    debitPurge: nombre(valeur(grille, /d[ée]bit de purge/i, 2)),
     volumeFiche: nombre(valeur(grille, /volume ([ée]chantillonn|pr[ée]lev)/i, 4)),
     support: texte(valeur(grille, /type de support/i)),
     referenceSupport: texte(valeur(grille, /r[ée]f[ée]rence du support/i)),
@@ -260,6 +352,12 @@ const ORDRE_DUREES: SourceDuree[] = ['erm', 'pompe', 'horaires']
 
 export function dureeSelon(f: FicheGaz, s: SourceDuree): number | null {
   return s === 'erm' ? f.dureeErm : s === 'pompe' ? f.dureePompe : f.dureeHoraires
+}
+
+/** Relative gap between two flow checks, against the larger one. */
+export function ecartDebits(a: number | null, b: number | null): number | null {
+  if (a === null || b === null || a <= 0 || b <= 0) return null
+  return Math.abs(a - b) / Math.max(a, b)
 }
 
 const fr = (x: number, chiffres = 3) => x.toLocaleString('fr-FR', { maximumFractionDigits: chiffres })
@@ -310,8 +408,26 @@ export function retenir(f: FicheGaz, sourceDuree: SourceDuree, sourceDebit: Sour
     alertes.push('Débit de fin d’échantillonnage non relevé : débit d’échantillonnage seul retenu')
   }
   if (debitDebut === null && debitFin === null) alertes.push('Aucun débit d’échantillonnage sur la fiche')
-  if (debitDebut !== null && debitFin !== null && Math.abs(debitFin - debitDebut) / debitDebut > 0.1) {
-    alertes.push(`Débit en fin d’échantillonnage écarté de plus de 10 % du débit de début (${fr(debitDebut)} → ${fr(debitFin)} L/min)`)
+  // Guide BRGM / INERIS 2016, tableau 11 (gaz du sol): below 5 % the mean
+  // flow, from 5 to 10 % the minimum flow, above 10 % not representative.
+  const ecart = ecartDebits(debitDebut, debitFin)
+  if (ecart !== null && debitDebut !== null && debitFin !== null) {
+    if (ecart > 0.1) {
+      alertes.push(
+        `Écart de débit début / fin de ${fr(ecart * 100, 1)} % (${fr(debitDebut)} → ${fr(debitFin)} L/min) : supérieur à 10 %, prélèvement non représentatif selon le guide BRGM / INERIS 2016 (tableau 11)`,
+      )
+    } else if (ecart > 0.05) {
+      const min = Math.min(debitDebut, debitFin)
+      alertes.push(
+        `Écart de débit début / fin de ${fr(ecart * 100, 1)} % : entre 5 et 10 %, le débit minimum (${fr(min)} L/min) est retenu pour le volume (guide BRGM / INERIS 2016, tableau 11)`,
+      )
+      debitDebut = min
+      debitFin = null
+      origineDebits = 'débit minimum (écart de 5 à 10 %)'
+    }
+  }
+  if ([debitDebut, debitFin].some((d) => d !== null && d > 2 && d <= 5)) {
+    alertes.push('Débit supérieur à 2 L/min : prélèvement de gaz du sol non représentatif selon le guide BRGM / INERIS 2016 (tableau 11)')
   }
   for (const d of [debitDebut, debitFin]) {
     if (d !== null && (d > 5 || d < 0.005)) {

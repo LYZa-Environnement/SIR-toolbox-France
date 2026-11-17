@@ -6,7 +6,6 @@ import ConformiteRejets from './pages/ConformiteRejets'
 import VerificationLivrables from './pages/VerificationLivrables'
 import SiteSetting from './pages/SiteSetting'
 import InterpretationPfas from './pages/InterpretationPfas'
-import ConditionsNappe from './pages/ConditionsNappe'
 
 export default function App() {
   return (
@@ -18,7 +17,8 @@ export default function App() {
         <Route path="/conformite-rejets" element={<ConformiteRejets />} />
         <Route path="/verification-livrables" element={<VerificationLivrables />} />
         <Route path="/interpretation-pfas" element={<InterpretationPfas />} />
-        <Route path="/conditions-nappe" element={<ConditionsNappe />} />
+        {/* Conditions de la nappe now lives in Résultats labo (groundwater). */}
+        <Route path="/conditions-nappe" element={<Navigate to="/resultats-labo" replace />} />
         <Route path="/declaration-iota" element={<Navigate to="/verification-livrables" replace />} />
         <Route path="/conversion" element={<Navigate to="/resultats-labo" replace />} />
 
