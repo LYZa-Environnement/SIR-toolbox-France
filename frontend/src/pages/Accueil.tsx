@@ -148,15 +148,17 @@ function Carte({ outil, numero }: { outil: Outil; numero: number }) {
   )
 }
 
-const CLE_REPLIES = 'accueil.categoriesRepliees'
+/** Categories the viewer opened, remembered in this browser: all are folded by default. */
+const CLE_OUVERTES = 'accueil.categoriesOuvertes'
 
-/** Categories folded by the viewer, remembered in this browser. */
 function lireRepliees(): Set<string> {
+  const toutes = CATEGORIES.map((c) => c.id as string)
   try {
-    const brut = localStorage.getItem(CLE_REPLIES)
-    return new Set(brut ? (JSON.parse(brut) as string[]) : [])
+    const brut = localStorage.getItem(CLE_OUVERTES)
+    const ouvertes = new Set(brut ? (JSON.parse(brut) as string[]) : [])
+    return new Set(toutes.filter((id) => !ouvertes.has(id)))
   } catch {
-    return new Set()
+    return new Set(toutes)
   }
 }
 
@@ -165,7 +167,7 @@ export default function Accueil() {
   function changer(suite: Set<string>) {
     setRepliees(suite)
     try {
-      localStorage.setItem(CLE_REPLIES, JSON.stringify([...suite]))
+      localStorage.setItem(CLE_OUVERTES, JSON.stringify(CATEGORIES.map((c) => c.id as string).filter((id) => !suite.has(id))))
     } catch {
       /* folding is only a convenience */
     }
