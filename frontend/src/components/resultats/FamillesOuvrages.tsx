@@ -75,8 +75,8 @@ export function FamillesOuvrages({
     <div className="familles">
       <div className="familles__outils">
         <div className="pfas-segment" role="group" aria-label="Nombre de familles">
-          <button type="button" className={kChoisi === null ? 'actif' : ''} onClick={() => setK(null)}>
-            Auto ({r.silhouettes.find((s) => s.s === Math.max(...r.silhouettes.map((x) => x.s)))?.k ?? r.k})
+          <button type="button" className={kChoisi === null ? 'actif' : ''} onClick={() => setK(null)} title="Nombre de familles choisi par la silhouette moyenne">
+            Auto{kChoisi === null ? ` (${r.k})` : ''}
           </button>
           {r.silhouettes.map((s) => (
             <button key={s.k} type="button" className={kChoisi === s.k ? 'actif' : ''} onClick={() => setK(s.k)} title={`Silhouette moyenne ${fr(s.s, 2)}`}>
@@ -165,6 +165,18 @@ function CarteFamilles({ r, choisi, onChoisir }: { r: ResultatFamilles; choisi: 
   const cy = Y(0)
   const rayon = Math.min(L, H) / 2 - m - 10
   const fleches = [...r.charges].sort((a, b) => b.x ** 2 + b.y ** 2 - (a.x ** 2 + a.y ** 2)).slice(0, 7)
+  // Arrow labels moved down a line when they would overlap one already placed.
+  const placees: { x: number; y: number; l: number }[] = []
+  const libelles = new Map<string, { x: number; y: number }>()
+  for (const { variable, x, y } of fleches) {
+    const l = court(variable).length * 6.4 + 4
+    const ex = cx + x * rayon + (x >= 0 ? 4 : -4)
+    const bx = x >= 0 ? ex : ex - l
+    let ey = cy - y * rayon + (y >= 0 ? -4 : 11)
+    for (let k = 0; k < 8 && placees.some((q) => Math.abs(q.y - ey) < 11 && bx < q.x + q.l && bx + l > q.x); k++) ey += y >= 0 ? -11 : 11
+    placees.push({ x: bx, y: ey, l })
+    libelles.set(variable.cle, { x: ex, y: ey })
+  }
 
   const enveloppe = (pts: [number, number][]): [number, number][] => {
     if (pts.length < 3) return pts
@@ -211,7 +223,7 @@ function CarteFamilles({ r, choisi, onChoisir }: { r: ResultatFamilles; choisi: 
           return (
             <g key={variable.cle} opacity={0.75}>
               <line x1={cx} y1={cy} x2={ex} y2={ey} stroke={variable.groupe === 'terrain' ? '#c96a1c' : MUET} strokeWidth={1.2} markerEnd="url(#fleche)" />
-              <text x={ex + (x >= 0 ? 4 : -4)} y={ey + (y >= 0 ? -4 : 11)} fontSize="10.5" fill={variable.groupe === 'terrain' ? '#9c4f12' : MUET} textAnchor={x >= 0 ? 'start' : 'end'} className="halo">
+              <text x={libelles.get(variable.cle)!.x} y={libelles.get(variable.cle)!.y} fontSize="10.5" fill={variable.groupe === 'terrain' ? '#9c4f12' : MUET} textAnchor={x >= 0 ? 'start' : 'end'} className="halo">
                 {court(variable)}
               </text>
             </g>

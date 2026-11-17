@@ -17,7 +17,6 @@ const COULEUR_ETAT: Record<Etat, string> = {
 
 const ENCRE = '#0d2421'
 const MUET = '#4f625f'
-const GRILLE = '#e3e8e7'
 
 const fr = (x: number, d = 1) => x.toLocaleString('fr-FR', { maximumFractionDigits: d })
 const parNom = (a: string, b: string) => a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' })
@@ -80,10 +79,8 @@ export function VisuelsNappe({ jeu, evaluations, synthese }: { jeu: Jeu; evaluat
           </span>
         ))}
       </div>
-      <div className="visuels__grille">
-        <DiagrammeRedox points={points} choisi={choisi} onChoisir={setChoisi} />
-        <MatricePurges points={points} choisi={choisi} onChoisir={setChoisi} />
-      </div>
+      <DiagrammeRedox points={points} choisi={choisi} onChoisir={setChoisi} />
+      <MatricePurges points={points} choisi={choisi} onChoisir={setChoisi} />
       <div className="visuels__detail" aria-live="polite">
         {sel ? (
           <>
@@ -122,79 +119,176 @@ export function VisuelsNappe({ jeu, evaluations, synthese }: { jeu: Jeu; evaluat
   )
 }
 
-/** O2 dissolved (x) against measured redox (y), zones of the USEPA 1998 thresholds. */
+/** O2 dissolved (x, square-root scale) against measured redox (y), zones of the USEPA 1998 thresholds. */
 function DiagrammeRedox({ points, choisi, onChoisir }: { points: Point[]; choisi: string | null; onChoisir: (c: string) => void }) {
-  const L = 460
-  const H = 320
-  const g = 52
-  const d = 16
-  const h = 18
-  const b = 44
+  const [survol, setSurvol] = useState<string | null>(null)
+  const L = 820
+  const H = 440
+  const g = 70
+  const d = 185
+  const h = 30
+  const b = 52
   const mesures = points.filter((p) => p.od !== null && p.orp !== null)
-  const xMax = Math.max(8, ...mesures.map((p) => p.od! * 1.1))
-  const yMin = Math.min(-250, ...mesures.map((p) => p.orp! - 30))
-  const yMax = Math.max(250, ...mesures.map((p) => p.orp! + 30))
-  const x = (v: number) => g + (v / xMax) * (L - g - d)
+  const xMax = Math.max(10, ...mesures.map((p) => p.od! * 1.15))
+  const yMin = Math.min(-300, Math.floor((Math.min(...mesures.map((p) => p.orp!)) - 40) / 50) * 50)
+  const yMax = Math.max(300, Math.ceil((Math.max(...mesures.map((p) => p.orp!)) + 40) / 50) * 50)
+  // Square-root scale: the low oxygen values, where reducing conditions are decided, get room.
+  const x = (v: number) => g + (Math.sqrt(Math.max(0, v)) / Math.sqrt(xMax)) * (L - g - d)
   const y = (v: number) => h + ((yMax - v) / (yMax - yMin)) * (H - h - b)
   const cohvMax = Math.max(...points.map((p) => p.cohv), 0)
-  const rayon = (p: Point) => (cohvMax > 0 ? 6 + 10 * Math.sqrt(p.cohv / cohvMax) : 8)
-  const zone = (x0: number, x1: number, y0: number, y1: number, fond: string, texte: string, tx: number, ty: number) => (
-    <g>
-      <rect x={x(x0)} y={y(y1)} width={x(x1) - x(x0)} height={y(y0) - y(y1)} fill={fond} />
-      <text x={tx} y={ty} fontSize="10.5" fill={MUET}>
-        {texte}
-      </text>
-    </g>
-  )
-  const ticksX = [0, 0.5, 2, 5, ...(xMax > 10 ? [10] : [])].filter((v) => v <= xMax)
-  const ticksY = [yMin, -100, 0, 50, 200, yMax].filter((v, i, a) => v >= yMin && v <= yMax && a.indexOf(v) === i).map((v) => Math.round(v))
+  const rayon = (p: Point) => (cohvMax > 0 ? 7 + 13 * Math.sqrt(p.cohv / cohvMax) : 9)
+
+  const ZONES = [
+    { x0: 0, x1: 0.5, y0: yMin, y1: -100, fond: '#cfdcef', nom: 'Réducteur', detail: 'O₂ < 0,5 mg/l, redox < −100 mV' },
+    { x0: 0, x1: 0.5, y0: -100, y1: 50, fond: '#e1eaf4', nom: 'Anoxique, faiblement réducteur', detail: 'O₂ < 0,5 mg/l, redox de −100 à +50 mV' },
+    { x0: 2, x1: xMax, y0: 50, y1: yMax, fond: '#f7e4cf', nom: 'Oxydant', detail: 'O₂ ≥ 2 mg/l, redox ≥ +50 mV' },
+  ]
+
+  // Labels placed right of their point, else left, above or below, avoiding each other.
+  const places: { x: number; y: number; l: number }[] = []
+  const etiquettes = new Map<string, { x: number; y: number; ancre: 'start' | 'end' | 'middle' }>()
+  for (const p of [...mesures].sort((a, c) => rayon(c) - rayon(a))) {
+    const px = x(p.od!)
+    const py = y(p.orp!)
+    const r = rayon(p)
+    const l = p.nom.length * 7 + 6
+    const essais: { x: number; y: number; ancre: 'start' | 'end' | 'middle'; bx: number }[] = [
+      { x: px + r + 4, y: py + 4, ancre: 'start', bx: px + r + 4 },
+      { x: px - r - 4, y: py + 4, ancre: 'end', bx: px - r - 4 - l },
+      { x: px, y: py - r - 6, ancre: 'middle', bx: px - l / 2 },
+      { x: px, y: py + r + 14, ancre: 'middle', bx: px - l / 2 },
+    ]
+    const libre = essais.find((e) => !places.some((q) => Math.abs(q.y - e.y) < 13 && e.bx < q.x + q.l && e.bx + l > q.x)) ?? essais[0]
+    places.push({ x: libre.bx, y: libre.y, l })
+    etiquettes.set(p.cle, libre)
+  }
+
+  const ticksX = [0, 0.5, 1, 2, 5, 10, 20].filter((v) => v <= xMax)
+  const ticksY: number[] = []
+  for (let v = Math.ceil(yMin / 100) * 100; v <= yMax; v += 100) ticksY.push(v)
+  const etats = ORDRE_ETATS.filter((e) => points.some((p) => p.etat === e))
 
   return (
-    <figure className="visuels__figure">
+    <figure className="visuels__figure visuels__figure--large">
       <figcaption>
         Oxygène dissous et potentiel redox
-        <span>Taille des points : COHV quantifiés (µmol/l)</span>
+        <span>Chaque ouvrage selon ses deux mesures de fin de purge ; la couleur dit son état, la taille ses COHV. Cliquez un point pour sa lecture.</span>
       </figcaption>
       <svg viewBox={`0 0 ${L} ${H}`} role="img" aria-label="Diagramme oxygène dissous – potentiel redox des ouvrages">
-        {zone(0, 0.5, yMin, -100, '#dbe5f3', 'Réducteur', x(0) + 4, y(yMin) - 6)}
-        {zone(0, 0.5, -100, 50, '#e8f0f6', '', 0, 0)}
-        {zone(2, xMax, 50, yMax, '#f7e8d6', 'Oxydant', x(xMax) - 52, y(yMax) + 14)}
-        {[0.5, 2].map((v) => (
-          <line key={v} x1={x(v)} x2={x(v)} y1={y(yMax)} y2={y(yMin)} stroke={GRILLE} strokeDasharray="3 3" />
-        ))}
-        {[-100, 50].map((v) => (
-          <line key={v} x1={x(0)} x2={x(xMax)} y1={y(v)} y2={y(v)} stroke={GRILLE} strokeDasharray="3 3" />
-        ))}
-        <line x1={g} x2={L - d} y1={y(yMin)} y2={y(yMin)} stroke={MUET} />
-        <line x1={g} x2={g} y1={y(yMin)} y2={y(yMax)} stroke={MUET} />
-        {ticksX.map((v) => (
-          <text key={v} x={x(v)} y={H - b + 16} fontSize="10.5" fill={MUET} textAnchor="middle">
-            {fr(v)}
-          </text>
+        <rect x={x(0)} y={y(yMax)} width={x(xMax) - x(0)} height={y(yMin) - y(yMax)} fill="#f3f5f4" />
+        {ZONES.map((z) => (
+          <rect key={z.nom} x={x(z.x0)} y={y(Math.min(z.y1, yMax))} width={x(Math.min(z.x1, xMax)) - x(z.x0)} height={y(Math.max(z.y0, yMin)) - y(Math.min(z.y1, yMax))} fill={z.fond}>
+            <title>{`${z.nom} : ${z.detail}`}</title>
+          </rect>
         ))}
         {ticksY.map((v) => (
-          <text key={v} x={g - 6} y={y(v) + 3.5} fontSize="10.5" fill={MUET} textAnchor="end">
-            {v > 0 ? `+${v}` : v}
-          </text>
+          <g key={v}>
+            <line x1={x(0)} x2={x(xMax)} y1={y(v)} y2={y(v)} stroke="#fff" strokeWidth={1} />
+            <text x={g - 8} y={y(v) + 4} fontSize="12" fill={MUET} textAnchor="end">
+              {v > 0 ? `+${v}` : v}
+            </text>
+          </g>
         ))}
-        <text x={(g + L - d) / 2} y={H - 6} fontSize="11" fill={ENCRE} textAnchor="middle">
-          O₂ dissous (mg/l)
+        {ticksX.map((v) => (
+          <g key={v}>
+            <line x1={x(v)} x2={x(v)} y1={y(yMax)} y2={y(yMin)} stroke="#fff" strokeWidth={1} />
+            <text x={x(v)} y={H - b + 18} fontSize="12" fill={MUET} textAnchor="middle">
+              {fr(v)}
+            </text>
+          </g>
+        ))}
+        {[0.5, 2].map((v) => (
+          <g key={v}>
+            <line x1={x(v)} x2={x(v)} y1={y(yMax)} y2={y(yMin)} stroke={ENCRE} strokeOpacity={0.45} strokeDasharray="5 4" />
+            <text x={x(v)} y={h - 8} fontSize="11.5" fill={ENCRE} textAnchor="middle" fontWeight={600}>
+              {fr(v)} mg/l
+            </text>
+          </g>
+        ))}
+        {[-100, 50].map((v) => (
+          <g key={v}>
+            <line x1={x(0)} x2={x(xMax)} y1={y(v)} y2={y(v)} stroke={ENCRE} strokeOpacity={0.45} strokeDasharray="5 4" />
+            <text x={x(xMax) + 6} y={y(v) + 4} fontSize="11.5" fill={ENCRE} fontWeight={600}>
+              {v > 0 ? `+${v}` : `−${-v}`} mV
+            </text>
+          </g>
+        ))}
+        <text x={x(0) + 6} y={y(Math.max(yMin, -300)) - 8} fontSize="12.5" fontWeight={700} fill="#1d3f72" className="halo">
+          Réducteur
         </text>
-        <text x={12} y={(h + H - b) / 2} fontSize="11" fill={ENCRE} textAnchor="middle" transform={`rotate(-90 12 ${(h + H - b) / 2})`}>
+        <text x={x(0) + 6} y={y(50) + 16} fontSize="11.5" fontWeight={600} fill="#285e7d" className="halo">
+          Anoxique
+        </text>
+        <text x={x(xMax) - 8} y={y(yMax) + 18} fontSize="12.5" fontWeight={700} fill="#8a4a0c" textAnchor="end" className="halo">
+          Oxydant
+        </text>
+        <text x={(x(0.5) + x(2)) / 2} y={y(yMax) + 18} fontSize="11.5" fontWeight={600} fill={MUET} textAnchor="middle" className="halo">
+          Transition
+        </text>
+        <text x={(g + L - d) / 2} y={H - 10} fontSize="12.5" fill={ENCRE} textAnchor="middle">
+          O₂ dissous (mg/l, échelle racine carrée)
+        </text>
+        <text x={16} y={(h + H - b) / 2} fontSize="12.5" fill={ENCRE} textAnchor="middle" transform={`rotate(-90 16 ${(h + H - b) / 2})`}>
           Redox mesuré (mV, Ag/AgCl)
         </text>
         {mesures.map((p) => {
-          const actif = p.cle === choisi
+          const actif = p.cle === choisi || p.cle === survol
+          const et = etiquettes.get(p.cle)!
           return (
-            <g key={p.cle} className="visuels__point" onClick={() => onChoisir(p.cle)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onChoisir(p.cle)}>
-              <circle cx={x(p.od!)} cy={y(p.orp!)} r={rayon(p)} fill={COULEUR_ETAT[p.etat]} fillOpacity={actif ? 1 : 0.78} stroke={actif ? ENCRE : '#fff'} strokeWidth={actif ? 2.5 : 1.5} />
-              <text x={x(p.od!) + rayon(p) + 3} y={y(p.orp!) + 3.5} fontSize="10.5" fill={ENCRE} fontWeight={actif ? 700 : 500}>
+            <g
+              key={p.cle}
+              className="visuels__point"
+              onClick={() => onChoisir(p.cle)}
+              onMouseEnter={() => setSurvol(p.cle)}
+              onMouseLeave={() => setSurvol(null)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && onChoisir(p.cle)}
+            >
+              <circle
+                cx={x(p.od!)}
+                cy={y(p.orp!)}
+                r={rayon(p)}
+                fill={COULEUR_ETAT[p.etat]}
+                fillOpacity={choisi && !actif ? 0.35 : 0.88}
+                stroke={actif ? ENCRE : '#fff'}
+                strokeWidth={actif ? 2.5 : 1.5}
+              />
+              <text x={et.x} y={et.y} fontSize="12" fill={ENCRE} fontWeight={actif ? 700 : 600} textAnchor={et.ancre} className="halo">
                 {p.nom}
               </text>
               <title>{`${p.nom} — ${LIBELLES_ETAT[p.etat]}\nO₂ ${fr(p.od!)} mg/l, redox ${fr(p.orp!, 0)} mV${p.cohv > 0 ? `\nCOHV ${fr(p.cohv, 2)} µmol/l` : ''}`}</title>
             </g>
           )
         })}
+        <g transform={`translate(${L - d + 64}, ${h + 70})`}>
+          <text fontSize="11.5" fontWeight={700} fill={ENCRE}>
+            État
+          </text>
+          {etats.map((e, k) => (
+            <g key={e} transform={`translate(0, ${16 + k * 18})`}>
+              <circle cx={6} cy={-4} r={6} fill={COULEUR_ETAT[e]} />
+              <text x={16} y={0} fontSize="11" fill={ENCRE}>
+                {LIBELLES_ETAT[e].replace(/ \(.*\)/, '')}
+              </text>
+            </g>
+          ))}
+          {cohvMax > 0 && (
+            <g transform={`translate(0, ${30 + etats.length * 18})`}>
+              <text fontSize="11.5" fontWeight={700} fill={ENCRE}>
+                COHV (µmol/l)
+              </text>
+              {[cohvMax, cohvMax / 4].map((v, k) => (
+                <g key={k} transform={`translate(${10}, ${26 + k * 34})`}>
+                  <circle cx={0} cy={0} r={7 + 13 * Math.sqrt(v / cohvMax)} fill="none" stroke={MUET} />
+                  <text x={24} y={4} fontSize="11" fill={MUET}>
+                    {fr(v, 2)}
+                  </text>
+                </g>
+              ))}
+            </g>
+          )}
+        </g>
       </svg>
       {mesures.length < points.length && (
         <p className="visuels__muet">Sans O₂ ou redox mesuré : {points.filter((p) => p.od === null || p.orp === null).map((p) => p.nom).join(', ')}.</p>

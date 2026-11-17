@@ -2423,3 +2423,94 @@ a.card:hover {
   margin: 0.1rem 0;
   font-size: 0.72rem;
 }
+
+/* Families of wells. */
+.familles {
+  display: grid;
+  gap: 0.9rem;
+}
+.familles__outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.familles__case {
+  font-size: 0.85rem;
+}
+.familles__grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .familles__grille {
+    grid-template-columns: 1fr;
+  }
+}
+.familles__cartes {
+  display: grid;
+  gap: 0.6rem;
+}
+.famille {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--famille);
+  background: var(--color-surface);
+  font-size: 0.86rem;
+}
+.famille__tete {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--famille);
+}
+.famille__tete span {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.famille p {
+  margin: 0.3rem 0 0;
+}
+.famille em {
+  font-style: normal;
+  color: var(--color-muted);
+}
+.famille__membres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.45rem;
+}
+.famille__membres .chip {
+  font-size: 0.74rem;
+  padding: 0.1rem 0.45rem;
+}
+.familles__profils {
+  overflow-x: auto;
+}
+.familles__profils svg {
+  width: 100%;
+  height: auto;
+}
+svg .halo {
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.visuels__figure--large svg {
+  max-height: 34rem;
+}
+
+.evolution {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+.evolution .visuels__figure {
+  padding: 0.5rem 0.6rem;
+}

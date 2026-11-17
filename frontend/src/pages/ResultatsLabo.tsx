@@ -12,6 +12,10 @@ import { lireClasseurs, type EtatFichesGaz } from '../lib/resultats/lireFichesGa
 import { QualiteGaz } from '../components/QualiteGaz'
 import { CarteResultats } from '../components/resultats/CarteResultats'
 import { NuageGaz } from '../components/resultats/NuageGaz'
+import { FamillesOuvrages } from '../components/resultats/FamillesOuvrages'
+import { ProfilHydraulique } from '../components/resultats/ProfilHydraulique'
+import type { OuvrageHydro } from '../lib/resultats/hydraulique'
+import type { Mesure as MesureFamille, Variable as VariableFamille } from '../lib/resultats/familles'
 import { Tuile, Volet, type TeinteVolet } from '../components/resultats/Volet'
 import { EnTete } from '../components/Tri'
 import { useTri } from '../lib/tri'
@@ -594,6 +598,72 @@ export default function ResultatsLabo() {
     if (!conversion || !fichesGaz || !fichesGaz.fiches.some((f) => f.mesures.length)) return null
     return { points: fichesGaz.fiches.map((f) => evaluerQualite(f, sourceDuree, sourceDebit)) }
   }, [conversion, fichesGaz, sourceDuree, sourceDebit])
+
+  /** Wells with a hydraulic head on their sheet, for the cross-section. */
+  const ouvragesHydro = useMemo((): OuvrageHydro[] => {
+    if (matrice !== 'eau' || !rapportNappe) return []
+    const analyses = new Set(retenusAnalyse.map((p) => p.nom))
+    return rapportNappe.evaluations
+      .filter((e) => e.ouvrage.fiche?.charge !== null && e.ouvrage.fiche?.charge !== undefined)
+      .map((e) => ({
+        nom: e.ouvrage.nom,
+        echantillons: e.ouvrage.echantillons.filter((x) => analyses.has(x)),
+        repere: e.ouvrage.fiche!.altitudeRepere,
+        niveau: e.ouvrage.fiche!.niveauStatique,
+        charge: e.ouvrage.fiche!.charge!,
+      }))
+      .filter((o) => o.echantillons.length)
+  }, [matrice, rapportNappe, retenusAnalyse])
+
+  /** Field parameters of each sample, for the families of wells. */
+  const terrainFamilles = useMemo((): { variables: VariableFamille[]; mesures: Record<string, Record<string, MesureFamille>> } | null => {
+    const mesures: Record<string, Record<string, MesureFamille>> = {}
+    const mettre = (e: string, cle: string, v: number | null | undefined) => {
+      if (v === null || v === undefined || !Number.isFinite(v)) return
+      ;(mesures[e] ??= {})[cle] = { valeur: v, inferieur: false }
+    }
+    if (matrice === 'eau' && rapportNappe) {
+      for (const ev of rapportNappe.evaluations) {
+        const t = rapportNappe.jeu.valeurs[ev.ouvrage.cle] ?? {}
+        for (const e of ev.ouvrage.echantillons) {
+          mettre(e, 't:ph', t.ph?.valeur)
+          mettre(e, 't:orp', t.orp?.valeur)
+          mettre(e, 't:od', t.od?.valeur)
+          mettre(e, 't:ce', t.ce?.valeur)
+          mettre(e, 't:t', t.t?.valeur)
+        }
+      }
+      return {
+        variables: [
+          { cle: 't:ph', libelle: 'pH', groupe: 'terrain', unite: '', log: false },
+          { cle: 't:orp', libelle: 'Redox', groupe: 'terrain', unite: 'mV', log: false },
+          { cle: 't:od', libelle: 'O₂ dissous', groupe: 'terrain', unite: 'mg/l', log: false },
+          { cle: 't:ce', libelle: 'Conductivité', groupe: 'terrain', unite: 'µS/cm', log: true },
+          { cle: 't:t', libelle: 'Température', groupe: 'terrain', unite: '°C', log: false },
+        ],
+        mesures,
+      }
+    }
+    if (qualiteGaz && fichesGaz) {
+      for (const p of retenusAnalyse) {
+        const i = associationFiches[p.nom] ?? -1
+        const q = i >= 0 ? qualiteGaz.points[i] : null
+        if (!q) continue
+        mettre(p.nom, 't:o2', q.o2)
+        mettre(p.nom, 't:co2', q.co2)
+        mettre(p.nom, 't:pid', q.pidMax === null ? null : q.pidMax + 0.1)
+      }
+      return {
+        variables: [
+          { cle: 't:o2', libelle: 'O₂', groupe: 'terrain', unite: '%', log: false },
+          { cle: 't:co2', libelle: 'CO₂', groupe: 'terrain', unite: 'ppm', log: true },
+          { cle: 't:pid', libelle: 'PID', groupe: 'terrain', unite: 'ppm', log: true },
+        ],
+        mesures,
+      }
+    }
+    return null
+  }, [matrice, rapportNappe, qualiteGaz, fichesGaz, retenusAnalyse, associationFiches])
 
   // ---- Sampling sheets, chosen at step 2 -------------------------------------
 
@@ -1190,10 +1260,16 @@ export default function ResultatsLabo() {
                 id="positions"
                 teinte="ardoise"
                 titre="Positions hydrauliques"
-                resume="Ouvrages amont, aval et dans le panache : contribution du site (export expert)"
+                resume={
+                  ouvragesHydro.length >= 2
+                    ? `Profil des ${ouvragesHydro.length} ouvrages d’après leurs charges, concentrations de l’amont à l’aval, contribution du site`
+                    : 'Ouvrages amont, aval et dans le panache : contribution du site (export expert)'
+                }
                 ouvert={ouverts.has('positions')}
                 onBasculer={() => basculer('positions')}
+                badges={ouvragesHydro.length >= 2 ? <span className="badge badge--faible">{ouvragesHydro.length} cotes NGF</span> : undefined}
               >
+                <ProfilHydraulique ouvrages={ouvragesHydro} lecture={lecture} guides={sansReference ? {} : guides} positions={positions} onPositions={setPositions} />
               <PositionsHydrauliques
                 points={lecture.points.filter((p) => !estControle(qualifications[p.nom]))}
                 positions={positions}
@@ -1403,12 +1479,18 @@ export default function ResultatsLabo() {
             <Volet
               id="signatures"
               teinte="brique"
-              titre="Signatures des composés"
-              resume="Part de chaque composé dans sa famille, par échantillon"
+              titre="Signatures et familles de points"
+              resume={`Points qui se ressemblent d’après tous les composés analysés${terrainFamilles ? ' et les paramètres de terrain' : ''} ; signature de chaque point`}
               ouvert={ouverts.has('signatures')}
               onBasculer={() => basculer('signatures')}
             >
-            <SignaturesApercu lecture={lecture} qualifications={qualifications} metaux={matrice === 'sol'} />
+              <FamillesOuvrages
+                lecture={lecture}
+                echantillons={retenusAnalyse.map((p) => p.nom)}
+                conversion={conversion ? { prelevements, unite } : null}
+                terrain={terrainFamilles}
+              />
+              <SignaturesApercu lecture={lecture} qualifications={qualifications} metaux={matrice === 'sol'} />
             </Volet>
           </div>
         </section>
