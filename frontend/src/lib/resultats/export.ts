@@ -60,6 +60,9 @@ export interface OptionsExport {
   libelleGuide: string
   /** No reference values chosen: no comparison sheet. */
   sansReference?: boolean
+  /** Groundwater: what the sampling sheets and the lab tell of the
+   *  aquifer (Conditions de la nappe), for its sheets. */
+  nappe?: import('../nappe/export.ts').Rapport
   /** Soil gas: quality of the gas drawn, from the sampling sheets. */
   qualiteGaz?: { points: QualitePoint[]; synthese: string[]; references: string[] }
   legende: Legende
@@ -951,6 +954,10 @@ export async function construireClasseur(lecture: Lecture, opts: OptionsExport):
   feuilleAnalyse(wb, lecture, opts)
   feuilleQualite(wb, lecture, opts)
   if (opts.qualiteGaz) feuilleQualiteGaz(wb, opts.qualiteGaz, opts.titre)
+  if (opts.nappe) {
+    const { ajouterFeuillesNappe } = await import('../nappe/export.ts')
+    ajouterFeuillesNappe(wb, opts.nappe, !!opts.expert)
+  }
   if (opts.campagnes) {
     const { ajouterFeuillesCampagnes } = await import('./feuillesCampagnes.ts')
     ajouterFeuillesCampagnes(wb, opts.campagnes, opts.titre)

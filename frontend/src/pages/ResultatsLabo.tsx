@@ -8,6 +8,8 @@ import { fusionnerLectures } from '../lib/resultats/fusion'
 import { ordonnerCOHV } from '../lib/resultats/cohv'
 import { SignaturesApercu } from '../components/Signatures'
 import { FichesGaz, type EtatFichesGaz } from '../components/FichesGaz'
+import { ConditionsNappe } from '../components/nappe/ConditionsNappe'
+import type { Rapport as RapportNappe } from '../lib/nappe/export'
 import { ficheDe, libelleDates, retenir, type FicheGaz, type SourceDebit, type SourceDuree } from '../lib/resultats/fichesGaz'
 import { evaluerQualite, REFERENCES_QUALITE, syntheseQualite } from '../lib/resultats/qualiteGaz'
 import { PositionsHydrauliques } from '../components/PositionsHydrauliques'
@@ -161,6 +163,8 @@ export default function ResultatsLabo() {
   const [unite, setUnite] = useState<UniteSortie>('µg/m³')
   const [metaux, setMetaux] = useState<ContexteMetaux>('sur site')
   const [repere, setRepere] = useState<Repere>('r1')
+  /** Groundwater: what the sampling sheets and the lab tell of the aquifer. */
+  const [rapportNappe, setRapportNappe] = useState<RapportNappe | null>(null)
   /** No reference values at all: the table without comparison. */
   const [sansReference, setSansReference] = useState(false)
   const [surcharges, setSurcharges] = useState<Record<string, string>>({})
@@ -289,6 +293,8 @@ export default function ResultatsLabo() {
     () => Object.fromEntries(points.map((p) => [p.nom, versPrelevement(saisies[p.nom])])),
     [points, saisies],
   )
+  /** The lab file as Conditions de la nappe reads it: the retained samples. */
+  const laboNappe = useMemo(() => (lecture && matrice === 'eau' ? { lecture: { ...lecture, points: retenus }, nom: fichier } : null), [lecture, matrice, retenus, fichier])
   const sansVolume = conversion ? retenus.filter((p) => volumeLitres(prelevements[p.nom]) === null) : []
   const associationFiches = useMemo(
     () => (fichesGaz ? Object.fromEntries(points.map((p) => [p.nom, assocManuelle[p.nom] ?? ficheDe(p.nom, fichesGaz.fiches)])) : {}),
@@ -478,6 +484,7 @@ export default function ResultatsLabo() {
           libelleGuide: matrice === 'air' ? `Valeur repère ${repere.toUpperCase()}` : 'Valeur de comparaison',
           sansReference,
           qualiteGaz: qualiteGazExport(),
+          nappe: matrice === 'eau' ? (rapportNappe ?? undefined) : undefined,
           legende: legendeGuides(matrice, options),
           qualifications,
           seuilDoublon,
@@ -853,11 +860,13 @@ export default function ResultatsLabo() {
         </section>
       )}
 
+      {lecture && matrice === 'eau' && <ConditionsNappe labo={laboNappe} numero={3} onRapport={setRapportNappe} />}
+
       {lecture && matrice && (
         <section className="section">
           <div className="container">
             <h2 className="etape">
-              <span>{conversion ? 4 : 3}</span> Valeurs guides et tableau
+              <span>{conversion || matrice === 'eau' ? 4 : 3}</span> Valeurs guides et tableau
             </h2>
 
             <div className="grid grid--2" style={{ margin: '1.25rem 0 0.75rem', alignItems: 'end', maxWidth: '52rem' }}>
@@ -1081,7 +1090,8 @@ export default function ResultatsLabo() {
                 <strong>Export standard</strong>
                 <p>
                   « Tableau X - Résultats {libelle}.xlsx » : mis en forme{sansReference ? '' : ', valeurs guides ERM'}, analyse par
-                  composé et contrôle qualité.
+                  composé et contrôle qualité{matrice === 'eau' && rapportNappe ? ', conditions physico-chimiques (synthèse visuelle) et qualité des purges' : ''}
+                  {conversion && fichesGaz?.fiches.some((f) => f.mesures.length) ? ', qualité des gaz du sol captés' : ''}.
                 </p>
                 <button type="button" className="btn" onClick={() => exporter(false)} disabled={!!export_ || !retenus.length}>
                   {export_ === 'standard' ? 'Préparation…' : 'Télécharger le tableau Excel'}
@@ -1094,6 +1104,9 @@ export default function ResultatsLabo() {
                   <li>dégradation des COHV et des chlorobenzènes : stade par ouvrage, nombre de chlore moyen, composition en moles, figure (USEPA, 1998) ;</li>
                   <li>HAP : profil par cycles, origine pétrogénique ou pyrolytique (Yunker et al., 2002), part cancérogène, équivalent benzo(a)pyrène (INERIS, 2003) ;</li>
                   {matrice === 'eau' && <li>amont / aval hydraulique : contribution du site par paramètre, rapport aval / amont, dépassements apparaissant en aval, figure (positions à renseigner plus haut) ;</li>}
+                  {matrice === 'eau' && rapportNappe && (
+                    <li>atténuation naturelle (fiches de prélèvement + laboratoire) : synthèse par ouvrage, criblage USEPA 1998 critère par critère, processus redox, données BIOCHLOR si préparées, méthode et sources ;</li>
+                  )}
                   <li>hydrocarbures : répartition par classes de carbone et produits associés ; BTEX : indicateurs d'altération ;</li>
                     <li>signatures des composés organiques (camemberts par échantillon, ordonnés par similarité) ;</li>
                 {matrice === 'sol' && <li>admissibilité ISDI par échantillon (arrêté du 12 décembre 2014, annexe II) ;</li>}

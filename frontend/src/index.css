@@ -1804,3 +1804,9 @@ a.card:hover {
   margin: 0;
   font-size: 1.6rem;
 }
+
+/* Sub-steps of a step (Conditions de la nappe within Résultats labo). */
+.sous-etape {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.1rem;
+}

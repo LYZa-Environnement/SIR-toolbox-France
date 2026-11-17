@@ -1,9 +1,9 @@
-import { Fragment, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
-import { lireNombre } from '../lib/resultats/calc'
-import { fusionnerLectures } from '../lib/resultats/fusion'
-import { lireClasseur, type Cell, type Lecture } from '../lib/resultats/parse'
-import TransportBiochlor from '../components/nappe/TransportBiochlor'
-import { associationAuto, construireJeu, decalageFiches } from '../lib/nappe/donnees'
+import { Fragment, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { lireNombre } from '../../lib/resultats/calc'
+import type { Cell, Lecture } from '../../lib/resultats/parse'
+import type { Rapport } from '../../lib/nappe/export'
+import TransportBiochlor from './TransportBiochlor'
+import { associationAuto, construireJeu, decalageFiches } from '../../lib/nappe/donnees'
 import {
   BAREME_CLASSES,
   COMPOSES_FILIATION,
@@ -18,13 +18,13 @@ import {
   type Favorabilite,
   type Niveau,
   type Statut,
-} from '../lib/nappe/evaluation'
-import { cleOuvrage, lireFiches, type FicheTerrain } from '../lib/nappe/fiches'
-import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../lib/nappe/parametres'
-import { SOURCES } from '../lib/nappe/sources'
-import { LIBELLES_ETAT, synthetiser, type Etat, type Synthese } from '../lib/nappe/synthese'
-import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../lib/nappe/transport'
-import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../lib/nappe/recap'
+} from '../../lib/nappe/evaluation'
+import { cleOuvrage, lireFiches, type FicheTerrain } from '../../lib/nappe/fiches'
+import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../../lib/nappe/parametres'
+import { SOURCES } from '../../lib/nappe/sources'
+import { LIBELLES_ETAT, synthetiser, type Etat, type Synthese } from '../../lib/nappe/synthese'
+import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../../lib/nappe/transport'
+import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../../lib/nappe/recap'
 
 type Feuille = { nom: string; grille: Cell[][] }
 
@@ -103,11 +103,25 @@ function Depot({ titre, aide, multiple, chargement, onFichiers }: { titre: strin
   )
 }
 
-export default function ConditionsNappe() {
+/**
+ * Groundwater conditions, within Résultats labo (groundwater): the sampling
+ * sheets of the campaign read with the lab file already loaded there —
+ * physico-chemical conditions, purge quality, natural attenuation (USEPA
+ * 1998 screening, redox processes) and BIOCHLOR inputs. What it computes is
+ * handed back (`onRapport`) for the sheets of the Résultats labo export.
+ */
+export function ConditionsNappe({
+  labo: laboFourni,
+  numero,
+  onRapport,
+}: {
+  labo: { lecture: Lecture; nom: string } | null
+  numero: number
+  onRapport?: (rp: Rapport | null) => void
+}) {
   const [fiches, setFiches] = useState<FicheTerrain[]>([])
   const [fichiersFiches, setFichiersFiches] = useState<string[]>([])
   const [ignores, setIgnores] = useState<string[]>([])
-  const [labos, setLabos] = useState<{ lecture: Lecture; nom: string }[]>([])
   const [association, setAssociation] = useState<Record<string, string>>({})
   const [saisies, setSaisies] = useState<Record<string, string>>({})
   const [ajouts, setAjouts] = useState<string[]>([])
@@ -117,7 +131,7 @@ export default function ConditionsNappe() {
   const [statuts, setStatuts] = useState<Record<Compose, Statut>>(STATUTS_DEFAUT)
   const [ouvert, setOuvert] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [chargement, setChargement] = useState<'fiches' | 'labo' | null>(null)
+  const [chargement, setChargement] = useState<'fiches' | null>(null)
   const [projet, setProjet] = useState('')
   const [export_, setExport] = useState(false)
   const [hydro, setHydro] = useState<SaisieHydro>(HYDRO_DEFAUT)
@@ -145,29 +159,8 @@ export default function ConditionsNappe() {
     }
   }
 
-  async function chargerLabo(fs: File[]) {
-    if (!fs.length) return
-    setChargement('labo')
-    setErreur(null)
-    try {
-      const lus = await Promise.all(fs.map(async (f) => ({ lecture: lireClasseur(await lireOnglets(f), 'tout'), nom: f.name })))
-      setLabos((avant) => [...avant, ...lus])
-    } catch (e) {
-      setErreur(`Fichier du laboratoire non lu : ${(e as Error).message}`)
-    } finally {
-      setChargement(null)
-    }
-  }
-
-  const labo = useMemo(() => {
-    if (!labos.length) return { lecture: null as { lecture: Lecture; nom: string } | null, notes: [] as string[], erreur: null as string | null }
-    try {
-      const f = fusionnerLectures(labos)
-      return { lecture: { lecture: f.lecture, nom: labos.map((l) => l.nom).join(' + ') }, notes: f.notes, erreur: null }
-    } catch (e) {
-      return { lecture: null, notes: [], erreur: (e as Error).message }
-    }
-  }, [labos])
+  // Stable between renders: the report it leads to goes back to the parent.
+  const labo = useMemo(() => ({ lecture: laboFourni, notes: [] as string[], erreur: null as string | null }), [laboFourni])
 
   const jeu = useMemo(() => construireJeu({ fiches, labo: labo.lecture, association, saisies, ajouts }), [fiches, labo, association, saisies, ajouts])
   const dec = lireNombre(decalage) ?? 0
@@ -178,64 +171,76 @@ export default function ConditionsNappe() {
   const recap = useMemo(() => recapTerrain(jeu, evaluations, dec), [jeu, evaluations, dec])
   const syntheseRecap = useMemo(() => syntheseTerrain(recap, evaluations), [recap, evaluations])
 
-  const plusContamine = evaluations.reduce<Evaluation | null>((m, e) => (e.cohvMolaire > (m?.cohvMolaire ?? 0) ? e : m), null)
+  const plusContamine = useMemo(() => evaluations.reduce<Evaluation | null>((m, e) => (e.cohvMolaire > (m?.cohvMolaire ?? 0) ? e : m), null), [evaluations])
   const comptes = new Map<Classe, number>()
   for (const e of evaluations) if (e.score.complet) comptes.set(e.score.classe, (comptes.get(e.score.classe) ?? 0) + 1)
   const complets = evaluations.filter((e) => e.score.complet).length
   const conditions = new Map<Favorabilite, number>()
   for (const e of evaluations) conditions.set(e.lecture.conditions, (conditions.get(e.lecture.conditions) ?? 0) + 1)
-  const requisSite = PARAMS.filter((p) => p.requis && !evaluations.some((e) => jeu.valeurs[e.ouvrage.cle]?.[p.id]))
-  // Limits and useful analyses shared by most wells, said once.
-  const frequents = (liste: (e: Evaluation) => string[]) => {
-    const n = new Map<string, number>()
-    for (const e of evaluations) for (const x of liste(e)) n.set(x, (n.get(x) ?? 0) + 1)
-    return [...n.entries()].filter(([, k]) => k >= evaluations.length / 2).map(([x]) => x)
-  }
-  const limitesSite = frequents((e) => e.lecture.limites)
-  const analysesSite = frequents((e) => e.lecture.analysesUtiles)
+  const { requisSite, limitesSite, analysesSite } = useMemo(() => {
+    // Limits and useful analyses shared by most wells, said once.
+    const frequents = (liste: (e: Evaluation) => string[]) => {
+      const n = new Map<string, number>()
+      for (const e of evaluations) for (const x of liste(e)) n.set(x, (n.get(x) ?? 0) + 1)
+      return [...n.entries()].filter(([, k]) => k >= evaluations.length / 2).map(([x]) => x)
+    }
+    return {
+      requisSite: PARAMS.filter((p) => p.requis && !evaluations.some((e) => jeu.valeurs[e.ouvrage.cle]?.[p.id])),
+      limitesSite: frequents((e) => e.lecture.limites),
+      analysesSite: frequents((e) => e.lecture.analysesUtiles),
+    }
+  }, [evaluations, jeu])
 
   const synthese = useMemo(() => synthetiser(jeu, evaluations), [jeu, evaluations])
   const transport = useMemo(() => calculerTransport(hydro, jeu, plusContamine?.ouvrage.cle ?? ''), [hydro, jeu, plusContamine])
-  const nomOuvrage = (cle: string) => jeu.ouvrages.find((o) => o.cle === cle)?.nom ?? cle
 
   const fichesMesurees = fiches.filter((f) => !f.vide)
   const fichesVides = fiches.filter((f) => f.vide)
   const decalagesFiches = [...new Set(fichesMesurees.map((f) => f.decalage).filter((x): x is number => x !== null))]
 
+  /** Everything the report — and the Résultats labo export — is made of. */
+  const rapport = useMemo((): Rapport | null => {
+    if (!fiches.length || !evaluations.length) return null
+    const nomOuvrage = (cle: string) => jeu.ouvrages.find((o) => o.cle === cle)?.nom ?? cle
+    return {
+    titre: `Conditions de la nappe${projet ? ` — ${projet}` : ''}`,
+    contexte: [
+      ['Fiches de prélèvement', fichiersFiches.join(', ') || '-'],
+      ['Résultats du laboratoire', laboFourni?.nom || 'aucun (paramètres de terrain seuls)'],
+      ['Écart redox mesuré → Eh', `${fr(dec, 1)} mV (électrode de référence Ag/AgCl)`],
+      ['Ouvrages de fond', fond.map(nomOuvrage).join(', ') || 'aucun désigné'],
+      [
+        'Ouvrage le plus contaminé (COHV, µmol/l)',
+        plusContamine
+          ? `${plusContamine.ouvrage.nom} — conditions ${LIBELLES_FAVORABILITE[plusContamine.lecture.conditions].toLowerCase()}, score USEPA ${plusContamine.score.complet ? `${plusContamine.score.total} (${LIBELLES_CLASSE[plusContamine.score.classe].toLowerCase()})` : `partiel ${plusContamine.score.total} / ${plusContamine.score.accessible}`}`
+          : '-',
+      ],
+      ['Criblage USEPA complet (nitrates, fer, sulfates, méthane)', `${complets} ouvrage${complets > 1 ? 's' : ''} sur ${evaluations.length}`],
+      ['Analyses requises absentes partout', requisSite.map((p) => p.libelle).join(', ') || 'aucune'],
+      ['Limites de l’interprétation', limitesSite.join(' ') || '-'],
+      ['Analyses utiles', analysesSite.join(' ; ') || '-'],
+    ],
+    limites: limitesSite,
+    jeu,
+    evaluations,
+    options,
+    synthese,
+    transport: avecBiochlor && transport.vx !== null ? transport : undefined,
+    recap: recap.ouvrages ? { recap, synthese: syntheseRecap } : undefined,
+  }
+  }, [fiches, evaluations, projet, fichiersFiches, laboFourni, dec, fond, plusContamine, complets, requisSite, limitesSite, analysesSite, jeu, options, synthese, avecBiochlor, transport, recap, syntheseRecap])
+
+  useEffect(() => {
+    onRapport?.(rapport)
+  }, [rapport, onRapport])
+
   async function exporter() {
+    if (!rapport) return
     setExport(true)
     try {
-      const { telechargerRapport } = await import('../lib/nappe/export')
+      const { telechargerRapport } = await import('../../lib/nappe/export')
       const date = new Date().toISOString().slice(0, 10)
-      await telechargerRapport(
-        {
-          titre: `Conditions de la nappe${projet ? ` — ${projet}` : ''}`,
-          contexte: [
-            ['Fiches de prélèvement', fichiersFiches.join(', ') || '-'],
-            ['Résultats du laboratoire', labos.map((l) => l.nom).join(', ') || 'aucun (paramètres de terrain seuls)'],
-            ['Écart redox mesuré → Eh', `${fr(dec, 1)} mV (électrode de référence Ag/AgCl)`],
-            ['Ouvrages de fond', fond.map(nomOuvrage).join(', ') || 'aucun désigné'],
-            [
-              'Ouvrage le plus contaminé (COHV, µmol/l)',
-              plusContamine
-                ? `${plusContamine.ouvrage.nom} — conditions ${LIBELLES_FAVORABILITE[plusContamine.lecture.conditions].toLowerCase()}, score USEPA ${plusContamine.score.complet ? `${plusContamine.score.total} (${LIBELLES_CLASSE[plusContamine.score.classe].toLowerCase()})` : `partiel ${plusContamine.score.total} / ${plusContamine.score.accessible}`}`
-                : '-',
-            ],
-            ['Criblage USEPA complet (nitrates, fer, sulfates, méthane)', `${complets} ouvrage${complets > 1 ? 's' : ''} sur ${evaluations.length}`],
-            ['Analyses requises absentes partout', requisSite.map((p) => p.libelle).join(', ') || 'aucune'],
-            ['Limites de l’interprétation', limitesSite.join(' ') || '-'],
-            ['Analyses utiles', analysesSite.join(' ; ') || '-'],
-          ],
-          limites: limitesSite,
-          jeu,
-          evaluations,
-          options,
-          synthese,
-          transport: avecBiochlor && transport.vx !== null ? transport : undefined,
-          recap: recap.ouvrages ? { recap, synthese: syntheseRecap } : undefined,
-        },
-        `Conditions nappe${projet ? ` - ${projet}` : ''} - ${date}.xlsx`,
-      )
+      await telechargerRapport(rapport, `Conditions nappe${projet ? ` - ${projet}` : ''} - ${date}.xlsx`)
     } finally {
       setExport(false)
     }
@@ -244,7 +249,7 @@ export default function ConditionsNappe() {
   async function exporterRecap() {
     setExportRecap(true)
     try {
-      const { telechargerRecap } = await import('../lib/nappe/export')
+      const { telechargerRecap } = await import('../../lib/nappe/export')
       const date = new Date().toISOString().slice(0, 10)
       await telechargerRecap(
         `Récapitulatif des paramètres de terrain${projet ? ` — ${projet}` : ''}`,
@@ -272,20 +277,20 @@ export default function ConditionsNappe() {
 
   return (
     <>
-      <section className="section">
+      <section className="section section--muted">
         <div className="container">
-          <p className="eyebrow">Eaux souterraines — atténuation naturelle</p>
-          <h1 style={{ maxWidth: '26ch' }}>Conditions de la nappe</h1>
-          <p className="lede">
-            Lisez les fiches de prélèvement (pH, redox, oxygène dissous, conductivité, température en fin de purge) et, si vous les avez, les
-            résultats du laboratoire : processus redox dominant, criblage de la déchloration réductrice selon le protocole USEPA 1998 (repris par
-            BIOCHLOR), devenir du chlorure de vinyle, contrôle des mesures et données d'entrée de BIOCHLOR. Les données restent dans votre
-            navigateur.
+          <h2 className="etape">
+            <span>{numero}</span> Fiches de prélèvement et conditions de la nappe (facultatif)
+          </h2>
+          <p className="lede" style={{ marginBottom: '1.25rem' }}>
+            Chargez les fiches de prélèvement de la campagne : conditions physico-chimiques de la nappe (pH, redox, oxygène dissous, conductivité,
+            température en fin de purge), qualité des purges et, avec les résultats du laboratoire chargés ci-dessus, processus redox dominant,
+            criblage de la déchloration réductrice selon le protocole USEPA 1998, devenir du chlorure de vinyle et données d'entrée de BIOCHLOR.
+            L'export Excel des résultats reçoit les onglets « Conditions physico-chimiques » et « Qualité des purges » (et, en export expert,
+            l'atténuation naturelle).
           </p>
 
-          <h2 className="etape">
-            <span>1</span> Fiches de prélèvement
-          </h2>
+          <h3 className="sous-etape">Fiches de prélèvement</h3>
           <Depot
             titre="Déposez ici le classeur des fiches de prélèvement"
             aide="Une fiche par onglet (modèle ERM ou équivalent) : tableau de purge avec pH, redox mesuré et corrigé, oxygène dissous, conductivité, température. Plusieurs classeurs possibles."
@@ -320,16 +325,7 @@ export default function ConditionsNappe() {
             </div>
           )}
 
-          <h2 className="etape">
-            <span>2</span> Résultats du laboratoire (facultatif)
-          </h2>
-          <Depot
-            titre="Déposez ici le ou les fichiers du laboratoire"
-            aide="ALS / Wessling, Eurofins, SGS : disposition reconnue automatiquement. Utiles : nitrates, fer (II ou dissous), manganèse, sulfates, sulfures, méthane, éthène/éthane, COT, chlorures, alcalinité, COHV, BTEX."
-            multiple
-            chargement={chargement === 'labo'}
-            onFichiers={chargerLabo}
-          />
+          {labo.lecture && fiches.length > 0 && <h3 className="sous-etape">Résultats du laboratoire et ouvrages</h3>}
           {erreur && (
             <p role="alert" className="alerte">
               {erreur}
@@ -340,7 +336,7 @@ export default function ConditionsNappe() {
               {labo.erreur}
             </p>
           )}
-          {labo.lecture && (
+          {labo.lecture && fiches.length > 0 && (
             <div className="card" style={{ marginTop: '1rem', maxWidth: '60rem' }}>
               <strong>{labo.lecture.nom}</strong>
               {labo.notes.map((n) => (
@@ -395,23 +391,12 @@ export default function ConditionsNappe() {
                   </table>
                 </div>
               </details>
-              <button
-                type="button"
-                className="btn btn--ghost btn--petit"
-                style={{ marginTop: '0.5rem' }}
-                onClick={() => {
-                  setLabos([])
-                  setAssociation({})
-                }}
-              >
-                Retirer les résultats du laboratoire
-              </button>
             </div>
           )}
 
-          <h2 className="etape">
-            <span>3</span> Réglages
-          </h2>
+          {fiches.length > 0 && (
+            <>
+          <h3 className="sous-etape">Réglages</h3>
           <div className="grid grid--3" style={{ alignItems: 'end' }}>
             <label className="champ">
               Projet / site (optionnel)
@@ -443,7 +428,10 @@ export default function ConditionsNappe() {
             Le protocole USEPA note le redox mesuré contre l'électrode Ag/AgCl ; l'écart ne sert qu'à afficher Eh (électrode normale à hydrogène).
           </p>
 
-          {jeu.ouvrages.length > 0 && (
+            </>
+          )}
+
+          {jeu.ouvrages.length > 0 && fiches.length > 0 && (
             <div className="grid grid--2" style={{ marginTop: '1rem', gap: '1rem' }}>
               <details className="qualif card">
                 <summary>Ouvrages de fond — amont, hors panache ({fond.length})</summary>
@@ -486,12 +474,10 @@ export default function ConditionsNappe() {
         </div>
       </section>
 
-      {evaluations.length > 0 && (
+      {evaluations.length > 0 && fiches.length > 0 && (
         <section className="section section--muted">
           <div className="container">
-            <h2 className="etape">
-              <span>4</span> Synthèse générale
-            </h2>
+            <h3 className="sous-etape">Synthèse générale</h3>
             <SyntheseGenerale s={synthese} />
             {recap.ouvrages > 0 && (
               <div className="card recap-terrain" style={{ marginTop: '1.5rem' }}>
@@ -558,12 +544,10 @@ export default function ConditionsNappe() {
         </section>
       )}
 
-      {evaluations.length > 0 && (
+      {evaluations.length > 0 && fiches.length > 0 && (
         <section className="section">
           <div className="container">
-            <h2 className="etape">
-              <span>5</span> Conditions par ouvrage
-            </h2>
+            <h3 className="sous-etape">Conditions par ouvrage</h3>
             <div className="grid grid--3" style={{ gap: '1rem', marginBottom: '1rem' }}>
               <div className="card">
                 <span className="eyebrow">Zone la plus contaminée</span>
@@ -759,12 +743,10 @@ export default function ConditionsNappe() {
         </section>
       )}
 
-      {evaluations.length > 0 && (
+      {evaluations.length > 0 && fiches.length > 0 && (
         <section className="section section--muted">
           <div className="container">
-            <h2 className="etape">
-              <span>6</span> Données d'entrée BIOCHLOR (option)
-            </h2>
+            <h3 className="sous-etape">Données d'entrée BIOCHLOR (option)</h3>
             <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', maxWidth: '48rem' }}>
               <input type="checkbox" checked={avecBiochlor} onChange={(e) => setAvecBiochlor(e.target.checked)} />
               <span>
@@ -784,12 +766,10 @@ export default function ConditionsNappe() {
         </section>
       )}
 
-      {evaluations.length > 0 && (
+      {evaluations.length > 0 && fiches.length > 0 && (
         <section className="section">
           <div className="container">
-            <h2 className="etape">
-              <span>7</span> Rapport
-            </h2>
+            <h3 className="sous-etape">Rapport complet des conditions de la nappe</h3>
             <button type="button" className="btn" onClick={() => void exporter()} disabled={export_}>
               {export_ ? 'Préparation…' : 'Télécharger le rapport Excel'}
             </button>
@@ -801,6 +781,7 @@ export default function ConditionsNappe() {
         </section>
       )}
 
+      {fiches.length > 0 && (
       <section className="section">
         <div className="container">
           <h2 style={{ fontSize: '1.2rem' }}>Démarche</h2>
@@ -808,12 +789,12 @@ export default function ConditionsNappe() {
             <div className="card">
               <span className="eyebrow">Ligne de preuve 1</span>
               <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
-                Baisse des concentrations et des masses dans le temps et le long de l'écoulement : à lire sur plusieurs campagnes (outil Résultats
-                labo, onglets d'évolution).
+                Baisse des concentrations et des masses dans le temps et le long de l'écoulement : à lire sur plusieurs campagnes (comparaison
+                des campagnes ci-dessus, onglets d'évolution de l'export).
               </p>
             </div>
             <div className="card">
-              <span className="eyebrow">Ligne de preuve 2 — cet outil</span>
+              <span className="eyebrow">Ligne de preuve 2 — cette section</span>
               <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
                 Processus identifiés et quantifiés : indicateurs géochimiques (criblage USEPA, processus redox), produits de dégradation, constantes
                 de biodégradation pour BIOCHLOR.
@@ -834,6 +815,7 @@ export default function ConditionsNappe() {
           </ul>
         </div>
       </section>
+      )}
     </>
   )
 }

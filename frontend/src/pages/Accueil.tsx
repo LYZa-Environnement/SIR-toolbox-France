@@ -58,7 +58,7 @@ const CATEGORIES: Categorie[] = [
     id: 'terrain',
     titre: 'Données de terrain',
     etape: 'Investiguer',
-    description: 'Mettre en forme les observations des sondages et lire les paramètres mesurés dans la nappe.',
+    description: 'Mettre en forme les observations des sondages et des piézomètres.',
     outils: [
       {
         titre: 'Logs de forage',
@@ -67,14 +67,6 @@ const CATEGORIES: Categorie[] = [
           "Générez les logs de sondages et de piézomètres au format ERM depuis le classeur de saisie : lithologie, équipement, PID, niveau d'eau, échantillons et résultats d'analyses.",
         points: ['Contrôles de cohérence avant diffusion', 'Impression PDF et export SVG'],
         page: 'logs-forage.html',
-      },
-      {
-        titre: 'Conditions de la nappe',
-        accroche: 'Atténuation naturelle des COHV',
-        description:
-          'Chargez les fiches de prélèvement et, si vous les avez, les résultats du laboratoire : processus redox, criblage USEPA 1998 de la déchloration réductrice, devenir du chlorure de vinyle et données d’entrée BIOCHLOR.',
-        points: ['pH, redox, O₂, conductivité, température en fin de purge', 'Récapitulatif min / max / moyenne et synthèse de la nappe', 'Contrôle des mesures, rapport Excel'],
-        route: '/conditions-nappe',
       },
     ],
   },
@@ -88,8 +80,8 @@ const CATEGORIES: Categorie[] = [
         titre: 'Résultats labo',
         accroche: 'Mise en forme des résultats',
         description:
-          'Chargez un rapport de laboratoire (eau, sol, gaz du sol / air ambiant) : tableau mis en forme, comparaison aux valeurs guides et export Excel.',
-        points: ['Conversion µg/support → µg/m³', 'Export standard ou expert'],
+          'Chargez un rapport de laboratoire (eau, sol, gaz du sol / air ambiant) et les fiches de prélèvement : tableau mis en forme, comparaison aux valeurs de référence, conditions de la nappe et qualité des prélèvements, export Excel.',
+        points: ['Conversion µg/support → µg/m³, qualité des gaz du sol captés', 'Eaux : conditions physico-chimiques, purges, atténuation naturelle', 'Export standard ou expert'],
         route: '/resultats-labo',
       },
       {
@@ -204,7 +196,7 @@ export default function Accueil() {
         <p className="eyebrow">ERM — boîte à outils</p>
         <h1 style={{ maxWidth: '22ch' }}>SIR Toolbox France</h1>
         <p className="lede">
-          {total === 9 ? 'Neuf' : total} outils pour mener une étude de site, de la lecture des données publiques au terrain, à
+          {total === 9 ? 'Neuf' : total === 8 ? 'Huit' : total} outils pour mener une étude de site, de la lecture des données publiques au terrain, à
           l'interprétation des résultats d'analyses et au contrôle de conformité.
         </p>
 
