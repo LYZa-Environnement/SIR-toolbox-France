@@ -11,7 +11,7 @@ import { LectureImpossible } from '../lib/resultats/parse'
 import { Tuile, Volet, type TeinteVolet } from '../components/resultats/Volet'
 import { Explorateur } from '../components/suivi/Explorateur'
 import { OPTIONS_VUE, type OptionsVue, type Selection } from '../lib/suivi/ui'
-import { AmontAval, Degradation, Faits, Indicateurs, Methode, Piezometrie, Pistes, Plan, Qualite } from '../components/suivi/Panneaux'
+import { AmontAval, Degradation, Faits, GrilleGuide, Indicateurs, Methode, Piezometrie, Pistes, Plan, Qualite } from '../components/suivi/Panneaux'
 import { FichesOuvrages, LegendeClasses, MatriceTendances, TableauTendances } from '../components/suivi/Tendances'
 
 const LIBELLES_TYPE: Record<FichierLu['type'], string> = { labo: 'Rapport de laboratoire', historique: 'Tableau historique', fiches: 'Fiches de prélèvement' }
@@ -562,6 +562,11 @@ export default function SuiviTemporel() {
                     <span className="st-note">4 au minimum (MAROS) ; l'outil HYPE du BRGM en demande 10 — en dessous, la série est signalée comme courte.</span>
                   </label>
                   <label className="champ">
+                    Arrêt d'un traitement de dépollution (facultatif)
+                    <input type="date" value={reglages.finTraitement ?? ''} onChange={(e) => setReglages({ ...reglages, finTraitement: e.target.value || null })} />
+                    <span className="st-note">Pour rechercher un effet rebond après l'arrêt (venting, sparging, pompage…) — guide BRGM/INERIS 2022, p. 12 et 17.</span>
+                  </label>
+                  <label className="champ">
                     Seuil de vigilance (part de la valeur de référence)
                     <select value={reglages.vigilance} onChange={(e) => setReglages({ ...reglages, vigilance: Number(e.target.value) })}>
                       <option value={0.5}>50 %</option>
@@ -661,6 +666,18 @@ export default function SuiviTemporel() {
 
             <Volet id="pistes" titre="Pistes pour le programme de surveillance" teinte="violet" ouvert={ouverts.has('pistes')} onBasculer={() => basculer('pistes')} resume="Renforcer, maintenir, compléter, alléger — avec le critère appliqué">
               <Pistes analyse={analyse} />
+            </Volet>
+
+            <Volet
+              id="grille"
+              titre="Grille du guide « Évolution et arrêt de la surveillance » (2022)"
+              teinte="vert"
+              ouvert={ouverts.has('grille')}
+              onBasculer={() => basculer('grille')}
+              resume={`${analyse.grille.filter((g) => g.statut === 'ok').length} points satisfaits, ${analyse.grille.filter((g) => g.statut === 'partiel' || g.statut === 'non').length} à compléter, ${analyse.grille.filter((g) => g.statut === 'a-verifier').length} à vérifier dans le dossier`}
+              badges={analyse.grille.some((g) => g.statut === 'non') ? <span className="badge badge--elevee">{analyse.grille.filter((g) => g.statut === 'non').length} non satisfait(s)</span> : undefined}
+            >
+              <GrilleGuide analyse={analyse} />
             </Volet>
 
             <Volet id="qualite" titre="Qualité et comparabilité des données" teinte="ardoise" ouvert={ouverts.has('qualite')} onBasculer={() => basculer('qualite')} resume={`${analyse.qualite.filter((q) => q.niveau !== 'info').length} point(s) d'attention`}>

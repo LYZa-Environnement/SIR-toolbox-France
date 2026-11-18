@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CLASSES, direction, fr, LIBELLES_CENSURE, LIBELLES_PISTE, pTexte, type Analyse, type Fait, type NiveauFait, type TypePiste } from '../../lib/suivi/analyse'
+import { CLASSES, direction, fr, LIBELLES_CENSURE, LIBELLES_PISTE, LIBELLES_STATUT_GRILLE, pTexte, type Analyse, type Fait, type NiveauFait, type TypePiste } from '../../lib/suivi/analyse'
 import { formatDate } from '../../lib/suivi/dates'
 import { figureDegradation, figureEcoulement, figureNiveaux, figurePlan, type ModeNiveaux } from '../../lib/suivi/figures'
 import { barresSvg } from '../../lib/suivi/graphique'
@@ -55,9 +55,10 @@ export function Pistes({ analyse }: { analyse: Analyse }) {
   return (
     <div className="st-pistes">
       <p className="st-note">
-        Ces pistes appliquent des critères simples et explicites aux résultats de la période. Elles ne remplacent ni le jugement de l'ingénieur ni la démarche du guide BRGM/INERIS
-        « Évolution et arrêt de la surveillance des eaux souterraines » (2022) : état de la source, usages et enjeux en aval, représentativité des ouvrages, sens d'écoulement,
-        conditions fixées par l'arrêté préfectoral.
+        Ces pistes appliquent aux résultats de la période les questions et les critères du guide BRGM/INERIS « Évolution et arrêt de la surveillance des eaux souterraines » (2022),
+        cités page par page : réseau minimal de 3 ouvrages (5 si le sens d'écoulement varie), ouvrage amont jamais abandonné, substance au-dessus d'un critère de gestion jamais
+        abandonnée, produits de dégradation conservés. Elles ne remplacent ni le jugement de l'ingénieur ni la lecture du dossier (état de la source, usages et enjeux en aval,
+        surveillance imposée par la réglementation nationale, arrêté préfectoral).
       </p>
       {types.map((t) => {
         const ps = analyse.pistes.filter((p) => p.type === t)
@@ -77,6 +78,68 @@ export function Pistes({ analyse }: { analyse: Analyse }) {
         )
       })}
       {!analyse.pistes.length && <p className="st-note">Aucune piste particulière ne ressort des critères appliqués.</p>}
+    </div>
+  )
+}
+
+/** The reading grid of the BRGM/INERIS 2022 guide, step by step. */
+export function GrilleGuide({ analyse }: { analyse: Analyse }) {
+  const etapes: { n: 2 | 3 | 4; titre: string }[] = [
+    { n: 2, titre: 'Étape 2 — Éligibilité de la demande' },
+    { n: 3, titre: 'Étape 3 — Respect des exigences techniques' },
+    { n: 4, titre: "Étape 4 — Justification de l'argumentation" },
+  ]
+  const compte = (st: string) => analyse.grille.filter((g) => g.statut === st).length
+  return (
+    <div className="st-grille">
+      <p className="st-note" style={{ maxWidth: '62rem' }}>
+        Grille de lecture du guide BRGM/INERIS « Évolution et arrêt de la surveillance des eaux souterraines » (ministère de la Transition écologique, décembre 2022), que l'inspection
+        applique à toute demande d'évolution ou d'arrêt. L'étape 1 (recevabilité) suppose un bilan quadriennal conforme au guide « Surveillance de la qualité des eaux souterraines ».
+        Les points que les données chargées permettent de juger sont évalués ici ; les autres restent « à vérifier » dans le dossier. L'exigence de justification est plus forte pour
+        un arrêt total que pour une évolution (p. 17).
+      </p>
+      <div className="st-filtres">
+        {(['ok', 'partiel', 'non', 'a-verifier'] as const).map((st) => (
+          <span key={st} className="st-classe" style={{ background: LIBELLES_STATUT_GRILLE[st].fond, color: LIBELLES_STATUT_GRILLE[st].couleur, borderColor: LIBELLES_STATUT_GRILLE[st].couleur }}>
+            {LIBELLES_STATUT_GRILLE[st].libelle} {compte(st)}
+          </span>
+        ))}
+      </div>
+      {etapes.map((e) => (
+        <section key={e.n}>
+          <h4 className="st-sous-titre">{e.titre}</h4>
+          <div className="tableau-defile">
+            <table className="tableau st-tableau">
+              <thead>
+                <tr>
+                  <th style={{ width: '3rem' }}>Point</th>
+                  <th style={{ width: '22rem' }}>Exigence</th>
+                  <th style={{ width: '8rem' }}>Statut</th>
+                  <th>Constat sur les données</th>
+                  <th style={{ width: '4rem' }}>Page</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analyse.grille
+                  .filter((g) => g.etape === e.n)
+                  .map((g) => (
+                    <tr key={g.code}>
+                      <th scope="row">{g.code}</th>
+                      <td>{g.intitule}</td>
+                      <td>
+                        <span className="st-classe" style={{ background: LIBELLES_STATUT_GRILLE[g.statut].fond, color: LIBELLES_STATUT_GRILLE[g.statut].couleur, borderColor: LIBELLES_STATUT_GRILLE[g.statut].couleur }}>
+                          {LIBELLES_STATUT_GRILLE[g.statut].libelle}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.84rem' }}>{g.constat}</td>
+                      <td>p. {g.page}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
     </div>
   )
 }
@@ -467,6 +530,13 @@ export function Methode({ analyse }: { analyse: Analyse }) {
           le rapport de suivi, qui valide la surveillance en place ou propose son évolution.
         </li>
         <li>NF X31-620-2, prestation BQ — bilan quadriennal : interprétation (A270) de l'ensemble des données des quatre dernières années de suivi.</li>
+        <li>
+          Pistes et grille de lecture : guide BRGM/INERIS « Évolution et arrêt de la surveillance des eaux souterraines » (déc. 2022) — réseau résiduel d'au moins 3 ouvrages (1 amont,
+          2 aval), 5 si le sens d'écoulement varie (p. 12, 19) ; ouvrage amont jamais abandonné (p. 30) ; substance au-dessus d'un critère de gestion jamais abandonnée, même stable (p. 9,
+          39) ; produits de dégradation, physico-chimie et LQ (p. 15) ; piézométrie en m NGF (p. 14, 16) ; flux continu d'amont en aval (p. 18) ; baisse avec une nappe basse (p. 17) ;
+          effets rebonds (p. 12, 17). Ouvrages redondants : tau de Kendall ≥ 0,6 et médianes à un facteur 2 près pour chaque composé quantifié, à confirmer par la cartographie du
+          panache (p. 19, 46).
+        </li>
         <li>
           Guides BRGM/INERIS « Surveillance de la qualité des eaux souterraines appropriée aux installations classées et sites pollués » (déc. 2022) et « Évolution et arrêt de la
           surveillance des eaux souterraines » (déc. 2022).

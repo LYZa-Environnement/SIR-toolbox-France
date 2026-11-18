@@ -3274,3 +3274,13 @@ svg .halo {
     grid-template-columns: 1fr;
   }
 }
+.st-grille .tableau {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 52rem;
+}
+.st-grille .tableau td,
+.st-grille .tableau th {
+  white-space: normal;
+  vertical-align: top;
+}

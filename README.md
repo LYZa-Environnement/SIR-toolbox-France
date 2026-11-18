@@ -116,9 +116,15 @@ livrables).
   de tendance d'après MAROS, demi-vie et horizon de la valeur de référence,
   résultats atypiques ; résultats < LQ selon trois conventions (censure à la
   LQ la plus élevée par défaut, LQ, LQ/2). À l'échelle du réseau : faits
-  marquants classés, pistes pour le programme de surveillance avec leur
-  critère, qualité des données (LQ variables ou supérieures à la référence,
-  lacunes), déchloration des chloroéthènes (parts molaires, chlore moyen,
+  marquants classés, pistes pour le programme de surveillance et grille de
+  lecture des 4 étapes du guide BRGM/INERIS « Évolution et arrêt de la
+  surveillance des eaux souterraines » (2022), critères cités page par page
+  (réseau minimal de 3 à 5 ouvrages, ouvrage amont et substance au-dessus
+  d'un critère de gestion jamais abandonnés, produits de dégradation,
+  physico-chimie, LQ, piézométrie en m NGF, flux continu d'amont en aval,
+  baisse avec une nappe basse, effet rebond après l'arrêt d'un traitement,
+  ouvrages redondants), qualité des données (LQ variables ou supérieures à
+  la référence, lacunes), déchloration des chloroéthènes (parts molaires, chlore moyen,
   total en moles, blocage au stade DCE), piézométrie (régime HE / BE
   d'après les niveaux, battement et écart au niveau médian de chaque
   ouvrage, lien concentration – niveau ; avec la cote NGF du repère, sens

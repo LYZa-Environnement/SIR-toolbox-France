@@ -86,9 +86,11 @@ export interface Reglages {
   vigilance: number
   /** Coefficient of variation below which a series without trend is "stable" (MAROS). */
   covStable: number
+  /** End of an active remediation (ISO), to look for a rebound after it. */
+  finTraitement: string | null
 }
 
-export const REGLAGES_DEFAUT: Reglages = { alpha: 0.05, nMin: 4, nRobuste: 10, censure: 'lq-max', debut: null, fin: null, vigilance: 0.75, covStable: 1 }
+export const REGLAGES_DEFAUT: Reglages = { alpha: 0.05, nMin: 4, nRobuste: 10, censure: 'lq-max', debut: null, fin: null, vigilance: 0.75, covStable: 1, finTraitement: null }
 
 // ---- Classes ------------------------------------------------------------------------------------
 
@@ -559,6 +561,39 @@ export interface AmontAvalCompose {
   frequenceAmont: number
 }
 
+export interface FluxContinu {
+  compose: Compose
+  /** Campaigns where the compound is higher downgradient than upgradient (factor 2, or not quantified upgradient). */
+  campagnes: number
+  /** Of the campaigns with results both upgradient and downgradient. */
+  comparables: number
+  /** Including the last two. */
+  recent: boolean
+  depasse: boolean
+  /** A metal: the natural background is to be considered before concluding to a site impact. */
+  metal: boolean
+}
+
+export type StatutGrille = 'ok' | 'partiel' | 'non' | 'a-verifier'
+
+export const LIBELLES_STATUT_GRILLE: Record<StatutGrille, { libelle: string; couleur: string; fond: string }> = {
+  ok: { libelle: 'Satisfait', couleur: '#1F6B45', fond: '#DDF0E4' },
+  partiel: { libelle: 'Partiel', couleur: '#8A5300', fond: '#FCE8C8' },
+  non: { libelle: 'Non satisfait', couleur: '#9C2A1C', fond: '#F8D7D3' },
+  'a-verifier': { libelle: 'À vérifier', couleur: '#3B4856', fond: '#E9EDF1' },
+}
+
+/** One point of the reading grid of the guide « Évolution et arrêt de la surveillance des eaux souterraines » (BRGM/INERIS, déc. 2022). */
+export interface PointGrille {
+  etape: 2 | 3 | 4
+  code: string
+  intitule: string
+  statut: StatutGrille
+  constat: string
+  /** Page of the guide (x/52). */
+  page: number
+}
+
 export interface PointMax {
   valeur: number
   inferieur: boolean
@@ -594,6 +629,14 @@ export interface Analyse {
   piezo: PiezoOuvrage[]
   ecoulement: Ecoulement | null
   amontAval: AmontAvalCompose[]
+  /** Checks of the BRGM/INERIS 2022 guide on changing or stopping groundwater monitoring. */
+  grille: PointGrille[]
+  /** Compounds higher downgradient than upgradient campaign after campaign (guide 2022, p. 18). */
+  fluxContinu: FluxContinu[]
+  /** Series falling while the water table is low (guide 2022, p. 17). */
+  baissesNappeBasse: AnalyseSerie[]
+  /** After the end of the remediation: series with a rebound, and the number of campaigns since. */
+  rebonds: { series: AnalyseSerie[]; campagnesApres: number } | null
   /** First and last date of the window as analysed. */
   debut: string
   fin: string
@@ -668,11 +711,16 @@ export function analyser(base: Base, corrections: Corrections, r: Reglages): Ana
   const piezo = piezometrie(base, ouvrages, actives, r)
   const ecoulement = ecoulements(base, ouvrages, campagnes)
   const amontAval = comparaisonAmontAval(base, ouvrages, campagnes, composesQuantifies)
+  const fluxContinu = fluxAmontAval(amontAval, references)
+  const baissesNappeBasse = baissesAvecNappeBasse(actives, piezo)
+  const rebonds = r.finTraitement ? rebondsApres(actives, campagnes, r) : null
   const faits = faitsMarquants(actives, composesJamais, campagnes, degradation, piezo, amontAval, r, ecoulement)
-  const pistes = pistesSurveillance(actives, ouvrages, composesJamais, composesQuantifies, campagnes, base, references, r)
+  faits.push(...faitsGuide(fluxContinu, baissesNappeBasse, rebonds, r))
+  faits.sort((a, b) => b.poids - a.poids)
+  const pistes = pistesSurveillance(actives, ouvrages, composesJamais, composesQuantifies, campagnes, base, references, r, ecoulement, rebonds)
   const qualite = notesQualite(base, actives, ouvrages, campagnes, composesJamais, references)
 
-  return {
+  const resultat: Analyse = {
     base,
     reglages: r,
     campagnes,
@@ -691,9 +739,15 @@ export function analyser(base: Base, corrections: Corrections, r: Reglages): Ana
     piezo,
     ecoulement,
     amontAval,
+    grille: [],
+    fluxContinu,
+    baissesNappeBasse,
+    rebonds,
     debut: campagnes[0]?.date ?? '',
     fin: campagnes[campagnes.length - 1]?.date ?? '',
   }
+  resultat.grille = grilleGuide(resultat)
+  return resultat
 }
 
 // ---- Key facts ---------------------------------------------------------------------------------------
@@ -888,6 +942,34 @@ function faitsMarquants(
 
 // ---- Monitoring programme prompts ---------------------------------------------------------------
 
+/** Reference to the guide « Évolution et arrêt de la surveillance des eaux souterraines » (BRGM/INERIS pour le MTECT, déc. 2022). */
+const GUIDE = (p: number | string) => `guide BRGM/INERIS « Évolution et arrêt de la surveillance des eaux souterraines » (2022), p. ${p}`
+
+/** Fewest wells left after an abandonment: 3 (1 upgradient, 2 downgradient), 5 when the flow direction varies (guide 2022, p. 12 and 19). */
+export function reseauMinimal(ecoulement: Ecoulement | null): number {
+  return ecoulement && ecoulement.dispersion > 45 ? 5 : 3
+}
+
+/** Campaigns paired by campaign between two series of the same compound. */
+function paires(a: AnalyseSerie, b: AnalyseSerie): { x: number; y: number }[] {
+  const parCampagne = new Map(b.retenus.map((p) => [p.resultat.campagne, p.rang]))
+  return a.retenus.flatMap((p) => {
+    const y = parCampagne.get(p.resultat.campagne)
+    return y === undefined ? [] : [{ x: p.rang, y }]
+  })
+}
+
+/**
+ * Prompts for the monitoring programme, after the questions of the guide
+ * « Évolution et arrêt de la surveillance des eaux souterraines »
+ * (BRGM/INERIS, 2022, § 2.4 and 2.6): wells (an upgradient well is never
+ * given up, nor a well that alone follows a residual source, and the
+ * network keeps 3 wells — 5 when the flow direction varies; a well out of
+ * the plume or redundant with another may be), frequency, substances (one
+ * above a management criterion, even stable, cannot be given up;
+ * degradation products are kept), and what the review lacks (piezometry in
+ * m NGF, physico-chemistry, LQ).
+ */
 function pistesSurveillance(
   series: AnalyseSerie[],
   ouvrages: Ouvrage[],
@@ -897,38 +979,65 @@ function pistesSurveillance(
   base: Base,
   references: Map<string, Reference | null>,
   r: Reglages,
+  ecoulement: Ecoulement | null,
+  rebonds: Analyse['rebonds'],
 ): Piste[] {
   const pistes: Piste[] = []
   const nC = campagnes.length
   const enHausse = (s: AnalyseSerie) => s.classe === 'hausse' || s.classe === 'hausse-probable'
   const labo = (s: AnalyseSerie) => !s.compose.terrain && !s.compose.calcule
+  const minimum = reseauMinimal(ecoulement)
+  const duree = nC ? campagnes[nC - 1].t - campagnes[0].t : 0
+  const deuxRegimes = new Set(campagnes.map((c) => c.regime).filter(Boolean)).size >= 2
 
-  // Wells.
+  // ---- Wells ----
+  const candidats: { o: Ouvrage; texte: string; critere: string }[] = []
   for (const o of ouvrages) {
     const ss = series.filter((s) => s.ouvrage === o && labo(s))
     if (!ss.length) continue
     const prelevees = new Set(ss.flatMap((s) => s.retenus.map((p) => p.resultat.campagne))).size
     const hausse = ss.filter(enHausse)
     const depasse = ss.filter((s) => s.depassementsConsecutifs > 0)
+    const variables = ss.filter((s) => s.classe === 'sans-tendance' && (s.ratioMax ?? 0) > r.vigilance)
     const rien = ss.every((s) => s.nQ === 0)
-    if (hausse.length || depasse.length) {
+    if (o.position === 'amont') {
+      pistes.push({
+        type: 'maintenir',
+        portee: 'ouvrage',
+        cible: o.nom,
+        texte: `Ouvrage amont : référence de la qualité des eaux arrivant sur le site (environnement local témoin), il n'est pas abandonnable.${rien ? ` Aucun composé quantifié sur ${prelevees} campagnes.` : ''}`,
+        critere: `Abandon de l'ouvrage amont non acceptable — ${GUIDE(30)}.`,
+      })
+    } else if (hausse.length || depasse.length) {
       pistes.push({
         type: hausse.some((s) => s.classe === 'hausse') ? 'renforcer' : 'maintenir',
         portee: 'ouvrage',
         cible: o.nom,
-        texte: `${hausse.length ? `Tendance à la hausse (${hausse.map((s) => s.compose.nom).join(', ')})` : ''}${hausse.length && depasse.length ? ' ; ' : ''}${depasse.length ? `dépassement à la dernière campagne (${depasse.map((s) => s.compose.nom).join(', ')})` : ''} : maintenir l'ouvrage${hausse.some((s) => s.classe === 'hausse') ? ', voire resserrer la fréquence le temps de confirmer la tendance' : ''}.`,
-        critere: 'Hausse significative ou probable, ou dépassement de la valeur de référence à la dernière campagne.',
+        texte: `${hausse.length ? `Tendance à la hausse (${hausse.map((s) => s.compose.nom).join(', ')})` : ''}${hausse.length && depasse.length ? ' ; ' : ''}${depasse.length ? `au-dessus de la valeur de référence à la dernière campagne (${depasse.map((s) => s.compose.nom).join(', ')})` : ''} : maintenir l'ouvrage${hausse.some((s) => s.classe === 'hausse') ? ', voire resserrer la fréquence le temps de confirmer la tendance' : ''}${o.position === 'droit' && depasse.length ? ' — il suit une source encore active' : ''}.`,
+        critere: `Ouvrage utile au suivi d'une pollution avérée ; un ouvrage seul à suivre une source résiduelle active n'est pas abandonnable — ${GUIDE('19 et 30')}.`,
       })
     } else if (rien && prelevees >= 4) {
+      candidats.push({
+        o,
+        texte: `Aucun composé quantifié sur ${prelevees} campagnes : ouvrage hors panache${duree >= 2 ? '' : ' (sur une période encore courte)'}. Son abandon peut se discuter selon son rôle (limite du panache, sortie de site, enjeu en aval) ; à défaut, il peut être conservé et entretenu pour la piézométrie et une campagne lors du prochain bilan quadriennal.`,
+        critere: `Ouvrage hors panache, < LQ depuis le début du suivi — ${GUIDE('19, 30 et 34')}.`,
+      })
+    }
+    if (variables.length && !hausse.length) {
       pistes.push({
-        type: o.position === 'amont' ? 'maintenir' : 'alleger',
+        type: 'maintenir',
         portee: 'ouvrage',
         cible: o.nom,
-        texte:
-          o.position === 'amont'
-            ? `Aucun composé quantifié sur ${prelevees} campagnes : ouvrage de référence amont, à conserver pour situer les apports extérieurs.`
-            : `Aucun composé quantifié sur ${prelevees} campagnes : son rôle dans le réseau (contrôle aval, latéral, sentinelle d'un captage) décide de son maintien ; un espacement des prélèvements peut se discuter.`,
-        critere: 'Tous les composés < LQ sur au moins 4 campagnes de la période.',
+        texte: `Variations fortes et sans tendance (${variables.map((s) => s.compose.nom).join(', ')}) : la fréquence actuelle est à garder tant que ces variations ne sont pas expliquées (niveau de la nappe, travaux, événements climatiques).`,
+        critere: `Variations significatives ou contradictoires inexpliquées : argument pour maintenir ou augmenter la fréquence — ${GUIDE(20)}.`,
+      })
+    } else if (!hausse.length && !depasse.length && !rien && prelevees >= 8 && ss.every((s) => s.classe !== 'sans-tendance') && ss.some((s) => s.classe === 'baisse' || s.classe === 'baisse-probable')) {
+      pistes.push({
+        type: 'alleger',
+        portee: 'ouvrage',
+        cible: o.nom,
+        texte: `Concentrations stables ou en baisse, sous la valeur de référence, sur ${prelevees} campagnes : une diminution de la fréquence sur cet ouvrage peut se discuter, si l'efficacité de la gestion reste suivie ailleurs à fréquence constante.`,
+        critere: `Ouvrage en bordure d'un panache en régression — ${GUIDE(20)}.`,
       })
     }
     const manquees = nC - prelevees
@@ -937,20 +1046,73 @@ function pistesSurveillance(
         type: 'completer',
         portee: 'ouvrage',
         cible: o.nom,
-        texte: `Non prélevé à ${manquees} des ${nC} campagnes de la période : en rechercher la cause (ouvrage sec, inaccessible, détérioré) — un contrôle de l'état de l'ouvrage peut être nécessaire.`,
-        critere: 'Au moins 2 campagnes manquantes.',
+        texte: `Non prélevé à ${manquees} des ${nC} campagnes : en rechercher la cause (ouvrage sec, inaccessible, détérioré) — vérifier son état et anticiper sa réhabilitation ou son remplacement.`,
+        critere: `Ouvrage à sec, dégradé ou inadapté — ${GUIDE('12 et 19')}.`,
       })
     }
   }
 
-  // Compounds.
+  // Redundant wells: same compounds, same levels, moving together.
+  const redondances: string[] = []
+  const nonAmont = ouvrages.filter((o) => o.position !== 'amont')
+  for (let i = 0; i < nonAmont.length; i++)
+    for (let j = i + 1; j < nonAmont.length; j++) {
+      const a = nonAmont[i]
+      const b = nonAmont[j]
+      const communs = series.filter((s) => s.ouvrage === a && labo(s) && s.nQ >= 4)
+      const liens = communs.flatMap((sa) => {
+        const sb = series.find((x) => x.ouvrage === b && x.compose === sa.compose && x.nQ >= 4)
+        if (!sb || !sa.mediane || !sb.mediane) return []
+        const ps = paires(sa, sb)
+        if (ps.length < 6) return []
+        const c = kendallTau(ps.map((p) => p.x), ps.map((p) => p.y))
+        return [{ c, rapport: sa.mediane / sb.mediane }]
+      })
+      const quantifiesA = series.filter((s) => s.ouvrage === a && labo(s) && s.nQ > 0).length
+      const quantifiesB = series.filter((s) => s.ouvrage === b && labo(s) && s.nQ > 0).length
+      if (liens.length >= 1 && liens.length === quantifiesA && quantifiesA === quantifiesB && liens.every((l) => l.c && l.c.tau >= 0.6 && l.c.p <= r.alpha && l.rapport >= 0.5 && l.rapport <= 2))
+        redondances.push(`${a.nom} et ${b.nom}`)
+    }
+  if (redondances.length) {
+    pistes.push({
+      type: 'alleger',
+      portee: 'reseau',
+      cible: 'Ouvrages redondants ?',
+      texte: `Mêmes composés, mêmes niveaux et mêmes évolutions campagne après campagne : ${redondances.join(' ; ')}. L'un des deux pourrait apporter une information redondante — à démontrer par la cartographie du panache avant toute demande d'abandon.`,
+      critere: `Informations redondantes avec un ouvrage proche depuis plusieurs campagnes (tau de Kendall ≥ 0,6 et médianes à un facteur 2 près pour chaque composé quantifié) — ${GUIDE('19 et 46')}.`,
+    })
+  }
+  const restants = ouvrages.length - candidats.length
+  for (const c of candidats) {
+    const possible = restants >= minimum || ouvrages.length - 1 >= minimum
+    pistes.push({
+      type: possible ? 'alleger' : 'maintenir',
+      portee: 'ouvrage',
+      cible: c.o.nom,
+      texte: possible
+        ? c.texte
+        : `${c.texte.split(' : ')[0]} : mais le réseau compte ${ouvrages.length} ouvrage${ouvrages.length > 1 ? 's' : ''}, son abandon le ramènerait sous le minimum de ${minimum} ouvrages${minimum === 5 ? " (sens d'écoulement variable)" : ''} — à conserver.`,
+      critere: `${c.critere} Réseau résiduel d'au moins ${minimum} ouvrages${minimum === 5 ? " (5 quand le sens d'écoulement varie)" : ', dont 1 amont et 2 aval'} — ${GUIDE('12 et 19')}.`,
+    })
+  }
+  if (ouvrages.length < 3 || !ouvrages.some((o) => o.position === 'amont') || ouvrages.filter((o) => o.position === 'aval').length < 2) {
+    pistes.push({
+      type: 'renforcer',
+      portee: 'reseau',
+      cible: 'Réseau',
+      texte: `Le réseau analysé compte ${ouvrages.length} ouvrage${ouvrages.length > 1 ? 's' : ''}, dont ${ouvrages.filter((o) => o.position === 'amont').length} amont et ${ouvrages.filter((o) => o.position === 'aval').length} aval : en dessous du réseau minimal (1 amont et 2 aval), ou positions non renseignées à l'étape 3.`,
+      critere: `Réseau minimal de 3 ouvrages (1 amont, 2 aval) pour un site en activité — ${GUIDE(19)}.`,
+    })
+  }
+
+  // ---- Compounds ----
   const quantifiesNoms = new Set(quantifies.map((c) => compact(c.nom)))
   for (const c of jamais) {
     if (c.calcule) continue
     const ss = series.filter((s) => s.compose === c)
     const nMax = Math.max(0, ...ss.map((s) => s.n))
     const ref = references.get(c.cle)
-    const lqMax = Math.max(0, ...ss.map((s) => s.lqMax ?? 0))
+    const lqMax = Math.max(0, ...ss.map((s) => s.lqDerniere ?? 0))
     const parents = FILLES[compact(c.nom)]?.filter((p) => quantifiesNoms.has(p))
     if (parents?.length) {
       pistes.push({
@@ -958,23 +1120,26 @@ function pistesSurveillance(
         portee: 'compose',
         cible: c.nom,
         texte: `Jamais quantifié, mais produit de dégradation de composés présents sur le site : à conserver dans le programme analytique.`,
-        critere: 'Filiation de déchloration (USEPA, 1998).',
+        critere: `Les produits fils de dégradation des solvants chlorés (DCE, CV) doivent être recherchés — ${GUIDE(15)}.`,
       })
     } else if (ref && lqMax > ref.valeur) {
       pistes.push({
         type: 'completer',
         portee: 'compose',
         cible: c.nom,
-        texte: `Jamais quantifié, mais avec une LQ (${fr(lqMax)} ${c.unite}) au-dessus de la valeur de référence (${fr(ref.valeur)}) : demander au laboratoire une LQ inférieure avant toute conclusion.`,
-        critere: 'Les limites de quantification doivent être inférieures aux valeurs de comparaison (guides BRGM/INERIS de surveillance des eaux souterraines).',
+        texte: `Jamais quantifié, mais la LQ actuelle (${fr(lqMax)} ${c.unite}) dépasse la valeur de référence (${fr(ref.valeur)}) : demander au laboratoire une LQ inférieure avant toute conclusion.`,
+        critere: `Les limites de détection doivent être inférieures aux valeurs de référence auxquelles les résultats sont comparés — ${GUIDE(15)}.`,
       })
     } else if (nMax >= 4) {
+      const assez = duree >= 2 && deuxRegimes
       pistes.push({
-        type: 'retirer',
+        type: assez ? 'retirer' : 'completer',
         portee: 'compose',
         cible: c.nom,
-        texte: `Jamais quantifié sur ${nMax} campagnes, sur aucun ouvrage, avec une LQ adaptée : son retrait du programme analytique peut être proposé s'il n'est pas un traceur de la source.`,
-        critere: '< LQ sur au moins 4 campagnes et tous les ouvrages ; LQ ≤ valeur de référence.',
+        texte: assez
+          ? `Jamais quantifié sur ${nMax} campagnes (${fr(duree, 2)} ans, hautes et basses eaux), sur aucun ouvrage, avec une LQ adaptée : son retrait du programme peut être proposé s'il n'est ni un traceur de la source ni une substance encore utilisée ou stockée sur le site.`
+          : `Jamais quantifié sur ${nMax} campagnes, mais sur une période courte ou un seul régime hydrologique : un retrait serait prématuré.`,
+        critere: `Concentrations inférieures aux valeurs seuils depuis plusieurs années, sur une période représentative des variations de la nappe — ${GUIDE('16, 20 et 46')}.`,
       })
     }
   }
@@ -993,6 +1158,17 @@ function pistesSurveillance(
       continue
     }
     if (!ref) continue
+    const audessus = ss.filter((s) => (s.ratioDernier ?? 0) > 1)
+    if (audessus.length) {
+      pistes.push({
+        type: 'maintenir',
+        portee: 'compose',
+        cible: c.nom,
+        texte: `Au-dessus de la valeur de référence (${fr(ref.valeur)} ${c.unite}) à la dernière campagne sur ${audessus.map((s) => s.ouvrage.nom).join(', ')}${audessus.every((s) => s.classe === 'stable') ? ', de façon stable' : ''} : son abandon n'est pas envisageable.`,
+        critere: `Abandon d'une substance impossible si la mesure dépasse un critère de gestion, même stable dans le temps — ${GUIDE('9 et 39')}.`,
+      })
+      continue
+    }
     const nMin = Math.min(...ss.map((s) => s.n))
     const tousSous = ss.every((s) => s.ratioMax !== null && s.ratioMax < 0.5) && ss.every((s) => s.depassements === 0)
     if (tousSous && nMin >= 8 && ss.every((s) => s.classe !== 'sans-tendance')) {
@@ -1001,30 +1177,74 @@ function pistesSurveillance(
         portee: 'compose',
         cible: c.nom,
         texte: `Toujours sous la moitié de la valeur de référence (${fr(ref.valeur)} ${c.unite}) sur ${nMin} campagnes au moins, sans hausse : un allègement (fréquence, ouvrages) peut être proposé.`,
-        critere: 'Maximum < 50 % de la valeur de référence sur au moins 8 campagnes, aucune hausse.',
+        critere: `Concentrations inférieures aux valeurs seuils depuis plusieurs années, sans variation significative — ${GUIDE(20)}.`,
       })
     }
   }
 
-  // Network.
+  // ---- What the review lacks ----
+  const parents = ['tetrachloroethylene', 'trichloroethylene'].filter((n) => quantifiesNoms.has(n))
+  const analyses = new Set(base.composes.map((c) => compact(c.nom)))
+  const filles = [
+    { nom: 'cis-1,2-dichloroéthylène', variantes: ['cis12dichloroethylene', '12cisdichloroethylene', '12dichloroethylene'] },
+    { nom: 'chlorure de vinyle', variantes: ['chloruredevinyle', 'chloroethylene', 'monochloroethylene'] },
+  ].filter((f) => !f.variantes.some((v) => analyses.has(v)))
+  if (parents.length && filles.length) {
+    pistes.push({
+      type: 'completer',
+      portee: 'reseau',
+      cible: 'Produits de dégradation',
+      texte: `PCE / TCE quantifiés, mais ${filles.map((f) => f.nom).join(' et ')} non analysé${filles.length > 1 ? 's' : ''} : à ajouter au programme analytique.`,
+      critere: `Les produits fils de dégradation doivent être recherchés — ${GUIDE(15)}.`,
+    })
+  }
+  const carburants = quantifies.some((c) => /^(benzene|toluene|ethylbenzene|xylenes?.*)$/.test(compact(c.nom)) || /hydrocarbure/i.test(c.nom))
+  if (carburants && !['mtbe', 'methyltertbutylether', 'etbe', 'ethyltertbutylether'].some((v) => [...analyses].some((a) => a.includes(v)))) {
+    pistes.push({
+      type: 'completer',
+      portee: 'reseau',
+      cible: 'Additifs des carburants',
+      texte: "Hydrocarbures ou BTEX quantifiés sans recherche de MTBE / ETBE : si la pollution provient de carburants (station-service, dépôt), les adjuvants (plomb et MTBE pour les activités anciennes, ETBE pour les plus récentes, voire TBA) sont à ajouter.",
+      critere: `Substances suivies adaptées à l'activité, adjuvants des carburants — ${GUIDE(15)}.`,
+    })
+  }
+  const terrain = new Set(base.composes.filter((c) => c.terrain).map((c) => c.terrain))
+  const manquants = (['ph', 'od', 'orp'] as const).filter((t) => !terrain.has(t))
+  if (manquants.length && nC) {
+    pistes.push({
+      type: 'completer',
+      portee: 'reseau',
+      cible: 'Paramètres physico-chimiques',
+      texte: `${manquants.length === 3 ? 'Aucun paramètre de terrain chargé' : `Non suivis : ${manquants.map((t) => ({ ph: 'pH', od: 'oxygène dissous', orp: 'potentiel redox' })[t]).join(', ')}`} — ils sont nécessaires pour interpréter la dégradation des composés organiques et la réactivité des composés inorganiques ; chargez les fiches de prélèvement.`,
+      critere: `pH, oxygène dissous et potentiel redox exploités dans l'interprétation — ${GUIDE('15 et 18')}.`,
+    })
+  }
   const regimes = new Set(campagnes.map((c) => c.regime).filter(Boolean))
   if (nC >= 4 && regimes.size < 2) {
     pistes.push({
       type: 'completer',
       portee: 'reseau',
       cible: 'Calendrier',
-      texte: 'Les campagnes de la période ne couvrent pas à la fois les hautes et les basses eaux : le suivi devrait alterner les deux régimes pour saisir les variations saisonnières.',
-      critere: 'Au moins une campagne de hautes eaux et une de basses eaux par an (pratique courante, guide BRGM/INERIS « Surveillance de la qualité des eaux souterraines »).',
+      texte: 'Les campagnes de la période ne couvrent pas à la fois les hautes et les basses eaux : la période n’est pas représentative des variations de la nappe.',
+      critere: `Représentativité de la période de surveillance au regard des variations piézométriques connues — ${GUIDE(16)}.`,
     })
   }
   const sansCote = [...new Set(base.niveaux.filter((n) => n.charge === null && n.profondeur !== null).map((n) => n.ouvrage))]
-  if (sansCote.length && ouvrages.filter((o) => o.position === 'amont' || o.position === 'aval').length < 2) {
+  if (sansCote.length) {
     pistes.push({
       type: 'completer',
       portee: 'reseau',
       cible: 'Nivellement des repères',
-      texte: `Les niveaux de ${sansCote.length} ouvrage${sansCote.length > 1 ? 's' : ''} ne sont connus qu'en profondeur sous le repère : sans cote NGF, ni le sens d'écoulement ni la position amont / aval ne se déduisent des mesures. Un nivellement des têtes d'ouvrages, ou la carte piézométrique de l'étude, permet de les établir.`,
-      critere: 'Cotes NGF des repères nécessaires pour comparer les niveaux entre ouvrages.',
+      texte: `Les niveaux de ${sansCote.length} ouvrage${sansCote.length > 1 ? 's' : ''} ne sont connus qu'en profondeur sous le repère : sans cote NGF, ni le sens d'écoulement ni la position amont / aval ne se déduisent des mesures. Un nivellement des têtes d'ouvrages par un géomètre (précision centimétrique, m NGF) est attendu.`,
+      critere: `Mesures piézométriques en m NGF à chaque campagne, résultats du nivellement avec indication du niveau repère — ${GUIDE('14 et 16')}.`,
+    })
+  } else if (base.niveaux.length && !ecoulement && nC) {
+    pistes.push({
+      type: 'completer',
+      portee: 'reseau',
+      cible: "Sens d'écoulement",
+      texte: "Cotes NGF disponibles mais coordonnées des ouvrages manquantes (au moins trois, non alignés) : saisissez-les à l'étape 3 pour calculer le sens d'écoulement de chaque campagne.",
+      critere: `Sens d'écoulement déterminé à chaque campagne, variabilité saisonnière et interannuelle discutée — ${GUIDE(14)}.`,
     })
   }
   if (!base.niveaux.length && nC) {
@@ -1032,8 +1252,8 @@ function pistesSurveillance(
       type: 'completer',
       portee: 'reseau',
       cible: 'Piézométrie',
-      texte: "Aucun niveau d'eau chargé : la piézométrie de chaque campagne permet de vérifier le sens d'écoulement et le rôle (amont / aval) de chaque ouvrage, et d'interpréter les variations de concentration.",
-      critere: 'Relevé piézométrique à chaque campagne.',
+      texte: "Aucun niveau d'eau chargé : la piézométrie de chaque campagne (chronique et carte) est attendue dans le bilan, pour le sens d'écoulement, le rôle de chaque ouvrage et l'interprétation des concentrations.",
+      critere: `Mesures piézométriques à chaque campagne, intégrées dans une chronique et une carte — ${GUIDE(16)}.`,
     })
   }
   if (nC && nC < r.nRobuste) {
@@ -1045,17 +1265,347 @@ function pistesSurveillance(
       critere: 'Au moins 10 résultats par série (outil HYPE, BRGM).',
     })
   }
+  if (rebonds) {
+    if (rebonds.campagnesApres < 3)
+      pistes.push({
+        type: 'completer',
+        portee: 'reseau',
+        cible: 'Après le traitement',
+        texte: `${rebonds.campagnesApres} campagne${rebonds.campagnesApres > 1 ? 's' : ''} depuis l'arrêt du traitement : plusieurs campagnes sur l'ensemble du réseau sont nécessaires pour écarter un effet rebond avant toute demande d'allègement ou d'arrêt.`,
+        critere: `Durée suffisante après l'arrêt des installations, au-delà de la période d'éventuels effets rebonds — ${GUIDE('17 et 52')}.`,
+      })
+    else if (rebonds.series.length)
+      pistes.push({
+        type: 'renforcer',
+        portee: 'reseau',
+        cible: 'Effet rebond',
+        texte: `Remontée des concentrations depuis l'arrêt du traitement : ${rebonds.series.map((s) => `${s.compose.nom} sur ${s.ouvrage.nom}`).join(', ')} — maintenir la surveillance de ces ouvrages et examiner la source résiduelle.`,
+        critere: `Prise en compte des effets rebonds — ${GUIDE('12, 17 et 18')}.`,
+      })
+  }
   if (series.some((s) => s.compose.terrain === null && s.classe === 'hausse' && /vinyle|chloroethylene/.test(compact(s.compose.nom)))) {
     pistes.push({
       type: 'completer',
       portee: 'reseau',
-      cible: 'Paramètres',
+      cible: 'Accepteurs et donneurs d’électrons',
       texte: "Le chlorure de vinyle augmente : l'analyse de l'éthène et de l'éthane (fin de la déchloration) et des indicateurs redox (O2, nitrates, fer II, sulfates, méthane) permet de juger si la dégradation va à son terme.",
-      critere: 'Atténuation naturelle des solvants chlorés (USEPA, 1998).',
+      critere: `Ajout des accepteurs et donneurs d'électrons pertinent pour évaluer l'atténuation — ${GUIDE(20)} ; USEPA (1998).`,
     })
   }
   const ordre: TypePiste[] = ['renforcer', 'maintenir', 'completer', 'alleger', 'retirer']
   return pistes.sort((a, b) => ordre.indexOf(a.type) - ordre.indexOf(b.type))
+}
+
+// ---- Guide 2022: upgradient → downgradient, low water, rebound ---------------------------------------
+
+/**
+ * Concentrations higher downgradient than upgradient over several
+ * campaigns point to a continuous flux to the groundwater, hence a
+ * possibly uncontrolled source (guide 2022, p. 18): campaigns where the
+ * compound is quantified on site or downgradient and either not quantified
+ * upgradient or at least twice the upgradient result.
+ */
+function fluxAmontAval(amontAval: AmontAvalCompose[], references: Map<string, Reference | null>): FluxContinu[] {
+  const out: FluxContinu[] = []
+  for (const x of amontAval) {
+    if (x.compose.calcule || x.compose.terrain) continue
+    const comparables = x.campagnes.filter((l) => l.amont && (l.aval || l.droit))
+    if (comparables.length < 3) continue
+    const plus = comparables.map((l) => {
+      const v = [l.aval, l.droit].filter((p): p is PointMax => !!p && !p.inferieur).sort((a, b) => b.valeur - a.valeur)[0]
+      return !!v && (l.amont!.inferieur ? v.valeur > l.amont!.valeur : v.valeur >= 2 * l.amont!.valeur)
+    })
+    const n = plus.filter(Boolean).length
+    if (n < 3) continue
+    const ref = references.get(x.compose.cle)
+    const depasse = !!ref && x.campagnes.some((l) => [l.aval, l.droit].some((p) => p && !p.inferieur && p.valeur > ref.valeur))
+    out.push({ compose: x.compose, campagnes: n, comparables: comparables.length, recent: plus.slice(-2).every(Boolean), depasse, metal: /m[ée]tal|m[ée]taux|[ée]l[ée]ments? traces?/i.test(x.compose.famille) })
+  }
+  return out
+}
+
+/**
+ * A recent fall of the concentrations together with a low water table:
+ * the fall may only reflect an exceptionally low water level (guide 2022,
+ * p. 17). Series falling (or no longer quantified) whose well stood, at the
+ * last two campaigns, among the lowest fifth of its levels.
+ */
+function baissesAvecNappeBasse(series: AnalyseSerie[], piezo: PiezoOuvrage[]): AnalyseSerie[] {
+  const out: AnalyseSerie[] = []
+  for (const p of piezo) {
+    if (p.serie.length < 5) continue
+    const tries = p.serie.map((x) => x.v).sort((a, b) => a - b)
+    const bas = tries[Math.floor((tries.length - 1) * 0.2)]
+    const derniers = p.serie.slice(-2)
+    if (!derniers.every((x) => x.v <= bas)) continue
+    for (const s of series) {
+      if (s.ouvrage !== p.ouvrage || s.compose.terrain || s.compose.calcule) continue
+      if (s.classe === 'baisse' || s.classe === 'baisse-probable' || s.disparition || s.repasseSous || (s.rupture && !s.rupture.hausse)) out.push(s)
+    }
+  }
+  return out
+}
+
+/** After the end of the remediation: series rising since (Mann-Kendall p ≤ 2α), or whose last result doubles the lowest since. */
+function rebondsApres(series: AnalyseSerie[], campagnes: Campagne[], r: Reglages): NonNullable<Analyse['rebonds']> {
+  const fin = r.finTraitement!
+  const apres = campagnes.filter((c) => c.date > fin).length
+  const out: AnalyseSerie[] = []
+  for (const s of series) {
+    if (s.compose.terrain || s.compose.calcule) continue
+    const post = s.retenus.filter((p) => p.date > fin)
+    if (post.length < 3 || post.every((p) => p.inferieur)) continue
+    const mk = mannKendall(post.map((p) => p.rang))
+    const min = Math.min(...post.map((p) => p.valeur))
+    const der = post[post.length - 1]
+    if ((mk && mk.S > 0 && mk.pBilateral <= 2 * r.alpha) || (!der.inferieur && der.valeur >= 2 * min && der.valeur > post[0].valeur)) out.push(s)
+  }
+  return { series: out, campagnesApres: apres }
+}
+
+function faitsGuide(flux: FluxContinu[], basses: AnalyseSerie[], rebonds: Analyse['rebonds'], r: Reglages): Fait[] {
+  const faits: Fait[] = []
+  const recents = flux.filter((f) => f.recent)
+  if (recents.length) {
+    faits.push({
+      niveau: recents.some((f) => f.depasse) ? 'alerte' : 'vigilance',
+      titre: 'Concentrations plus fortes à l’aval qu’à l’amont, campagne après campagne',
+      detail: `${recents.map((f) => `${f.compose.nom} (${f.campagnes} campagnes sur ${f.comparables})`).join(', ')} : pour des substances liées au site, une augmentation d'amont en aval sur plusieurs campagnes indique un flux continu de polluants vers la nappe et donc la présence potentielle d'une source non maîtrisée, qu'il conviendra de gérer (${GUIDE(18)}).${recents.some((f) => f.metal) ? ` Pour les métaux (${recents.filter((f) => f.metal).map((f) => f.compose.nom).join(', ')}), le fond géochimique local est à considérer avant de conclure.` : ''}`,
+      poids: recents.some((f) => f.depasse) ? 84 : 62,
+    })
+  }
+  if (basses.length) {
+    faits.push({
+      niveau: 'vigilance',
+      titre: 'Baisse récente avec une nappe basse',
+      detail: `${basses.map((s) => `${s.compose.nom} sur ${s.ouvrage.nom}`).join(', ')} : la baisse coïncide avec des niveaux parmi les plus bas de la chronique aux deux dernières campagnes. Elle peut tenir à une nappe exceptionnellement basse plutôt qu'à une amélioration durable — à confirmer en hautes eaux avant d'appuyer une demande d'allègement ou d'arrêt (${GUIDE(17)}).`,
+      poids: 57,
+    })
+  }
+  if (rebonds?.series.length) {
+    faits.push({
+      niveau: 'alerte',
+      titre: `Effet rebond après l'arrêt du traitement (${r.finTraitement})`,
+      detail: `${rebonds.series.map((s) => `${s.compose.nom} sur ${s.ouvrage.nom}`).join(', ')} : concentrations en remontée sur les ${rebonds.campagnesApres} campagnes suivant l'arrêt (${GUIDE('12 et 18')}).`,
+      poids: 86,
+    })
+  }
+  return faits
+}
+
+// ---- Guide 2022: reading grid ----------------------------------------------------------------------------
+
+/**
+ * The points of the guide's reading grid (§ 2.4 to 2.6, logigramme p. 9)
+ * that the data loaded can answer, checked one by one; the others are
+ * listed « à vérifier » with what to look at.
+ */
+function grilleGuide(a: Analyse): PointGrille[] {
+  const g: PointGrille[] = []
+  const nC = a.campagnes.length
+  const ouvrages = a.ouvrages
+  const amont = ouvrages.filter((o) => o.position === 'amont')
+  const aval = ouvrages.filter((o) => o.position === 'aval')
+  const minimum = reseauMinimal(a.ecoulement)
+  const labo = a.series.filter((s) => s.n > 0 && !s.compose.terrain && !s.compose.calcule)
+  const noms = (ss: AnalyseSerie[]) => [...new Set(ss.map((s) => `${s.compose.nom} (${s.ouvrage.nom})`))].slice(0, 8).join(', ')
+
+  // Step 2.
+  g.push({
+    etape: 2,
+    code: '2.a',
+    intitule: 'Réseau minimal après évolution',
+    statut: ouvrages.length >= minimum && amont.length >= 1 && aval.length >= 2 ? 'ok' : ouvrages.length >= minimum ? 'partiel' : 'non',
+    constat: `${ouvrages.length} ouvrages analysés, dont ${amont.length} amont et ${aval.length} aval ; minimum ${minimum}${minimum === 5 ? " (sens d'écoulement variable)" : ' (1 amont, 2 aval)'}. ${ouvrages.length > minimum ? `Jusqu'à ${ouvrages.length - minimum} ouvrage(s) abandonnable(s) au regard de ce seul critère, jamais l'amont.` : "Aucun abandon d'ouvrage envisageable."}`,
+    page: 12,
+  })
+  const audessus = labo.filter((s) => (s.ratioDernier ?? 0) > 1)
+  g.push({
+    etape: 2,
+    code: '2.b',
+    intitule: "Abandon de substances : aucune au-dessus d'un critère de gestion",
+    statut: audessus.length ? 'partiel' : 'ok',
+    constat: audessus.length
+      ? `Abandon impossible pour : ${[...new Set(audessus.map((s) => s.compose.nom))].join(', ')} (au-dessus de la valeur de référence à la dernière campagne).`
+      : 'Aucune substance au-dessus de sa valeur de référence à la dernière campagne.',
+    page: 9,
+  })
+  // Step 3.
+  const eCamp = a.ecoulement?.campagnes.length ?? 0
+  const sansCote = a.piezo.filter((p) => !p.enCharge)
+  g.push({
+    etape: 3,
+    code: 'A',
+    intitule: "Sens d'écoulement déterminé à chaque campagne",
+    statut: eCamp && eCamp >= nC ? 'ok' : eCamp ? 'partiel' : 'non',
+    constat: a.ecoulement
+      ? `Calculé pour ${eCamp} campagne(s) sur ${nC} : vers le ${direction(a.ecoulement.azimutMoyen)}, écart entre campagnes ${Math.round(a.ecoulement.dispersion)}°.`
+      : !a.piezo.length
+        ? 'Aucun niveau d’eau chargé.'
+        : sansCote.length
+          ? 'Niveaux connus en profondeur sous repère seulement : sens d’écoulement non calculable sans cotes NGF.'
+          : 'Coordonnées des ouvrages manquantes (au moins trois, non alignés).',
+    page: 14,
+  })
+  g.push({
+    etape: 3,
+    code: 'B',
+    intitule: 'Rôle de chaque ouvrage explicité (amont, aval…)',
+    statut: ouvrages.every((o) => o.position !== 'autre') && amont.length ? 'ok' : amont.length ? 'partiel' : 'non',
+    constat: `${ouvrages.filter((o) => o.position === 'autre').length} ouvrage(s) sans position ; ${amont.length ? `amont : ${amont.map((o) => o.nom).join(', ')}` : "aucun ouvrage amont identifié"}.${a.ecoulement?.incoherences.length ? ` Positions à vérifier au regard de l'écoulement : ${a.ecoulement.incoherences.map((x) => x.ouvrage.nom).join(', ')}.` : ''}`,
+    page: 14,
+  })
+  g.push({
+    etape: 3,
+    code: 'C',
+    intitule: 'Ouvrages : nivellement en m NGF, coupes et crépines',
+    statut: a.piezo.length && !sansCote.length ? 'partiel' : 'non',
+    constat: `${a.piezo.length && !sansCote.length ? 'Cotes NGF disponibles pour tous les ouvrages suivis en piézométrie.' : sansCote.length ? `Repère sans cote NGF : ${sansCote.map((p) => p.ouvrage.nom).join(', ')}.` : 'Aucune cote NGF.'} Coupes techniques et position des crépines (captage des plus hautes eaux, produits plongeants) à vérifier dans le dossier.`,
+    page: 14,
+  })
+  const parents = a.composesQuantifies.some((c) => /^(tetrachloroethylene|trichloroethylene)$/.test(compact(c.nom)))
+  if (parents) {
+    const analyses = new Set(a.base.composes.map((c) => compact(c.nom)))
+    const ok = ['cis12dichloroethylene', '12cisdichloroethylene', '12dichloroethylene'].some((v) => analyses.has(v)) && ['chloruredevinyle', 'chloroethylene'].some((v) => analyses.has(v))
+    g.push({
+      etape: 3,
+      code: 'D.1',
+      intitule: 'Produits de dégradation recherchés (solvants chlorés)',
+      statut: ok ? 'ok' : 'non',
+      constat: ok ? 'PCE / TCE quantifiés, DCE et chlorure de vinyle analysés.' : 'PCE / TCE quantifiés sans recherche complète du DCE et du chlorure de vinyle.',
+      page: 15,
+    })
+  }
+  const terrain = new Set(a.base.composes.filter((c) => c.terrain).map((c) => c.terrain))
+  const nTerrain = (['ph', 'od', 'orp'] as const).filter((t) => terrain.has(t)).length
+  g.push({
+    etape: 3,
+    code: 'D.2',
+    intitule: 'Paramètres physico-chimiques (pH, O2, redox) suivis',
+    statut: nTerrain === 3 ? 'ok' : nTerrain ? 'partiel' : 'non',
+    constat: nTerrain ? `${nTerrain} sur 3 suivis (fiches de prélèvement).` : 'Aucun paramètre de terrain chargé.',
+    page: 15,
+  })
+  g.push({
+    etape: 3,
+    code: 'E',
+    intitule: "Plan d'échantillonnage identique sur toute la période",
+    statut: 'a-verifier',
+    constat: "Matériel, position de la pompe, conditions de purge et de prélèvement à comparer d'une campagne à l'autre (fiches de prélèvement) ; en cas de changement de protocole, les deux mis en œuvre en parallèle.",
+    page: 15,
+  })
+  // The LQ that matters is the current one: the last result of the series, below an LQ above the reference.
+  const lq = labo.filter((s) => s.reference && s.derniere?.inferieur && s.derniere.valeur > s.reference.valeur)
+  g.push({
+    etape: 3,
+    code: 'F.1',
+    intitule: 'Limites de quantification inférieures aux valeurs de référence',
+    statut: lq.length ? 'non' : 'ok',
+    constat: lq.length ? `LQ actuelle au-dessus de la référence : ${[...new Set(lq.map((s) => s.compose.nom))].join(', ')}.` : 'LQ actuelles sous les valeurs de référence pour tous les composés comparés. Incertitude analytique à reporter.',
+    page: 15,
+  })
+  const campagnesNGF = a.campagnes.filter((c) => a.ouvrages.every((o) => a.base.niveaux.some((n) => n.ouvrage === o.cle && n.campagne === c.id && n.charge !== null))).length
+  g.push({
+    etape: 3,
+    code: 'F.2',
+    intitule: 'Piézométrie en m NGF à chaque campagne (chronique et carte)',
+    statut: campagnesNGF === nC && nC ? 'ok' : campagnesNGF || a.piezo.length ? 'partiel' : 'non',
+    constat: `${campagnesNGF} campagne(s) sur ${nC} avec une cote NGF sur tous les ouvrages.${sansCote.length ? ' Profondeurs sous repère seulement pour une partie des ouvrages.' : ''} Cartes piézométriques à joindre.`,
+    page: 16,
+  })
+  g.push({ etape: 3, code: 'G', intitule: 'Schéma conceptuel à jour', statut: 'a-verifier', constat: 'Contexte hydrogéologique, sources, ouvrages et crépines, enjeux (dont dégazage vers l’air intérieur pour les composés volatils) : dans le dossier.', page: 16 })
+  const duree = nC ? a.campagnes[nC - 1].t - a.campagnes[0].t : 0
+  const regimes = new Set(a.campagnes.map((c) => c.regime).filter(Boolean)).size
+  g.push({
+    etape: 3,
+    code: 'H',
+    intitule: 'Représentativité de la période de surveillance',
+    statut: duree >= 3.5 && regimes >= 2 && nC >= 8 ? 'ok' : nC >= 4 ? 'partiel' : 'non',
+    constat: `${nC} campagnes sur ${fr(duree, 2)} an(s), ${regimes >= 2 ? 'hautes et basses eaux' : 'un seul régime hydrologique'}.${a.baissesNappeBasse.length ? ' Baisse récente concomitante d’une nappe basse sur certains ouvrages.' : ''} Temps de transfert et cinétique des phénomènes à discuter.`,
+    page: 16,
+  })
+  // Step 4.
+  g.push({
+    etape: 4,
+    code: '4.1',
+    intitule: 'Écarts amont / aval analysés',
+    statut: !amont.length || !(aval.length || ouvrages.some((o) => o.position === 'droit')) ? 'non' : a.fluxContinu.some((f) => f.recent) ? 'partiel' : 'ok',
+    constat: !amont.length
+      ? 'Pas d’ouvrage amont : pas de comparaison à l’environnement local témoin.'
+      : a.fluxContinu.some((f) => f.recent)
+        ? `Plus fort à l'aval qu'à l'amont sur plusieurs campagnes : ${a.fluxContinu.filter((f) => f.recent).map((f) => f.compose.nom).join(', ')} — flux continu, source potentiellement non maîtrisée.`
+        : 'Comparaison amont / aval disponible par campagne (volet Amont / aval).',
+    page: 17,
+  })
+  if (a.degradation.length)
+    g.push({
+      etape: 4,
+      code: '4.2',
+      intitule: 'Ratios entre molécules mères et filles',
+      statut: 'ok',
+      constat: `Parts molaires et chlore moyen suivis sur ${a.degradation.length} ouvrage(s)${a.degradation.some((d) => d.stade === 'stagnation-dce' || d.stade === 'accumulation-cv') ? ' ; blocage ou accumulation détecté' : ''}.`,
+      page: 18,
+    })
+  g.push({
+    etape: 4,
+    code: '4.3',
+    intitule: 'Données physico-chimiques prises en compte',
+    statut: nTerrain ? 'ok' : 'non',
+    constat: nTerrain ? 'Tendances des paramètres de terrain calculées comme pour les composés (tableau des tendances).' : 'Aucun paramètre de terrain.',
+    page: 18,
+  })
+  const liens = a.piezo.some((p) => p.correlations.length)
+  g.push({
+    etape: 4,
+    code: '4.4',
+    intitule: 'Concentrations mises en relation avec les niveaux de la nappe',
+    statut: liens ? 'ok' : a.piezo.length ? 'partiel' : 'non',
+    constat: liens
+      ? `Lien concentration – niveau testé (tau de Kendall) ; significatif pour ${a.piezo.flatMap((p) => p.correlations.filter((c) => c.c.p <= a.reglages.alpha)).length} série(s).`
+      : a.piezo.length
+        ? 'Niveaux chargés mais trop peu de campagnes appariées (6 au moins) pour tester le lien.'
+        : 'Aucun niveau d’eau.',
+    page: 18,
+  })
+  g.push({ etape: 4, code: '4.5', intitule: 'Événements anthropiques et climatiques', statut: 'a-verifier', constat: 'Travaux, incidents, pompages voisins, épisodes de pluie ou d’étiage à rapprocher des ruptures et des valeurs atypiques signalées.', page: 18 })
+  const hausses = labo.filter((s) => s.classe === 'hausse' || s.classe === 'hausse-probable')
+  g.push({
+    etape: 4,
+    code: '4.6',
+    intitule: 'Pérennité : pas de tendance à la hausse',
+    statut: hausses.length ? 'non' : 'ok',
+    constat: hausses.length ? `Hausse sur : ${noms(hausses)}.` : 'Aucune série en hausse sur la période.',
+    page: 18,
+  })
+  g.push({
+    etape: 4,
+    code: '4.7',
+    intitule: 'Pérennité : baisse non liée à une nappe exceptionnellement basse',
+    statut: !a.piezo.length ? 'a-verifier' : a.baissesNappeBasse.length ? 'partiel' : 'ok',
+    constat: !a.piezo.length ? 'Sans niveaux d’eau, à vérifier sur les données hydrologiques.' : a.baissesNappeBasse.length ? `À confirmer en hautes eaux : ${noms(a.baissesNappeBasse)}.` : 'Aucune baisse récente concomitante d’une nappe parmi les plus basses de la chronique.',
+    page: 17,
+  })
+  g.push({
+    etape: 4,
+    code: '4.8',
+    intitule: 'Pérennité : effets rebonds pris en compte',
+    statut: !a.rebonds ? 'a-verifier' : a.rebonds.series.length ? 'non' : a.rebonds.campagnesApres >= 3 ? 'ok' : 'partiel',
+    constat: !a.rebonds
+      ? "Si un traitement a eu lieu, saisissez la date de son arrêt (réglages) pour rechercher un rebond."
+      : a.rebonds.series.length
+        ? `Remontée après l'arrêt du traitement : ${noms(a.rebonds.series)}.`
+        : `${a.rebonds.campagnesApres} campagne(s) depuis l'arrêt du traitement, sans remontée détectée${a.rebonds.campagnesApres < 3 ? ' — trop peu pour conclure' : ''}.`,
+    page: 17,
+  })
+  g.push({
+    etape: 4,
+    code: '4.9',
+    intitule: 'Évaluation quantitative temporelle (optionnelle)',
+    statut: labo.some((s) => s.statut === 'teste') ? 'ok' : 'non',
+    constat: `Mann-Kendall et pente de Sen sur ${labo.filter((s) => s.statut === 'teste').length} série(s), comme l'outil HYPE du BRGM cité dans le guide.`,
+    page: 37,
+  })
+  return g
 }
 
 // ---- Data quality -------------------------------------------------------------------------------------

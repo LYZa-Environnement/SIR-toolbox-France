@@ -11,7 +11,7 @@ import type { Workbook, Worksheet } from 'exceljs'
 import { LIBELLES_POSITION } from '../resultats/expert/amontAval.ts'
 import { argb, BANDEAU, eclaircir, ETAT } from '../resultats/couleurs.ts'
 import { ecrire, VERT_ENTETE, type Style } from '../resultats/export.ts'
-import { CLASSES, direction, fr, LIBELLES_CENSURE, LIBELLES_PISTE, ORDRE_CLASSES, pTexte, type Analyse, type AnalyseSerie, type NiveauFait } from './analyse.ts'
+import { CLASSES, direction, fr, LIBELLES_CENSURE, LIBELLES_PISTE, LIBELLES_STATUT_GRILLE, ORDRE_CLASSES, pTexte, type Analyse, type AnalyseSerie, type NiveauFait } from './analyse.ts'
 import { formatDate } from './dates.ts'
 import { figureCompose, figureDegradation, figureEcoulement, figureNiveaux, figureOuvrage, figureSerie } from './figures.ts'
 import { barresSvg, svgEnPng } from './graphique.ts'
@@ -154,6 +154,35 @@ function feuilleSynthese(wb: Workbook, a: Analyse, site: string) {
     ecrire(ws, r, 2, ps.map((p) => p.cible).join(', '), { taille: 9, wrap: true })
     ws.mergeCells(r, 2, r, 3)
     r++
+  }
+  ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
+}
+
+function feuilleGrille(ws: Worksheet, a: Analyse) {
+  ;[8, 46, 14, 100, 7].forEach((l, i) => (ws.getColumn(i + 1).width = l))
+  let r = 1
+  ecrire(ws, r++, 1, 'Grille de lecture du guide « Évolution et arrêt de la surveillance des eaux souterraines »', { gras: true, taille: 12, bord: false })
+  r = texte(
+    ws,
+    r,
+    "BRGM / INERIS pour le ministère de la Transition écologique, décembre 2022. Points que les données chargées permettent de juger, évalués automatiquement ; les autres sont à vérifier dans le dossier. L'étape 1 (recevabilité) suppose un bilan quadriennal conforme au guide « Surveillance de la qualité des eaux souterraines ». L'exigence de justification est plus forte pour un arrêt total que pour une évolution (p. 17).",
+    5,
+  )
+  const titres: Record<number, string> = { 2: 'Étape 2 — Éligibilité de la demande', 3: 'Étape 3 — Respect des exigences techniques', 4: "Étape 4 — Justification de l'argumentation" }
+  for (const e of [2, 3, 4] as const) {
+    r++
+    r = bandeau(ws, r, titres[e], 5)
+    entete(ws, r++, ['Point', 'Exigence', 'Statut', 'Constat sur les données', 'Page'])
+    for (const g of a.grille.filter((x) => x.etape === e)) {
+      const st = LIBELLES_STATUT_GRILLE[g.statut]
+      ecrire(ws, r, 1, g.code, { taille: 9, gras: true, h: 'center' })
+      ecrire(ws, r, 2, g.intitule, { taille: 9, wrap: true })
+      ecrire(ws, r, 3, st.libelle, { taille: 9, gras: true, fond: argb(st.fond), couleur: argb(st.couleur), h: 'center' })
+      ecrire(ws, r, 4, g.constat, { taille: 9, wrap: true })
+      ecrire(ws, r, 5, g.page, { taille: 9, h: 'center' })
+      ws.getRow(r).height = Math.max(15, Math.ceil(g.constat.length / 110) * 12.5, Math.ceil(g.intitule.length / 50) * 12.5)
+      r++
+    }
   }
   ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
 }
@@ -653,6 +682,10 @@ function feuilleMethode(ws: Worksheet, a: Analyse) {
       'Guides BRGM/INERIS pour le ministère : « Surveillance de la qualité des eaux souterraines appropriée aux installations classées et sites pollués » (déc. 2022) et « Évolution et arrêt de la surveillance des eaux souterraines » (déc. 2022).',
       false,
     ],
+    [
+      "Pistes et grille : questions et critères du guide « Évolution et arrêt de la surveillance des eaux souterraines » (2022) — réseau résiduel d'au moins 3 ouvrages dont 1 amont et 2 aval, 5 si le sens d'écoulement varie (p. 12 et 19) ; ouvrage amont jamais abandonné (p. 30) ; substance au-dessus d'un critère de gestion, même stable, jamais abandonnée (p. 9 et 39) ; produits de dégradation, physico-chimie, LQ sous les valeurs de référence (p. 15) ; piézométrie en m NGF (p. 14 et 16) ; augmentation d'amont en aval sur plusieurs campagnes = flux continu (p. 18) ; baisse concomitante d'une nappe basse (p. 17) ; effets rebonds (p. 12 et 17). Ouvrages redondants : tau de Kendall ≥ 0,6 et médianes à un facteur 2 près pour chaque composé quantifié, à confirmer par la cartographie du panache (p. 19 et 46).",
+      false,
+    ],
     ['Valeurs de comparaison : tableau ERM des valeurs indicatives pour les eaux souterraines (arrêté du 11 janvier 2007 modifié, arrêté du 17 décembre 2008 modifié, valeurs locales), sauf valeur saisie.', false],
   ]
   let r = 1
@@ -800,6 +833,7 @@ export async function construireClasseurSuivi(a: Analyse, site: string): Promise
   const img = (x: { nom: string; svg: string; largeur: number; hauteur: number }, titre = x.nom) => image(titre, x.svg, x.largeur, x.hauteur)
 
   feuilleSynthese(wb, a, site)
+  feuilleGrille(wb.addWorksheet('Grille guide 2022', { views: [{ showGridLines: false }] }), a)
   feuilleTendances(wb.addWorksheet('Tendances'), a)
   feuilleMatrice(wb.addWorksheet('Matrice tendances', { views: [{ showGridLines: false }] }), a)
   feuilleChroniquesOuvrages(wb.addWorksheet('Chroniques par ouvrage'), a)
