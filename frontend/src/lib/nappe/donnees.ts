@@ -57,7 +57,7 @@ const aplatir = (nom: string) =>
  * (ignoring a date in the sample name), else the sheet whose name begins the
  * sample name ("PzC11 - ESO 1" → PzC11, but not PzC1), else itself.
  */
-export function associationAuto(nomEchantillon: string, fiches: FicheTerrain[]): string {
+export function associationAuto(nomEchantillon: string, fiches: Pick<FicheTerrain, 'ouvrage' | 'onglet'>[]): string {
   const echantillon = aplatir(nomEchantillon)
   const cle = cleOuvrage(echantillon)
   const f = fiches.find((x) => cleOuvrage(x.ouvrage) === cle) ?? fiches.find((x) => cleOuvrage(x.onglet) === cle)

@@ -1,4 +1,6 @@
 import { volumeLitres, type Prelevement, type UniteSortie } from '../lib/resultats/calc'
+import { useTri } from '../lib/tri'
+import { EnTete } from './Tri'
 import type { Lecture } from '../lib/resultats/parse'
 import {
   controleBlancs,
@@ -34,6 +36,11 @@ export function ControleQualite({ lecture, qualifications, onQualifier, seuilDou
     pt.composes.filter((c) => c.percee).map((c) => ({ point: pt.point, nom: c.parametre.nom, ratio: c.ratio })),
   )
   const perceesGlobales = percees.filter((p) => p.perceeGlobale)
+  const triQ = useTri(lecture.points, {
+    nom: (p) => p.nom,
+    type: (p) => qualifications[p.nom]?.type ?? 'echantillon',
+    de: (p) => qualifications[p.nom]?.de,
+  })
 
   return (
     <div className="card" style={{ marginTop: '1.5rem' }}>
@@ -53,13 +60,19 @@ export function ControleQualite({ lecture, qualifications, onQualifier, seuilDou
           <table className="tableau">
             <thead>
               <tr>
-                <th>Échantillon</th>
-                <th>Type</th>
-                <th>Doublon de</th>
+                <EnTete cle="nom" tri={triQ.tri} onTrier={triQ.trier}>
+                  Échantillon
+                </EnTete>
+                <EnTete cle="type" tri={triQ.tri} onTrier={triQ.trier}>
+                  Type
+                </EnTete>
+                <EnTete cle="de" tri={triQ.tri} onTrier={triQ.trier}>
+                  Doublon de
+                </EnTete>
               </tr>
             </thead>
             <tbody>
-              {lecture.points.map((p) => {
+              {triQ.tries.map((p) => {
                 const q = qualifications[p.nom] ?? { type: 'echantillon', auto: true }
                 return (
                   <tr key={p.nom} className={q.type !== 'echantillon' ? 'tableau__selection' : undefined}>
@@ -261,6 +274,18 @@ export function AnalyseApercu({
     s: statistiques(valeursCompose(lecture, pa, echantillons, conversion), guides[pa.cle]?.valeur ?? null),
   }))
   const n = (x: number | null) => (x === null ? '-' : fr(x))
+  const { tries, tri, trier } = useTri(lignes, {
+    nom: (l) => l.pa.nom,
+    quantifies: (l) => l.s.quantifies,
+    max: (l) => l.s.max,
+    ech: (l) => l.s.echantillonMax,
+    mediane: (l) => l.s.mediane,
+    moyenne: (l) => l.s.moyenne,
+    guide: (l) => l.s.guide,
+    depassements: (l) => (l.s.guide === null ? null : l.s.depassements),
+    ratio: (l) => l.s.ratioMaxGuide,
+  })
+  const th = { tri, onTrier: trier }
   return (
     <details className="qualif" style={{ marginTop: '1.5rem' }}>
       <summary>Analyse par composé (aperçu — le détail complet est dans l'onglet Excel)</summary>
@@ -268,19 +293,19 @@ export function AnalyseApercu({
         <table className="tableau tableau--resultats">
           <thead>
             <tr>
-              <th>Composé</th>
-              <th>Dépassements de la LQ / analysés</th>
-              <th>Maximum</th>
-              <th>Échantillon du max.</th>
-              <th>Médiane</th>
-              <th>Moyenne</th>
-              <th>Valeur guide</th>
-              <th>Dépassements</th>
-              <th>Max / valeur guide</th>
+              <EnTete cle="nom" {...th}>Composé</EnTete>
+              <EnTete cle="quantifies" {...th}>Dépassements de la LQ / analysés</EnTete>
+              <EnTete cle="max" {...th}>Maximum</EnTete>
+              <EnTete cle="ech" {...th}>Échantillon du max.</EnTete>
+              <EnTete cle="mediane" {...th}>Médiane</EnTete>
+              <EnTete cle="moyenne" {...th}>Moyenne</EnTete>
+              <EnTete cle="guide" {...th}>Valeur de comparaison</EnTete>
+              <EnTete cle="depassements" {...th}>Dépassements</EnTete>
+              <EnTete cle="ratio" {...th}>Max / valeur de comparaison</EnTete>
             </tr>
           </thead>
           <tbody>
-            {lignes.map(({ pa, s }) => (
+            {tries.map(({ pa, s }) => (
               <tr key={pa.cle}>
                 <th scope="row">{pa.nom}</th>
                 <td>

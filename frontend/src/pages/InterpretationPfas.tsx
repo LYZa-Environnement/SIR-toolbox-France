@@ -501,7 +501,7 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
               <p className="pfas-note" style={{ maxWidth: '48rem', marginTop: '1rem' }}>
                 {matrice === 'eau'
                   ? 'Le 6:2 FTS n’a pas d’échelle : aucune valeur de gestion ni ordre de grandeur publié n’a été retenu. Ses résultats figurent dans la vue d’ensemble, la comparaison des échantillons et la lecture détaillée (rapport avec ses produits de dégradation).'
-                  : 'Le TFA et le 6:2 FTS n’ont pas d’échelle : aucune valeur de référence publiée n’a été retenue pour les sols. Leurs résultats figurent dans la vue d’ensemble, la comparaison des échantillons et la lecture détaillée.'}
+                  : 'Le TFA et le 6:2 FTS n’ont pas d’échelle : aucune valeur de comparaison publiée n’a été retenue pour les sols. Leurs résultats figurent dans la vue d’ensemble, la comparaison des échantillons et la lecture détaillée.'}
               </p>
             </div>
           </section>

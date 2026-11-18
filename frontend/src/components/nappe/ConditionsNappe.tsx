@@ -1,9 +1,11 @@
-import { Fragment, useMemo, useState } from 'react'
-import { lireNombre } from '../lib/resultats/calc'
-import { fusionnerLectures } from '../lib/resultats/fusion'
-import { lireClasseur, type Lecture } from '../lib/resultats/parse'
-import TransportBiochlor from '../components/nappe/TransportBiochlor'
-import { associationAuto, construireJeu, decalageFiches } from '../lib/nappe/donnees'
+import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useTri } from '../../lib/tri'
+import { EnTete } from '../Tri'
+import { lireNombre } from '../../lib/resultats/calc'
+import type { Lecture } from '../../lib/resultats/parse'
+import type { Rapport } from '../../lib/nappe/export'
+import { VisuelsNappe } from './VisuelsNappe'
+import { associationAuto, construireJeu, decalageFiches } from '../../lib/nappe/donnees'
 import {
   BAREME_CLASSES,
   COMPOSES_FILIATION,
@@ -18,16 +20,14 @@ import {
   type Favorabilite,
   type Niveau,
   type Statut,
-} from '../lib/nappe/evaluation'
-import { cleOuvrage, lireFiches, type FicheTerrain } from '../lib/nappe/fiches'
-import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../lib/nappe/parametres'
-import { SOURCES } from '../lib/nappe/sources'
-import { LIBELLES_ETAT, synthetiser, type Etat, type Synthese } from '../lib/nappe/synthese'
-import { calculerTransport, HYDRO_DEFAUT, type SaisieHydro } from '../lib/nappe/transport'
-import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../lib/nappe/recap'
-import { lireFeuilles } from '../lib/fichiers'
-import ZoneDepot from '../components/ZoneDepot'
-import { jourIso, nombreFrOuTiret } from '../lib/format'
+} from '../../lib/nappe/evaluation'
+import { cleOuvrage, lireFiches, type FicheTerrain } from '../../lib/nappe/fiches'
+import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../../lib/nappe/parametres'
+import { SOURCES } from '../../lib/nappe/sources'
+import { LIBELLES_ETAT, synthetiser, type Etat, type Synthese } from '../../lib/nappe/synthese'
+import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../../lib/nappe/recap'
+import { lireFeuilles } from '../../lib/fichiers'
+import { nombreFrOuTiret } from '../../lib/format'
 
 const BADGE_CLASSE: Record<Classe, string> = {
   forte: 'badge badge--faible',
@@ -56,11 +56,30 @@ const COULEUR_NIVEAU: Record<Niveau, string> = { alerte: 'var(--level-elevee)', 
 
 const fr = nombreFrOuTiret
 
-export default function ConditionsNappe() {
+/**
+ * Groundwater conditions, within Résultats labo (groundwater): the sampling
+ * sheets of the campaign read with the lab file already loaded there —
+ * physico-chemical conditions, purge quality, natural attenuation (USEPA
+ * 1998 screening, redox processes). The sheets are chosen at step 2 of the
+ * page (`aCharger`); what is computed goes back (`onRapport`) for the
+ * Excel files of the export section.
+ */
+export function ConditionsNappe({
+  labo: laboFourni,
+  aCharger,
+  retrait,
+  onRapport,
+}: {
+  labo: { lecture: Lecture; nom: string } | null
+  /** Sheet workbooks to read, a new array for each choice. */
+  aCharger: File[] | null
+  /** Changes when the user removes the sheets from step 2. */
+  retrait: number
+  onRapport?: (rp: Rapport | null) => void
+}) {
   const [fiches, setFiches] = useState<FicheTerrain[]>([])
   const [fichiersFiches, setFichiersFiches] = useState<string[]>([])
   const [ignores, setIgnores] = useState<string[]>([])
-  const [labos, setLabos] = useState<{ lecture: Lecture; nom: string }[]>([])
   const [association, setAssociation] = useState<Record<string, string>>({})
   const [saisies, setSaisies] = useState<Record<string, string>>({})
   const [ajouts, setAjouts] = useState<string[]>([])
@@ -70,13 +89,9 @@ export default function ConditionsNappe() {
   const [statuts, setStatuts] = useState<Record<Compose, Statut>>(STATUTS_DEFAUT)
   const [ouvert, setOuvert] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [chargement, setChargement] = useState<'fiches' | 'labo' | null>(null)
+  const [chargement, setChargement] = useState<'fiches' | null>(null)
   const [projet, setProjet] = useState('')
-  const [export_, setExport] = useState(false)
-  const [hydro, setHydro] = useState<SaisieHydro>(HYDRO_DEFAUT)
-  const [exportRecap, setExportRecap] = useState(false)
   const [copie, setCopie] = useState(false)
-  const [avecBiochlor, setAvecBiochlor] = useState(false)
 
   async function chargerFiches(fs: File[]) {
     if (!fs.length) return
@@ -98,29 +113,8 @@ export default function ConditionsNappe() {
     }
   }
 
-  async function chargerLabo(fs: File[]) {
-    if (!fs.length) return
-    setChargement('labo')
-    setErreur(null)
-    try {
-      const lus = await Promise.all(fs.map(async (f) => ({ lecture: lireClasseur(await lireFeuilles(f, { cellDates: true }), 'tout'), nom: f.name })))
-      setLabos((avant) => [...avant, ...lus])
-    } catch (e) {
-      setErreur(`Fichier du laboratoire non lu : ${(e as Error).message}`)
-    } finally {
-      setChargement(null)
-    }
-  }
-
-  const labo = useMemo(() => {
-    if (!labos.length) return { lecture: null as { lecture: Lecture; nom: string } | null, notes: [] as string[], erreur: null as string | null }
-    try {
-      const f = fusionnerLectures(labos)
-      return { lecture: { lecture: f.lecture, nom: labos.map((l) => l.nom).join(' + ') }, notes: f.notes, erreur: null }
-    } catch (e) {
-      return { lecture: null, notes: [], erreur: (e as Error).message }
-    }
-  }, [labos])
+  // Stable between renders: the report it leads to goes back to the parent.
+  const labo = useMemo(() => ({ lecture: laboFourni, notes: [] as string[], erreur: null as string | null }), [laboFourni])
 
   const jeu = useMemo(() => construireJeu({ fiches, labo: labo.lecture, association, saisies, ajouts }), [fiches, labo, association, saisies, ajouts])
   const dec = lireNombre(decalage) ?? 0
@@ -131,83 +125,79 @@ export default function ConditionsNappe() {
   const recap = useMemo(() => recapTerrain(jeu, evaluations, dec), [jeu, evaluations, dec])
   const syntheseRecap = useMemo(() => syntheseTerrain(recap, evaluations), [recap, evaluations])
 
-  const plusContamine = evaluations.reduce<Evaluation | null>((m, e) => (e.cohvMolaire > (m?.cohvMolaire ?? 0) ? e : m), null)
+  const plusContamine = useMemo(() => evaluations.reduce<Evaluation | null>((m, e) => (e.cohvMolaire > (m?.cohvMolaire ?? 0) ? e : m), null), [evaluations])
   const comptes = new Map<Classe, number>()
   for (const e of evaluations) if (e.score.complet) comptes.set(e.score.classe, (comptes.get(e.score.classe) ?? 0) + 1)
   const complets = evaluations.filter((e) => e.score.complet).length
   const conditions = new Map<Favorabilite, number>()
   for (const e of evaluations) conditions.set(e.lecture.conditions, (conditions.get(e.lecture.conditions) ?? 0) + 1)
-  const requisSite = PARAMS.filter((p) => p.requis && !evaluations.some((e) => jeu.valeurs[e.ouvrage.cle]?.[p.id]))
-  // Limits and useful analyses shared by most wells, said once.
-  const frequents = (liste: (e: Evaluation) => string[]) => {
-    const n = new Map<string, number>()
-    for (const e of evaluations) for (const x of liste(e)) n.set(x, (n.get(x) ?? 0) + 1)
-    return [...n.entries()].filter(([, k]) => k >= evaluations.length / 2).map(([x]) => x)
-  }
-  const limitesSite = frequents((e) => e.lecture.limites)
-  const analysesSite = frequents((e) => e.lecture.analysesUtiles)
+  const { requisSite, limitesSite, analysesSite } = useMemo(() => {
+    // Limits and useful analyses shared by most wells, said once.
+    const frequents = (liste: (e: Evaluation) => string[]) => {
+      const n = new Map<string, number>()
+      for (const e of evaluations) for (const x of liste(e)) n.set(x, (n.get(x) ?? 0) + 1)
+      return [...n.entries()].filter(([, k]) => k >= evaluations.length / 2).map(([x]) => x)
+    }
+    return {
+      requisSite: PARAMS.filter((p) => p.requis && !evaluations.some((e) => jeu.valeurs[e.ouvrage.cle]?.[p.id])),
+      limitesSite: frequents((e) => e.lecture.limites),
+      analysesSite: frequents((e) => e.lecture.analysesUtiles),
+    }
+  }, [evaluations, jeu])
 
   const synthese = useMemo(() => synthetiser(jeu, evaluations), [jeu, evaluations])
-  const transport = useMemo(() => calculerTransport(hydro, jeu, plusContamine?.ouvrage.cle ?? ''), [hydro, jeu, plusContamine])
-  const nomOuvrage = (cle: string) => jeu.ouvrages.find((o) => o.cle === cle)?.nom ?? cle
 
   const fichesMesurees = fiches.filter((f) => !f.vide)
   const fichesVides = fiches.filter((f) => f.vide)
   const decalagesFiches = [...new Set(fichesMesurees.map((f) => f.decalage).filter((x): x is number => x !== null))]
 
-  async function exporter() {
-    setExport(true)
-    try {
-      const { telechargerRapport } = await import('../lib/nappe/export')
-      const date = jourIso()
-      await telechargerRapport(
-        {
-          titre: `Conditions de la nappe${projet ? ` — ${projet}` : ''}`,
-          contexte: [
-            ['Fiches de prélèvement', fichiersFiches.join(', ') || '-'],
-            ['Résultats du laboratoire', labos.map((l) => l.nom).join(', ') || 'aucun (paramètres de terrain seuls)'],
-            ['Écart redox mesuré → Eh', `${fr(dec, 1)} mV (électrode de référence Ag/AgCl)`],
-            ['Ouvrages de fond', fond.map(nomOuvrage).join(', ') || 'aucun désigné'],
-            [
-              'Ouvrage le plus contaminé (COHV, µmol/l)',
-              plusContamine
-                ? `${plusContamine.ouvrage.nom} — conditions ${LIBELLES_FAVORABILITE[plusContamine.lecture.conditions].toLowerCase()}, score USEPA ${plusContamine.score.complet ? `${plusContamine.score.total} (${LIBELLES_CLASSE[plusContamine.score.classe].toLowerCase()})` : `partiel ${plusContamine.score.total} / ${plusContamine.score.accessible}`}`
-                : '-',
-            ],
-            ['Criblage USEPA complet (nitrates, fer, sulfates, méthane)', `${complets} ouvrage${complets > 1 ? 's' : ''} sur ${evaluations.length}`],
-            ['Analyses requises absentes partout', requisSite.map((p) => p.libelle).join(', ') || 'aucune'],
-            ['Limites de l’interprétation', limitesSite.join(' ') || '-'],
-            ['Analyses utiles', analysesSite.join(' ; ') || '-'],
-          ],
-          limites: limitesSite,
-          jeu,
-          evaluations,
-          options,
-          synthese,
-          transport: avecBiochlor && transport.vx !== null ? transport : undefined,
-          recap: recap.ouvrages ? { recap, synthese: syntheseRecap } : undefined,
-        },
-        `Conditions nappe${projet ? ` - ${projet}` : ''} - ${date}.xlsx`,
-      )
-    } finally {
-      setExport(false)
-    }
+  /** Everything the report — and the Résultats labo export — is made of. */
+  const rapport = useMemo((): Rapport | null => {
+    if (!fiches.length || !evaluations.length) return null
+    const nomOuvrage = (cle: string) => jeu.ouvrages.find((o) => o.cle === cle)?.nom ?? cle
+    return {
+    titre: `Conditions de la nappe${projet ? ` — ${projet}` : ''}`,
+    contexte: [
+      ['Fiches de prélèvement', fichiersFiches.join(', ') || '-'],
+      ['Résultats du laboratoire', laboFourni?.nom || 'aucun (paramètres de terrain seuls)'],
+      ['Écart redox mesuré → Eh', `${fr(dec, 1)} mV (électrode de référence Ag/AgCl)`],
+      ['Ouvrages de fond', fond.map(nomOuvrage).join(', ') || 'aucun désigné'],
+      [
+        'Ouvrage le plus contaminé (COHV, µmol/l)',
+        plusContamine
+          ? `${plusContamine.ouvrage.nom} — conditions ${LIBELLES_FAVORABILITE[plusContamine.lecture.conditions].toLowerCase()}, score USEPA ${plusContamine.score.complet ? `${plusContamine.score.total} (${LIBELLES_CLASSE[plusContamine.score.classe].toLowerCase()})` : `partiel ${plusContamine.score.total} / ${plusContamine.score.accessible}`}`
+          : '-',
+      ],
+      ['Criblage USEPA complet (nitrates, fer, sulfates, méthane)', `${complets} ouvrage${complets > 1 ? 's' : ''} sur ${evaluations.length}`],
+      ['Analyses requises absentes partout', requisSite.map((p) => p.libelle).join(', ') || 'aucune'],
+      ['Limites de l’interprétation', limitesSite.join(' ') || '-'],
+      ['Analyses utiles', analysesSite.join(' ; ') || '-'],
+    ],
+    limites: limitesSite,
+    jeu,
+    evaluations,
+    options,
+    synthese,
+    recap: recap.ouvrages ? { recap, synthese: syntheseRecap } : undefined,
   }
+  }, [fiches, evaluations, projet, fichiersFiches, laboFourni, dec, fond, plusContamine, complets, requisSite, limitesSite, analysesSite, jeu, options, synthese, recap, syntheseRecap])
 
-  async function exporterRecap() {
-    setExportRecap(true)
-    try {
-      const { telechargerRecap } = await import('../lib/nappe/export')
-      const date = jourIso()
-      await telechargerRecap(
-        `Récapitulatif des paramètres de terrain${projet ? ` — ${projet}` : ''}`,
-        { recap, synthese: syntheseRecap },
-        `Recap parametres terrain${projet ? ` - ${projet}` : ''} - ${date}.xlsx`,
-      )
-    } finally {
-      setExportRecap(false)
-    }
-  }
+  useEffect(() => {
+    onRapport?.(rapport)
+  }, [rapport, onRapport])
+
+  // Sheets chosen at step 2 of the page.
+  useEffect(() => {
+    if (aCharger?.length) void chargerFiches(aCharger)
+    // chargerFiches only reads state setters and the current offset.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aCharger])
+  useEffect(() => {
+    if (!retrait) return
+    setFiches([])
+    setFichiersFiches([])
+    setIgnores([])
+  }, [retrait])
 
   async function copierSynthese() {
     try {
@@ -219,234 +209,52 @@ export default function ConditionsNappe() {
     }
   }
 
+  const ORDRE_COND: Favorabilite[] = ['favorable', 'possible', 'limite', 'defavorable', 'indetermine']
+  const triE = useTri(evaluations, {
+    nom: (e) => e.ouvrage.nom,
+    ph: (e) => jeu.valeurs[e.ouvrage.cle]?.ph?.valeur,
+    orp: (e) => jeu.valeurs[e.ouvrage.cle]?.orp?.valeur,
+    od: (e) => jeu.valeurs[e.ouvrage.cle]?.od?.valeur,
+    ce: (e) => jeu.valeurs[e.ouvrage.cle]?.ce?.valeur,
+    t: (e) => jeu.valeurs[e.ouvrage.cle]?.t?.valeur,
+    conditions: (e) => ORDRE_COND.indexOf(e.lecture.conditions),
+    indices: (e) => e.lecture.indices.length,
+    redox: (e) => e.redox.categorie,
+    score: (e) => e.score.total,
+    vigilance: (e) => e.alertes.filter((a) => a.niveau !== 'info').length,
+  })
+  const triR = useTri(recap.lignes, {
+    libelle: (l) => l.libelle,
+    unite: (l) => l.unite,
+    n: (l) => l.n,
+    min: (l) => l.min?.valeur,
+    max: (l) => l.max?.valeur,
+    moyenne: (l) => l.moyenne,
+  })
   const saisir = (cle: string, id: string, v: string) => setSaisies((s) => ({ ...s, [`${cle}|${id}`]: v }))
   const echantillons = labo.lecture?.lecture.points ?? []
   const optionsOuvrages = [...new Map([...fiches.map((f) => [cleOuvrage(f.ouvrage), f.ouvrage] as const), ...jeu.ouvrages.map((o) => [o.cle, o.nom] as const)]).entries()]
 
   return (
-    <>
-      <section className="section">
-        <div className="container">
-          <p className="eyebrow">Eaux souterraines — atténuation naturelle</p>
-          <h1 style={{ maxWidth: '26ch' }}>Conditions de la nappe</h1>
-          <p className="lede">
-            Lisez les fiches de prélèvement (pH, redox, oxygène dissous, conductivité, température en fin de purge) et, si vous les avez, les
-            résultats du laboratoire : processus redox dominant, criblage de la déchloration réductrice selon le protocole USEPA 1998 (repris par
-            BIOCHLOR), devenir du chlorure de vinyle, contrôle des mesures et données d'entrée de BIOCHLOR. Les données restent dans votre
-            navigateur.
-          </p>
-
-          <h2 className="etape">
-            <span>1</span> Fiches de prélèvement
-          </h2>
-          <ZoneDepot
-            libelleChargement="Lecture…"
-            titre="Déposez ici le classeur des fiches de prélèvement"
-            aide="Une fiche par onglet (modèle ERM ou équivalent) : tableau de purge avec pH, redox mesuré et corrigé, oxygène dissous, conductivité, température. Plusieurs classeurs possibles."
-            multiple
-            chargement={chargement === 'fiches'}
-            onFichiers={chargerFiches}
-          />
-          {fiches.length > 0 && (
-            <div className="card" style={{ marginTop: '1rem', maxWidth: '48rem' }}>
-              <strong>{fichiersFiches.join(', ')}</strong>
-              <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
-                {fiches.length} fiche{fiches.length > 1 ? 's' : ''} lue{fiches.length > 1 ? 's' : ''}, dont {fichesMesurees.length} avec des mesures.
-                {fichesVides.length > 0 && ` Sans mesure (ignorées) : ${fichesVides.map((f) => f.onglet).join(', ')}.`}
-                {ignores.length > 0 && ` Onglets non reconnus : ${ignores.join(', ')}.`}
-              </p>
-              <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                Valeur retenue : dernière lecture complète de la purge. Écart « redox corrigé − mesuré » lu sur les fiches :{' '}
-                {decalagesFiches.length ? decalagesFiches.map((d) => `${fr(d, 1)} mV`).join(', ') : 'non renseigné'}.
-              </p>
-              <button
-                type="button"
-                className="btn btn--ghost btn--petit"
-                style={{ marginTop: '0.5rem' }}
-                onClick={() => {
-                  setFiches([])
-                  setFichiersFiches([])
-                  setIgnores([])
-                }}
-              >
-                Retirer les fiches
-              </button>
-            </div>
-          )}
-
-          <h2 className="etape">
-            <span>2</span> Résultats du laboratoire (facultatif)
-          </h2>
-          <ZoneDepot
-            libelleChargement="Lecture…"
-            titre="Déposez ici le ou les fichiers du laboratoire"
-            aide="ALS / Wessling, Eurofins, SGS : disposition reconnue automatiquement. Utiles : nitrates, fer (II ou dissous), manganèse, sulfates, sulfures, méthane, éthène/éthane, COT, chlorures, alcalinité, COHV, BTEX."
-            multiple
-            chargement={chargement === 'labo'}
-            onFichiers={chargerLabo}
-          />
-          {erreur && (
-            <p role="alert" className="alerte">
-              {erreur}
-            </p>
-          )}
-          {labo.erreur && (
-            <p role="alert" className="alerte">
-              {labo.erreur}
-            </p>
-          )}
-          {labo.lecture && (
-            <div className="card" style={{ marginTop: '1rem', maxWidth: '60rem' }}>
-              <strong>{labo.lecture.nom}</strong>
-              {labo.notes.map((n) => (
-                <p key={n} style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  {n}
-                </p>
-              ))}
-              <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
-                Paramètres reconnus :{' '}
-                {Object.entries(jeu.reconnus)
-                  .map(([id, l]) => `${PARAMS.find((p) => p.id === id)?.libelle} ← ${l!.join(', ')}`)
-                  .join(' ; ') || 'aucun'}
-              </p>
-              {jeu.unitesIgnorees.length > 0 && (
-                <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--level-elevee)' }}>Unités non comprises, lignes écartées : {jeu.unitesIgnorees.join(', ')}</p>
-              )}
-              <details className="qualif" style={{ marginTop: '0.75rem' }} open={echantillons.some((p) => !fiches.some((f) => cleOuvrage(f.ouvrage) === associationAuto(p.nom, fiches)))}>
-                <summary>Correspondance des échantillons avec les ouvrages ({echantillons.length})</summary>
-                <div className="tableau-defile" style={{ maxHeight: '20rem', marginTop: '0.5rem' }}>
-                  <table className="tableau">
-                    <thead>
-                      <tr>
-                        <th>Échantillon du laboratoire</th>
-                        <th>Ouvrage</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {echantillons.map((p) => {
-                        const auto = associationAuto(p.nom, fiches)
-                        const v = association[p.nom] ?? auto
-                        const connu = fiches.some((f) => cleOuvrage(f.ouvrage) === v)
-                        return (
-                          <tr key={p.nom}>
-                            <td>{p.nom}</td>
-                            <td>
-                              <select value={v} onChange={(e) => setAssociation((a) => ({ ...a, [p.nom]: e.target.value }))}>
-                                {!connu && v && <option value={v}>{p.nom} (sans fiche)</option>}
-                                {optionsOuvrages
-                                  .filter(([cle]) => cle !== v || connu)
-                                  .map(([cle, nom]) => (
-                                    <option key={cle} value={cle}>
-                                      {nom}
-                                    </option>
-                                  ))}
-                                <option value="">— ne pas utiliser —</option>
-                              </select>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-              <button
-                type="button"
-                className="btn btn--ghost btn--petit"
-                style={{ marginTop: '0.5rem' }}
-                onClick={() => {
-                  setLabos([])
-                  setAssociation({})
-                }}
-              >
-                Retirer les résultats du laboratoire
-              </button>
-            </div>
-          )}
-
-          <h2 className="etape">
-            <span>3</span> Réglages
-          </h2>
-          <div className="grid grid--3" style={{ alignItems: 'end' }}>
-            <label className="champ">
-              Projet / site (optionnel)
-              <input value={projet} onChange={(e) => setProjet(e.target.value)} placeholder="ex. 0659943 — site X" />
-            </label>
-            <label className="champ">
-              Écart redox mesuré → Eh (mV)
-              <input inputMode="decimal" value={decalage} onChange={(e) => setDecalage(e.target.value)} placeholder="ex. 212 (Ag/AgCl, KCl 3 M)" />
-            </label>
-            <label className="champ">
-              Ajouter un ouvrage (saisie manuelle)
-              <span style={{ display: 'flex', gap: '0.4rem' }}>
-                <input value={nouvelOuvrage} onChange={(e) => setNouvelOuvrage(e.target.value)} placeholder="ex. Pz12" />
-                <button
-                  type="button"
-                  className="btn btn--petit"
-                  disabled={!nouvelOuvrage.trim()}
-                  onClick={() => {
-                    setAjouts((a) => [...a, nouvelOuvrage.trim()])
-                    setNouvelOuvrage('')
-                  }}
-                >
-                  Ajouter
-                </button>
-              </span>
-            </label>
-          </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0 0' }}>
-            Le protocole USEPA note le redox mesuré contre l'électrode Ag/AgCl ; l'écart ne sert qu'à afficher Eh (électrode normale à hydrogène).
-          </p>
-
-          {jeu.ouvrages.length > 0 && (
-            <div className="grid grid--2" style={{ marginTop: '1rem', gap: '1rem' }}>
-              <details className="qualif card">
-                <summary>Ouvrages de fond — amont, hors panache ({fond.length})</summary>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0' }}>
-                  Référence des critères « &gt; 2 × le fond » (chlorures, alcalinité, CO₂) : médiane des ouvrages cochés.
-                </p>
-                <div style={{ columns: '3 9rem', fontSize: '0.88rem' }}>
-                  {jeu.ouvrages.map((o) => (
-                    <label key={o.cle} style={{ display: 'block' }}>
-                      <input
-                        type="checkbox"
-                        checked={fond.includes(o.cle)}
-                        onChange={(e) => setFond((f) => (e.target.checked ? [...f, o.cle] : f.filter((x) => x !== o.cle)))}
-                      />{' '}
-                      {o.nom}
-                    </label>
-                  ))}
-                </div>
-              </details>
-              <details className="qualif card">
-                <summary>Composés rejetés ou produits de dégradation</summary>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0' }}>
-                  Un composé fille ne rapporte de points que s'il n'était pas présent dans le produit rejeté (note a/ du tableau 2.3).
-                </p>
-                {COMPOSES_FILIATION.map((c) => (
-                  <label key={c.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline', fontSize: '0.88rem', marginTop: '0.3rem' }}>
-                    <select value={statuts[c.id]} onChange={(e) => setStatuts((s) => ({ ...s, [c.id]: e.target.value as Statut }))}>
-                      <option value="auto">Automatique</option>
-                      <option value="filiation">Produit de dégradation</option>
-                      <option value="rejete">Rejeté (produit source)</option>
-                    </select>
-                    <span>
-                      <strong>{c.libelle}</strong> — {c.regle}
-                    </span>
-                  </label>
-                ))}
-              </details>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {evaluations.length > 0 && (
-        <section className="section section--muted">
-          <div className="container">
-            <h2 className="etape">
-              <span>4</span> Synthèse générale
-            </h2>
+    <div className="nappe">
+      {erreur && (
+        <p role="alert" className="alerte">
+          {erreur}
+        </p>
+      )}
+      {chargement === 'fiches' && <p className="pfas-muet">Lecture des fiches…</p>}
+      {!fiches.length ? (
+        <p style={{ margin: 0, fontSize: '0.92rem', color: 'var(--color-muted)', maxWidth: '52rem' }}>
+          Chargez les fiches de prélèvement de la campagne à l’étape 2 : conditions physico-chimiques de la nappe (pH, redox, oxygène dissous,
+          conductivité, température en fin de purge), qualité des purges et, avec les résultats du laboratoire, processus redox dominant et
+          criblage de la déchloration réductrice (USEPA 1998).
+        </p>
+      ) : (
+        <>
+          <VisuelsNappe jeu={jeu} evaluations={evaluations} synthese={synthese} />
+          {evaluations.length > 0 && (
+            <details className="sous-volet">
+              <summary>Synthèse générale et récapitulatif des paramètres de terrain</summary>
             <SyntheseGenerale s={synthese} />
             {recap.ouvrages > 0 && (
               <div className="card recap-terrain" style={{ marginTop: '1.5rem' }}>
@@ -458,16 +266,16 @@ export default function ConditionsNappe() {
                   <table className="tableau">
                     <thead>
                       <tr>
-                        <th>Paramètre</th>
-                        <th>Unité</th>
-                        <th>Ouvrages</th>
-                        <th>Minimum (ouvrage)</th>
-                        <th>Maximum (ouvrage)</th>
-                        <th>Moyenne</th>
+                        <EnTete cle="libelle" tri={triR.tri} onTrier={triR.trier}>Paramètre</EnTete>
+                        <EnTete cle="unite" tri={triR.tri} onTrier={triR.trier}>Unité</EnTete>
+                        <EnTete cle="n" tri={triR.tri} onTrier={triR.trier}>Ouvrages</EnTete>
+                        <EnTete cle="min" tri={triR.tri} onTrier={triR.trier}>Minimum (ouvrage)</EnTete>
+                        <EnTete cle="max" tri={triR.tri} onTrier={triR.trier}>Maximum (ouvrage)</EnTete>
+                        <EnTete cle="moyenne" tri={triR.tri} onTrier={triR.trier}>Moyenne</EnTete>
                       </tr>
                     </thead>
                     <tbody>
-                      {recap.lignes.map((l) => (
+                      {triR.tries.map((l) => (
                         <tr key={l.id}>
                           <td>
                             <strong>{l.libelle}</strong>
@@ -498,9 +306,6 @@ export default function ConditionsNappe() {
                   </p>
                 )}
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-                  <button type="button" className="btn btn--petit" onClick={() => void exporterRecap()} disabled={exportRecap}>
-                    {exportRecap ? 'Préparation…' : 'Télécharger le tableau récapitulatif (Excel)'}
-                  </button>
                   {syntheseRecap.length > 0 && (
                     <button type="button" className="btn btn--ghost btn--petit" onClick={() => void copierSynthese()}>
                       {copie ? 'Synthèse copiée' : 'Copier la synthèse'}
@@ -509,16 +314,11 @@ export default function ConditionsNappe() {
                 </div>
               </div>
             )}
-          </div>
-        </section>
-      )}
-
-      {evaluations.length > 0 && (
-        <section className="section">
-          <div className="container">
-            <h2 className="etape">
-              <span>5</span> Conditions par ouvrage
-            </h2>
+            </details>
+          )}
+          {evaluations.length > 0 && (
+            <details className="sous-volet">
+              <summary>Conditions par ouvrage : déchloration réductrice, criblage USEPA, processus redox</summary>
             <div className="grid grid--3" style={{ gap: '1rem', marginBottom: '1rem' }}>
               <div className="card">
                 <span className="eyebrow">Zone la plus contaminée</span>
@@ -574,21 +374,21 @@ export default function ConditionsNappe() {
               <table className="tableau">
                 <thead>
                   <tr>
-                    <th>Ouvrage</th>
-                    <th>pH</th>
-                    <th title="Redox mesuré contre Ag/AgCl, et Eh">Redox (Eh) mV</th>
-                    <th>O₂ mg/l (sat.)</th>
-                    <th>CE µS/cm</th>
-                    <th>T °C</th>
-                    <th>Conditions (déchloration)</th>
-                    <th>Indices de dégradation</th>
-                    <th>Processus redox</th>
-                    <th title="Complet : nitrates, fer, sulfates et méthane disponibles">Score USEPA</th>
-                    <th>Vigilance</th>
+                    <EnTete cle="nom" tri={triE.tri} onTrier={triE.trier}>Ouvrage</EnTete>
+                    <EnTete cle="ph" tri={triE.tri} onTrier={triE.trier}>pH</EnTete>
+                    <EnTete cle="orp" tri={triE.tri} onTrier={triE.trier} title="Redox mesuré contre Ag/AgCl, et Eh">Redox (Eh) mV</EnTete>
+                    <EnTete cle="od" tri={triE.tri} onTrier={triE.trier}>O₂ mg/l (sat.)</EnTete>
+                    <EnTete cle="ce" tri={triE.tri} onTrier={triE.trier}>CE µS/cm</EnTete>
+                    <EnTete cle="t" tri={triE.tri} onTrier={triE.trier}>T °C</EnTete>
+                    <EnTete cle="conditions" tri={triE.tri} onTrier={triE.trier}>Conditions (déchloration)</EnTete>
+                    <EnTete cle="indices" tri={triE.tri} onTrier={triE.trier}>Indices de dégradation</EnTete>
+                    <EnTete cle="redox" tri={triE.tri} onTrier={triE.trier}>Processus redox</EnTete>
+                    <EnTete cle="score" tri={triE.tri} onTrier={triE.trier} title="Complet : nitrates, fer, sulfates et méthane disponibles">Score USEPA</EnTete>
+                    <EnTete cle="vigilance" tri={triE.tri} onTrier={triE.trier}>Vigilance</EnTete>
                   </tr>
                 </thead>
                 <tbody>
-                  {evaluations.map((e) => {
+                  {triE.tries.map((e) => {
                     const t = jeu.valeurs[e.ouvrage.cle] ?? {}
                     const actif = ouvert === e.ouvrage.cle
                     const alertes = e.alertes.filter((a) => a.niveau !== 'info').length
@@ -710,68 +510,176 @@ export default function ConditionsNappe() {
                 </table>
               </div>
             </details>
-          </div>
-        </section>
-      )}
+            </details>
+          )}
+          <details className="sous-volet">
+            <summary>Fiches, correspondance avec le laboratoire et réglages</summary>
+          {fiches.length > 0 && (
+            <div className="card" style={{ marginTop: '1rem', maxWidth: '48rem' }}>
+              <strong>{fichiersFiches.join(', ')}</strong>
+              <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
+                {fiches.length} fiche{fiches.length > 1 ? 's' : ''} lue{fiches.length > 1 ? 's' : ''}, dont {fichesMesurees.length} avec des mesures.
+                {fichesVides.length > 0 && ` Sans mesure (ignorées) : ${fichesVides.map((f) => f.onglet).join(', ')}.`}
+                {ignores.length > 0 && ` Onglets non reconnus : ${ignores.join(', ')}.`}
+              </p>
+              <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                Valeur retenue : dernière lecture complète de la purge. Écart « redox corrigé − mesuré » lu sur les fiches :{' '}
+                {decalagesFiches.length ? decalagesFiches.map((d) => `${fr(d, 1)} mV`).join(', ') : 'non renseigné'}.
+              </p>
+            </div>
+          )}
 
-      {evaluations.length > 0 && (
-        <section className="section section--muted">
-          <div className="container">
-            <h2 className="etape">
-              <span>6</span> Données d'entrée BIOCHLOR (option)
-            </h2>
-            <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', maxWidth: '48rem' }}>
-              <input type="checkbox" checked={avecBiochlor} onChange={(e) => setAvecBiochlor(e.target.checked)} />
-              <span>
-                <strong>Préparer une modélisation BIOCHLOR</strong>
-                <span style={{ display: 'block', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-                  Usage expert : vitesse de l'eau, porosité, retard et constantes de biodégradation à renseigner, pour un modèle de transport du
-                  panache (USEPA / AFCEE). Inutile pour décrire les conditions de la nappe.
-                </span>
+          {labo.lecture && fiches.length > 0 && <h3 className="sous-etape">Résultats du laboratoire et ouvrages</h3>}
+          {labo.lecture && fiches.length > 0 && (
+            <div className="card" style={{ marginTop: '1rem', maxWidth: '60rem' }}>
+              <strong>{labo.lecture.nom}</strong>
+              {labo.notes.map((n) => (
+                <p key={n} style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                  {n}
+                </p>
+              ))}
+              <p style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
+                Paramètres reconnus :{' '}
+                {Object.entries(jeu.reconnus)
+                  .map(([id, l]) => `${PARAMS.find((p) => p.id === id)?.libelle} ← ${l!.join(', ')}`)
+                  .join(' ; ') || 'aucun'}
+              </p>
+              {jeu.unitesIgnorees.length > 0 && (
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: 'var(--level-elevee)' }}>Unités non comprises, lignes écartées : {jeu.unitesIgnorees.join(', ')}</p>
+              )}
+              <details className="qualif" style={{ marginTop: '0.75rem' }} open={echantillons.some((p) => !fiches.some((f) => cleOuvrage(f.ouvrage) === associationAuto(p.nom, fiches)))}>
+                <summary>Correspondance des échantillons avec les ouvrages ({echantillons.length})</summary>
+                <div className="tableau-defile" style={{ maxHeight: '20rem', marginTop: '0.5rem' }}>
+                  <table className="tableau">
+                    <thead>
+                      <tr>
+                        <th>Échantillon du laboratoire</th>
+                        <th>Ouvrage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {echantillons.map((p) => {
+                        const auto = associationAuto(p.nom, fiches)
+                        const v = association[p.nom] ?? auto
+                        const connu = fiches.some((f) => cleOuvrage(f.ouvrage) === v)
+                        return (
+                          <tr key={p.nom}>
+                            <td>{p.nom}</td>
+                            <td>
+                              <select value={v} onChange={(e) => setAssociation((a) => ({ ...a, [p.nom]: e.target.value }))}>
+                                {!connu && v && <option value={v}>{p.nom} (sans fiche)</option>}
+                                {optionsOuvrages
+                                  .filter(([cle]) => cle !== v || connu)
+                                  .map(([cle, nom]) => (
+                                    <option key={cle} value={cle}>
+                                      {nom}
+                                    </option>
+                                  ))}
+                                <option value="">— ne pas utiliser —</option>
+                              </select>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </div>
+          )}
+
+          {fiches.length > 0 && (
+            <>
+          <h3 className="sous-etape">Réglages</h3>
+          <div className="grid grid--3" style={{ alignItems: 'end' }}>
+            <label className="champ">
+              Projet / site (optionnel)
+              <input value={projet} onChange={(e) => setProjet(e.target.value)} placeholder="ex. 0659943 — site X" />
+            </label>
+            <label className="champ">
+              Écart redox mesuré → Eh (mV)
+              <input inputMode="decimal" value={decalage} onChange={(e) => setDecalage(e.target.value)} placeholder="ex. 212 (Ag/AgCl, KCl 3 M)" />
+            </label>
+            <label className="champ">
+              Ajouter un ouvrage (saisie manuelle)
+              <span style={{ display: 'flex', gap: '0.4rem' }}>
+                <input value={nouvelOuvrage} onChange={(e) => setNouvelOuvrage(e.target.value)} placeholder="ex. Pz12" />
+                <button
+                  type="button"
+                  className="btn btn--petit"
+                  disabled={!nouvelOuvrage.trim()}
+                  onClick={() => {
+                    setAjouts((a) => [...a, nouvelOuvrage.trim()])
+                    setNouvelOuvrage('')
+                  }}
+                >
+                  Ajouter
+                </button>
               </span>
             </label>
-            {avecBiochlor && (
-              <div style={{ marginTop: '1.25rem' }}>
-                <TransportBiochlor h={hydro} setH={setHydro} calc={transport} ouvrages={jeu.ouvrages} sourceDefaut={plusContamine?.ouvrage.cle ?? ''} />
-              </div>
-            )}
           </div>
-        </section>
-      )}
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0 0' }}>
+            Le protocole USEPA note le redox mesuré contre l'électrode Ag/AgCl ; l'écart ne sert qu'à afficher Eh (électrode normale à hydrogène).
+          </p>
 
-      {evaluations.length > 0 && (
-        <section className="section">
-          <div className="container">
-            <h2 className="etape">
-              <span>7</span> Rapport
-            </h2>
-            <button type="button" className="btn" onClick={() => void exporter()} disabled={export_}>
-              {export_ ? 'Préparation…' : 'Télécharger le rapport Excel'}
-            </button>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
-              Onglets : synthèse générale et classement, récapitulatif des paramètres de terrain (min, max, moyenne et synthèse), synthèse par ouvrage, score USEPA critère par critère, paramètres de terrain et
-              stabilisation, données utilisées{avecBiochlor && transport.vx !== null ? ', transport et saisies BIOCHLOR' : ''}, méthode et sources.
-            </p>
-          </div>
-        </section>
-      )}
+            </>
+          )}
 
-      <section className="section">
-        <div className="container">
-          <h2 style={{ fontSize: '1.2rem' }}>Démarche</h2>
+          {jeu.ouvrages.length > 0 && fiches.length > 0 && (
+            <div className="grid grid--2" style={{ marginTop: '1rem', gap: '1rem' }}>
+              <details className="qualif card">
+                <summary>Ouvrages de fond — amont, hors panache ({fond.length})</summary>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0' }}>
+                  Référence des critères « &gt; 2 × le fond » (chlorures, alcalinité, CO₂) : médiane des ouvrages cochés.
+                </p>
+                <div style={{ columns: '3 9rem', fontSize: '0.88rem' }}>
+                  {jeu.ouvrages.map((o) => (
+                    <label key={o.cle} style={{ display: 'block' }}>
+                      <input
+                        type="checkbox"
+                        checked={fond.includes(o.cle)}
+                        onChange={(e) => setFond((f) => (e.target.checked ? [...f, o.cle] : f.filter((x) => x !== o.cle)))}
+                      />{' '}
+                      {o.nom}
+                    </label>
+                  ))}
+                </div>
+              </details>
+              <details className="qualif card">
+                <summary>Composés rejetés ou produits de dégradation</summary>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0.5rem 0' }}>
+                  Un composé fille ne rapporte de points que s'il n'était pas présent dans le produit rejeté (note a/ du tableau 2.3).
+                </p>
+                {COMPOSES_FILIATION.map((c) => (
+                  <label key={c.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline', fontSize: '0.88rem', marginTop: '0.3rem' }}>
+                    <select value={statuts[c.id]} onChange={(e) => setStatuts((s) => ({ ...s, [c.id]: e.target.value as Statut }))}>
+                      <option value="auto">Automatique</option>
+                      <option value="filiation">Produit de dégradation</option>
+                      <option value="rejete">Rejeté (produit source)</option>
+                    </select>
+                    <span>
+                      <strong>{c.libelle}</strong> — {c.regle}
+                    </span>
+                  </label>
+                ))}
+              </details>
+            </div>
+          )}
+          </details>
+          <details className="sous-volet">
+            <summary>Démarche et sources</summary>
           <div className="grid grid--3" style={{ gap: '1rem' }}>
             <div className="card">
               <span className="eyebrow">Ligne de preuve 1</span>
               <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
-                Baisse des concentrations et des masses dans le temps et le long de l'écoulement : à lire sur plusieurs campagnes (outil Résultats
-                labo, onglets d'évolution).
+                Baisse des concentrations et des masses dans le temps et le long de l'écoulement : à lire sur plusieurs campagnes (comparaison
+                des campagnes ci-dessus, onglets d'évolution de l'export).
               </p>
             </div>
             <div className="card">
-              <span className="eyebrow">Ligne de preuve 2 — cet outil</span>
+              <span className="eyebrow">Ligne de preuve 2 — cette section</span>
               <p style={{ margin: '0.3rem 0 0', fontSize: '0.9rem' }}>
-                Processus identifiés et quantifiés : indicateurs géochimiques (criblage USEPA, processus redox), produits de dégradation, constantes
-                de biodégradation pour BIOCHLOR.
+                Processus identifiés et quantifiés : indicateurs géochimiques (criblage USEPA, processus redox), produits de dégradation.
               </p>
             </div>
             <div className="card">
@@ -787,9 +695,10 @@ export default function ConditionsNappe() {
               <li key={s.texte}>{s.url ? <a href={s.url} target="_blank" rel="noreferrer">{s.texte}</a> : s.texte}</li>
             ))}
           </ul>
-        </div>
-      </section>
-    </>
+          </details>
+        </>
+      )}
+    </div>
   )
 }
 

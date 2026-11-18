@@ -76,7 +76,13 @@ export interface FicheTerrain {
   /** ISO date, or the text as written. */
   date: string
   prelevePar: string
+  /** Initial static level, depth below the measuring point (m). */
   niveauStatique: number | null
+  /** Elevation of the measuring point (m NGF). */
+  altitudeRepere: number | null
+  /** Hydraulic head (m NGF): the water level elevation written on the
+   *  sheet, else the measuring point elevation minus the static level. */
+  charge: number | null
   /** Water level elevation (m NGF), for the hydraulic gradient. */
   coteNiveau: number | null
   flottant: string
@@ -295,13 +301,21 @@ export function lireFiche(grille: Cell[][], onglet: string): FicheTerrain | null
   }
 
   const nomCellule = texte(apres(grille, /^pi[ée]zom[èe]tre\s*:?$|^ouvrage\s*:?$|^point de pr[ée]l[èe]vement\s*:?$/i))
+  // The initial static level, before the purge, when the sheet gives both.
+  const niveauStatique = nombre(apres(grille, /niveau statique initial/i)) ?? nombre(apres(grille, /niveau statique/i))
+  const altitudeRepere = nombre(
+    apres(grille, /(altitude|altim[ée]trie|cote)\b.*\b(rep[èe]re|t[êe]te|haut du tube|margelle)|rep[èe]re.*\b(ngf|altitude)/i),
+  )
+  const coteNiveau = nombre(apres(grille, /^(altim[ée]trie|cote|altitude) (du |de la )?(ns|niveau|nappe|pi[ée]zom[ée]trique)/i))
   return {
     onglet,
     ouvrage: nomCellule || onglet.trim(),
     date: dateIso(apres(grille, /^date\s*:?$/i)),
     prelevePar: texte(apres(grille, /pr[ée]lev[ée] par/i)),
-    niveauStatique: nombre(apres(grille, /niveau statique/i)),
-    coteNiveau: nombre(apres(grille, /^(altim[ée]trie|cote|altitude) (du |de la )?(ns|niveau|nappe|pi[ée]zom[ée]trique)/i)),
+    niveauStatique,
+    altitudeRepere,
+    charge: coteNiveau ?? (altitudeRepere !== null && niveauStatique !== null ? Math.round((altitudeRepere - niveauStatique) * 1000) / 1000 : null),
+    coteNiveau,
     flottant: texte(apres(grille, /flottant/i, 2)),
     profondeurPompage: nombre(apres(grille, /prof\.?\s*(de\s*)?pompage/i)),
     debitPurge: nombre(apres(grille, /d[ée]bit de purge/i)),

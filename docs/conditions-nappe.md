@@ -1,7 +1,8 @@
 # Conditions de la nappe
 
-Page : `frontend/src/pages/ConditionsNappe.tsx` — catégorie **2. Données de
-terrain**. Code : `frontend/src/lib/nappe/`.
+Composant : `frontend/src/components/nappe/ConditionsNappe.tsx` — section de
+[Résultats labo](resultats-labo.md) pour les eaux souterraines (l'ancienne
+page `#/conditions-nappe` y renvoie). Code : `frontend/src/lib/nappe/`.
 
 Interprétation des paramètres physico-chimiques de la nappe, et de leur
 portée pour le devenir des solvants chlorés.
@@ -12,9 +13,10 @@ portée pour le devenir des solvants chlorés.
   (`fiches.ts`) : tableau de purge repéré par ses en-têtes, valeur de la
   dernière lecture complète, stabilisation sur les trois dernières lectures
   avec les critères de la fiche, écart du redox corrigé, observations.
-- **Fichiers du laboratoire**, en option : lus comme dans
-  [Résultats labo](resultats-labo.md) et rapprochés des ouvrages par leur
-  nom (corrigeable).
+- **Fichier du laboratoire** : celui déjà chargé dans Résultats labo,
+  rapproché des ouvrages par leur nom (corrigeable).
+
+Les fiches se choisissent à l'étape 2 de Résultats labo (fichiers).
 
 ## Synthèse générale
 
@@ -68,22 +70,15 @@ de la température, avec une synthèse de cinq phrases au plus (pH,
 minéralisation, oxygène et redox, température, qualité des mesures).
 Téléchargeable seul en Excel ou inclus dans le rapport.
 
-## Données d'entrée BIOCHLOR (option, usage expert)
+## Visuels
 
-`biochlor.ts`, `transport.ts`, `src/components/nappe/TransportBiochlor.tsx` :
+Diagramme oxygène dissous – redox et matrice de stabilisation des purges,
+cliquables (`src/components/nappe/VisuelsNappe.tsx`).
 
-- vitesse de l'eau depuis la vitesse de Darcy, K × gradient (gradient
-  proposé d'après les cotes NGF des fiches) ou une vitesse réelle connue ;
-- porosités et masse volumique types par lithologie (USEPA 1998, tableaux
-  C.3.1 et C.3.2) ;
-- foc depuis le COT d'un sol ;
-- dispersivité d'après la longueur du panache (Xu et Eckstein, 1995) ;
-- constantes de biodégradation entre deux ouvrages (normalisées par les
-  chlorures si disponibles, USEPA 1998 annexe C) ;
-- tableau des valeurs à saisir dans BIOCHLOR, en unités SI et US ; chaque
-  champ explique où trouver la valeur.
+## Export
 
-## Rapport
-
-Le tout s'inscrit dans la démarche par lignes de preuve (USEPA, MACAOH) et
-s'exporte en rapport Excel (`export.ts`).
+Le tout s'inscrit dans la démarche par lignes de preuve (USEPA, MACAOH).
+Dans l'export de Résultats labo (`export.ts`, ouvrages classés par nom) :
+onglets « Conditions physico-chimiques » (synthèse visuelle, échelles de
+couleurs) et « Qualité des purges » ; l'atténuation naturelle est dans
+l'export expert.

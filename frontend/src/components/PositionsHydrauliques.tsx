@@ -1,4 +1,6 @@
 import type { Point } from '../lib/resultats/parse'
+import { useTri } from '../lib/tri'
+import { EnTete } from './Tri'
 import { LIBELLES_POSITION, type Position } from '../lib/resultats/expert/amontAval'
 
 interface Props {
@@ -19,6 +21,7 @@ export function PositionsHydrauliques({ points, positions, auto, onPositions, fa
   const compte = (pos: Position) => points.filter((p) => positions[p.nom] === pos).length
   const nonRenseignes = points.filter((p) => !positions[p.nom])
   const pret = compte('amont') > 0 && compte('droit') + compte('aval') > 0
+  const { tries, tri, trier } = useTri(points, { nom: (p) => p.nom, position: (p) => (positions[p.nom] ? POSITIONS.indexOf(positions[p.nom]) : null) })
 
   return (
     <div className="card" style={{ marginTop: '1.5rem' }}>
@@ -38,12 +41,16 @@ export function PositionsHydrauliques({ points, positions, auto, onPositions, fa
           <table className="tableau">
             <thead>
               <tr>
-                <th>Échantillon</th>
-                <th>Position</th>
+                <EnTete cle="nom" tri={tri} onTrier={trier}>
+                  Échantillon
+                </EnTete>
+                <EnTete cle="position" tri={tri} onTrier={trier}>
+                  Position
+                </EnTete>
               </tr>
             </thead>
             <tbody>
-              {points.map((p) => (
+              {tries.map((p) => (
                 <tr key={p.nom} className={positions[p.nom] ? 'tableau__selection' : undefined}>
                   <th scope="row">{p.nom}</th>
                   <td>

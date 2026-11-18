@@ -1,14 +1,12 @@
 /**
  * Excel report of the groundwater conditions: summary by well, the
  * USEPA (1998) screening criterion by criterion, the field parameters of
- * the sampling sheets, the data used, the BIOCHLOR transport inputs when
- * computed, and the method with its sources.
+ * the sampling sheets, the data used, and the method with its sources.
  */
 
 import type { Workbook, Worksheet } from 'exceljs'
 import { BANDEAU, ETAT } from '../resultats/couleurs.ts'
 import { ecrire, GRIS_FAMILLE, VERT_ENTETE } from '../resultats/export.ts'
-import { ETHENES } from './biochlor.ts'
 import type { Jeu } from './donnees.ts'
 import { BAREME_CLASSES, COMPOSES_FILIATION, LIBELLES_CLASSE, LIBELLES_FAVORABILITE, type Classe, type Evaluation, type Favorabilite, type Options } from './evaluation.ts'
 import { PARAMS_TERRAIN } from './fiches.ts'
@@ -16,7 +14,6 @@ import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from './parametres
 import { formatExtreme, formatMoyenne, type Recap } from './recap.ts'
 import { SOURCES } from './sources.ts'
 import { LIBELLES_ETAT, type Etat, type Synthese } from './synthese.ts'
-import type { Transport } from './transport.ts'
 import { telechargerClasseurExcel } from '../fichiers.ts'
 
 export interface Rapport {
@@ -28,7 +25,6 @@ export interface Rapport {
   /** Limits shared by most wells. */
   limites: string[]
   synthese: Synthese
-  transport?: Transport
   /** Summary of the field parameters and its reading. */
   recap?: RecapTerrain
 }
@@ -122,7 +118,7 @@ function feuilleGenerale(wb: Workbook, rp: Rapport) {
     ['Conditions physico-chimiques', 0],
     ['Réserve sur la mesure', 0],
   ])
-  for (const c of rp.synthese.classement) {
+  for (const c of [...rp.synthese.classement].sort((a, b) => a.rang - b.rang)) {
     const cc = COULEUR_ETAT[c.etat]
     ecrire(ws, r, 1, c.rang, { taille: 9, h: 'center' })
     ecrire(ws, r, 2, c.nom, { taille: 9, gras: true })
@@ -390,63 +386,6 @@ function feuilleDonnees(wb: Workbook, rp: Rapport) {
   texte(ws, r, 'En bleu : valeurs saisies ou corrigées dans l’outil. La provenance de chaque valeur figure en commentaire.', { italique: true })
 }
 
-function feuilleTransport(wb: Workbook, rp: Rapport) {
-  const t = rp.transport
-  if (!t) return
-  const ws = wb.addWorksheet('Transport BIOCHLOR', { views: [{ showGridLines: false }] })
-  ecrire(ws, 1, 1, 'Données d’entrée BIOCHLOR et constantes de biodégradation de terrain (USEPA, 1998, annexe C)', { gras: true, taille: 11, bord: false })
-  let r = 3
-  ws.getColumn(1).width = 44
-  ws.getColumn(2).width = 30
-  ws.getColumn(3).width = 28
-  ws.getColumn(4).width = 24
-  r = bandeau(ws, r, 'Paramètres saisis et calculés', 4)
-  for (const [k, v] of t.parametres) {
-    ecrire(ws, r, 1, k, { taille: 9, fond: GRIS_FAMILLE, gras: true })
-    ws.mergeCells(r, 2, r, 4)
-    ecrire(ws, r++, 2, v, { taille: 9 })
-  }
-  r++
-  if (t.saisies.length) {
-    r = bandeau(ws, r, 'Valeurs à saisir dans BIOCHLOR', 4)
-    r = entetes(ws, r, [
-      ['Section', 0],
-      ['Champ', 0],
-      ['Valeur (SI)', 0],
-      ['Dans BIOCHLOR (unités US)', 0],
-    ])
-    for (const x of t.saisies) {
-      ;[x.section, x.champ, x.si, x.biochlor].forEach((v, j) => ecrire(ws, r, j + 1, v, { taille: 9, gras: j === 3 }))
-      r++
-    }
-    r++
-  }
-  if (t.taux) {
-    r = bandeau(ws, r, 'Constantes de biodégradation entre les deux ouvrages', 10)
-    r = entetes(ws, r, [
-      ['Composé', 0],
-      ['Koc (l/kg)', 0],
-      ['Retard R', 0],
-      ['Temps de transit (an)', 0],
-      ['CA (µg/l)', 11],
-      ['CB (µg/l)', 11],
-      ['CB corrigée (µg/l)', 12],
-      ['λ (1/an)', 10],
-      ['Littérature (USEPA 1998)', 18],
-      ['Remarque', 60],
-    ])
-    for (const x of t.taux) {
-      const e = ETHENES.find((y) => y.id === x.compose)!
-      const v: (string | number)[] = [e.libelle, nb(t.kocs[x.compose]), nb(x.retard), nb(x.temps), nb(x.cA), nb(x.cB), nb(x.cBcorr), nb(x.lambda), e.litterature, x.note ?? '-']
-      v.forEach((y, j) => ecrire(ws, r, j + 1, y, { taille: 9, h: j === v.length - 1 ? 'left' : 'center', wrap: j === v.length - 1, gras: j === 0 || j === 7 }))
-      r++
-    }
-    r++
-  }
-  r = texte(ws, r, 'q = K·i ; vx = q / ne ; R = 1 + ρb·Koc·foc / n ; t = distance / (vx / R) ; λ = −ln(CB,corr / CA) / t ; CB,corr = CB·TA/TB, T = Cl⁻ + 0,86 PCE + 0,81 TCE + 0,73 DCE + 0,57 CV (mg/l) ; αx = 0,83 (log10 L)^2,414 m.', { italique: true })
-  texte(ws, r, 'Les deux ouvrages doivent être sur une même ligne d’écoulement, dans le panache. Les valeurs types par lithologie (USEPA 1998, tableaux C.3.1 et C.3.2) sont à remplacer par des mesures dès que possible.', { italique: true })
-}
-
 /** Min, max (well in brackets) and mean of each field parameter, then a short reading. */
 function feuilleRecap(wb: Workbook, titre: string, { recap, synthese }: RecapTerrain) {
   const ws = wb.addWorksheet('Récapitulatif terrain', { views: [{ showGridLines: false }] })
@@ -515,6 +454,265 @@ function feuilleMethode(wb: Workbook) {
   }
 }
 
+/** Colour scale over a column of the rows written, from `bas` to `haut` (through `milieu` when given). */
+function echelleCouleurs(ws: Worksheet, col: number, r0: number, r1: number, bas: string, haut: string, milieu?: { valeur?: number; couleur: string }) {
+  if (r1 < r0) return
+  const l = ws.getColumn(col).letter
+  ws.addConditionalFormatting({
+    ref: `${l}${r0}:${l}${r1}`,
+    rules: [
+      {
+        type: 'colorScale',
+        priority: 1,
+        cfvo: milieu
+          ? [{ type: 'min' }, milieu.valeur !== undefined ? { type: 'num', value: milieu.valeur } : { type: 'percentile', value: 50 }, { type: 'max' }]
+          : [{ type: 'min' }, { type: 'max' }],
+        color: milieu ? [{ argb: bas }, { argb: milieu.couleur }, { argb: haut }] : [{ argb: bas }, { argb: haut }],
+      },
+    ],
+  })
+}
+
+const BLEU = 'FF9DB9E0'
+const BLANC = 'FFFFFFFF'
+const ORANGE = 'FFF2B77E'
+const VERT_CLAIR = 'FFA9D5B5'
+const ROUGE = 'FFE58F84'
+
+/**
+ * Visual summary of the physico-chemical conditions: every well from the
+ * most reducing to the most oxidising, its state and its field values on
+ * colour scales, with the lab's chlorinated solvents and the conditions
+ * they meet — then the site figures and its reading.
+ */
+function feuilleConditionsVisuelle(wb: Workbook, rp: Rapport) {
+  const ws = wb.addWorksheet('Conditions physico-chimiques', { views: [{ showGridLines: false }] })
+  const largeur = 14
+  ecrire(ws, 1, 1, `${rp.titre} — conditions physico-chimiques`, { gras: true, taille: 12, bord: false })
+  ecrire(ws, 2, 1, 'Mesures de terrain en fin de purge (fiches de prélèvement), croisées avec les résultats du laboratoire.', { italique: true, taille: 9, bord: false })
+  let r = 4
+  const paragraphe = (t: string) => {
+    ws.mergeCells(r, 1, r, largeur)
+    ecrire(ws, r, 1, t, { taille: 9, wrap: true, bord: false })
+    ws.getRow(r).height = Math.ceil(t.length / 190) * 13 + 3
+    r++
+  }
+  r = bandeau(ws, r, 'Synthèse', largeur)
+  ;(rp.recap?.synthese.length ? rp.recap.synthese : rp.synthese.site).forEach(paragraphe)
+  r++
+
+  r = bandeau(ws, r, 'Conditions par ouvrage (rang : du plus réducteur, 1, au plus oxydant)', largeur)
+  r = entetes(ws, r, [
+    ['Rang redox', 6],
+    ['Ouvrage', 14],
+    ['État physico-chimique', 18],
+    ['pH', 7],
+    ['Redox mesuré (mV Ag/AgCl)', 10],
+    ['Eh (mV)', 8],
+    ['O2 dissous (mg/l)', 9],
+    ['Saturation O2 (%)', 9],
+    ['Conductivité (µS/cm)', 11],
+    ['Température (°C)', 10],
+    ['COHV (µmol/l)', 10],
+    ['Conditions pour la déchloration réductrice', 16],
+    ['Processus redox dominant', 22],
+    ['Description', 70],
+  ])
+  const r0 = r
+  const parCle = new Map(rp.evaluations.map((e) => [e.ouvrage.cle, e]))
+  for (const c of rp.synthese.classement) {
+    const e = parCle.get(c.cle)
+    const v = rp.jeu.valeurs[c.cle] ?? {}
+    const val = (id: 'ph' | 'orp' | 'od' | 'ce' | 't') => (v[id] ? Number(v[id]!.valeur.toPrecision(4)) : '-')
+    const ce = COULEUR_ETAT[c.etat]
+    const cc = e ? COULEUR_CONDITIONS[e.lecture.conditions] : null
+    const cellules: [string | number, Parameters<typeof ecrire>[4]][] = [
+      [c.rang, { h: 'center' }],
+      [c.nom, { gras: true }],
+      [LIBELLES_ETAT[c.etat], { gras: true, h: 'center', fond: ce.fond, couleur: ce.texte, wrap: true }],
+      [val('ph'), { h: 'center' }],
+      [val('orp'), { h: 'center' }],
+      [nb(e?.eh, 3), { h: 'center' }],
+      [val('od'), { h: 'center' }],
+      [nb(e?.saturationO2, 3), { h: 'center' }],
+      [val('ce'), { h: 'center' }],
+      [val('t'), { h: 'center' }],
+      [e && e.cohvMolaire > 0 ? Number(e.cohvMolaire.toPrecision(3)) : '-', { h: 'center' }],
+      [e ? LIBELLES_FAVORABILITE[e.lecture.conditions] : '-', { h: 'center', fond: cc?.fond, couleur: cc?.texte, wrap: true }],
+      [e ? e.redox.processus : '-', { wrap: true }],
+      [c.description + (c.reserve ? ` Réserve : ${c.reserve}` : ''), { wrap: true }],
+    ]
+    cellules.forEach(([x, o], j) => ecrire(ws, r, j + 1, x, { taille: 9, ...o }))
+    ws.getRow(r).height = Math.max(24, Math.ceil(c.description.length / 85) * 12 + 4)
+    r++
+  }
+  const r1 = r - 1
+  // Reducing in blue, oxidising in orange; mineralisation in green; contamination in red.
+  echelleCouleurs(ws, 4, r0, r1, BLEU, ORANGE, { valeur: 7, couleur: BLANC })
+  echelleCouleurs(ws, 5, r0, r1, BLEU, ORANGE, { couleur: BLANC })
+  echelleCouleurs(ws, 6, r0, r1, BLEU, ORANGE, { couleur: BLANC })
+  echelleCouleurs(ws, 7, r0, r1, BLEU, ORANGE, { couleur: BLANC })
+  echelleCouleurs(ws, 8, r0, r1, BLEU, ORANGE, { couleur: BLANC })
+  echelleCouleurs(ws, 9, r0, r1, BLANC, VERT_CLAIR)
+  echelleCouleurs(ws, 10, r0, r1, BLEU, ROUGE, { couleur: BLANC })
+  echelleCouleurs(ws, 11, r0, r1, BLANC, ROUGE)
+  ws.views = [{ state: 'frozen', xSplit: 2, ySplit: r0 - 1, showGridLines: false }]
+  r++
+
+  if (rp.recap) {
+    r = bandeau(ws, r, 'Récapitulatif des paramètres de terrain (entre parenthèses : ouvrage où la valeur est relevée)', largeur)
+    const titres = ['Paramètre', 'Unité', 'Ouvrages', 'Minimum (ouvrage)', 'Maximum (ouvrage)', 'Moyenne']
+    const cols = [2, 4, 5, 6, 9, 12]
+    titres.forEach((t, j) => ecrire(ws, r, cols[j], t, { gras: true, taille: 9, fond: VERT_ENTETE, h: 'center', wrap: true }))
+    ws.mergeCells(r, 2, r, 3)
+    ws.mergeCells(r, 6, r, 8)
+    ws.mergeCells(r, 9, r, 11)
+    ws.mergeCells(r, 12, r, 13)
+    r++
+    for (const l of rp.recap.recap.lignes) {
+      const x = [l.libelle, l.unite, l.n, formatExtreme(l.min, l.id), formatExtreme(l.max, l.id), formatMoyenne(l)]
+      x.forEach((y, j) => ecrire(ws, r, cols[j], y, { taille: 9, h: j === 0 ? 'left' : 'center', gras: j === 0 }))
+      ws.mergeCells(r, 2, r, 3)
+      ws.mergeCells(r, 6, r, 8)
+      ws.mergeCells(r, 9, r, 11)
+      ws.mergeCells(r, 12, r, 13)
+      r++
+    }
+    r++
+  }
+  if (rp.synthese.profils.length) {
+    r = bandeau(ws, r, 'Profils verticaux (ouvrages multi-niveaux)', largeur)
+    rp.synthese.profils.forEach((p) => paragraphe(`• ${p.texte}`))
+    r++
+  }
+  if (rp.synthese.singularites.length) {
+    r = bandeau(ws, r, 'Ouvrages singuliers', largeur)
+    rp.synthese.singularites.forEach((p) => paragraphe(`• ${p}`))
+    r++
+  }
+  paragraphe(
+    'Lecture des couleurs : du bleu (réducteur, peu oxygéné, froid) à l’orange ou au rouge (oxydant, oxygéné, chaud) ; conductivité du blanc (faible) au vert (élevée) ; COHV du blanc au rouge (le plus contaminé). État physico-chimique d’après l’oxygène dissous et le redox ensemble ; conditions pour la déchloration réductrice d’après les seuils USEPA (1998) ; processus redox dominant d’après McMahon et Chapelle (2008) quand nitrates, fer, manganèse et sulfates sont analysés.',
+  )
+}
+
+const RESERVE_MESURE = /sursatur|sonde|incohérent|stabilis|calibration|dérive|phase flottante|odeur|H2S/i
+
+/**
+ * Purge of each well: readings, stabilisation of each parameter on the
+ * last three readings (criteria of the sheet), calibration and drift of the
+ * probe, what was noted, and a verdict.
+ */
+function feuilleQualitePurges(wb: Workbook, rp: Rapport) {
+  const ws = wb.addWorksheet('Qualité des purges', { views: [{ showGridLines: false }] })
+  ecrire(ws, 1, 1, `${rp.titre} — qualité des purges`, { gras: true, taille: 12, bord: false })
+  const evals = rp.evaluations.filter((e) => e.ouvrage.fiche && !e.ouvrage.fiche.vide)
+  const LIB = { stable: 'Stable', instable: 'Non stabilisé', insuffisant: '< 3 lectures' } as const
+  const bilans = evals.map((e) => {
+    const f = e.ouvrage.fiche!
+    const mesures = PARAMS_TERRAIN.filter((p) => f.stabilite[p.id])
+    const instables = mesures.filter((p) => f.stabilite[p.id] === 'instable')
+    const insuffisants = mesures.filter((p) => f.stabilite[p.id] === 'insuffisant')
+    const verdict: { texte: string; c: { fond: string; texte: string } } = !mesures.length
+      ? { texte: 'Aucune lecture exploitable', c: { fond: 'FFEDEDED', texte: 'FF555555' } }
+      : instables.length
+        ? { texte: `Non stabilisée (${instables.map((p) => p.libelle.toLowerCase()).join(', ')})`, c: ETAT.vigilance }
+        : insuffisants.length === mesures.length
+          ? { texte: 'Moins de 3 lectures : stabilisation non vérifiable', c: { fond: 'FFEDEDED', texte: 'FF555555' } }
+          : { texte: insuffisants.length ? 'Stabilisée (paramètres partiellement suivis)' : 'Stabilisée', c: ETAT.ok }
+    return { e, f, instables, verdict }
+  })
+  let r = 3
+  const paragraphe = (t: string) => {
+    ws.mergeCells(r, 1, r, 12)
+    ecrire(ws, r, 1, t, { taille: 9, wrap: true, bord: false })
+    ws.getRow(r).height = Math.ceil(t.length / 170) * 13 + 3
+    r++
+  }
+  const stables = bilans.filter((b) => b.verdict.c === ETAT.ok)
+  const nonStab = bilans.filter((b) => b.instables.length)
+  paragraphe(
+    `${stables.length} purge${stables.length > 1 ? 's' : ''} stabilisée${stables.length > 1 ? 's' : ''} sur ${bilans.length}.` +
+      (nonStab.length ? ` Stabilisation non atteinte : ${nonStab.map((b) => `${b.f.ouvrage} (${b.instables.map((p) => p.libelle.toLowerCase()).join(', ')})`).join(' ; ')} — les valeurs de fin de purge de ces ouvrages sont à lire avec réserve.` : ''),
+  )
+  r++
+  r = entetes(ws, r, [
+    ['Ouvrage', 14],
+    ['Date', 11],
+    ['Lectures', 8],
+    ['Durée de purge (min)', 9],
+    ['Volume purgé (l)', 9],
+    ['Débit de purge', 9],
+    ['Niveau statique (m)', 9],
+    ...PARAMS_TERRAIN.map((p) => [`Stabilisation — ${p.libelle}`, 11] as [string, number]),
+    ['Bilan de la purge', 22],
+    ['Calibration / dérive de la sonde', 18],
+    ['Points de vigilance sur la mesure', 50],
+    ['Observations (couleur, odeur, turbidité…)', 45],
+  ])
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: r - 1, showGridLines: false }]
+  for (const { e, f, verdict } of bilans) {
+    const fin = f.lectures[f.ligneFinale]
+    let c = 1
+    const put = (x: string | number, o: Parameters<typeof ecrire>[4] = {}) => ecrire(ws, r, c++, x, { taille: 9, h: 'center', ...o })
+    put(f.ouvrage, { gras: true, h: 'left' })
+    put(f.date || '-')
+    put(f.lectures.filter((l) => l.ph !== null || l.orp !== null || l.od !== null).length)
+    put(nb(fin?.duree))
+    put(nb(fin?.volume))
+    put(nb(f.debitPurge))
+    put(nb(f.niveauStatique))
+    for (const p of PARAMS_TERRAIN) {
+      const st = f.stabilite[p.id]
+      const coul = st === 'stable' ? ETAT.ok : st === 'instable' ? ETAT.vigilance : null
+      put(st ? LIB[st] : '-', { fond: coul?.fond, couleur: coul?.texte })
+    }
+    put(verdict.texte, { gras: true, fond: verdict.c.fond, couleur: verdict.c.texte, wrap: true })
+    put([f.calibration && `Calibration : ${f.calibration}`, f.derive && `Dérive : ${f.derive}`].filter(Boolean).join(' ; ') || '-', { wrap: true, h: 'left' })
+    const vigilance = e.alertes.filter((a) => RESERVE_MESURE.test(a.texte)).map((a) => a.texte)
+    put(vigilance.join(' ; ') || '-', { wrap: true, h: 'left', couleur: vigilance.length ? ETAT.vigilance.texte : undefined })
+    put(f.observations.join(' ; ') || '-', { wrap: true, h: 'left' })
+    const long = Math.max(vigilance.join(' ').length / 60, f.observations.join(' ; ').length / 55, verdict.texte.length / 26)
+    ws.getRow(r).height = Math.max(15, Math.ceil(long) * 12 + 3)
+    r++
+  }
+  r++
+  const tol = evals[0]?.ouvrage.fiche?.tolerances
+  const v = (x: number) => String(x).replace('.', ',')
+  if (tol) {
+    paragraphe(
+      `Stabilisation jugée sur les trois dernières lectures de la purge : écart entre lectures successives au plus de ± ${v(tol.ph)} (pH), ± ${v(tol.orp)} mV (redox), ± ${v(tol.od)} mg/l (oxygène dissous), ± ${v(tol.ce)} % (± ${v(tol.ceFaible)} % sous 500 µS/cm) pour la conductivité et ± ${v(tol.t)} °C (critères de la fiche). Valeurs retenues : dernière lecture complète de la purge.`,
+    )
+  }
+}
+
+/**
+ * The groundwater sheets added to the Résultats labo workbook: the visual
+ * summary of the physico-chemical conditions and the purge quality; with
+ * the expert export, natural attenuation too (summary by well, USEPA
+ * screening, method and sources). Wells in the order of their names.
+ */
+export function ajouterFeuillesNappe(wb: Workbook, brut: Rapport, expert: boolean) {
+  const rp = parOuvrage(brut)
+  feuilleConditionsVisuelle(wb, rp)
+  feuilleQualitePurges(wb, rp)
+  if (expert) {
+    feuilleSynthese(wb, rp)
+    feuilleScore(wb, rp)
+    feuilleMethode(wb)
+  }
+}
+
+const parNom = (a: string, b: string) => a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' })
+
+/** Wells in the order of their names (Pz1, Pz2, Pz10) in every sheet. */
+function parOuvrage(rp: Rapport): Rapport {
+  return {
+    ...rp,
+    evaluations: [...rp.evaluations].sort((a, b) => parNom(a.ouvrage.nom, b.ouvrage.nom)),
+    synthese: { ...rp.synthese, classement: [...rp.synthese.classement].sort((a, b) => parNom(a.nom, b.nom)) },
+  }
+}
+
 async function classeur(): Promise<Workbook> {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
@@ -529,7 +727,8 @@ export async function telechargerRecap(titre: string, rt: RecapTerrain, nomFichi
   await telechargerClasseurExcel(wb, nomFichier)
 }
 
-export async function telechargerRapport(rp: Rapport, nomFichier: string) {
+export async function telechargerRapport(brut: Rapport, nomFichier: string) {
+  const rp = parOuvrage(brut)
   const wb = await classeur()
   feuilleGenerale(wb, rp)
   if (rp.recap) feuilleRecap(wb, `${rp.titre} — récapitulatif des paramètres de terrain`, rp.recap)
@@ -537,7 +736,6 @@ export async function telechargerRapport(rp: Rapport, nomFichier: string) {
   feuilleScore(wb, rp)
   feuilleTerrain(wb, rp)
   feuilleDonnees(wb, rp)
-  feuilleTransport(wb, rp)
   feuilleMethode(wb)
   await telechargerClasseurExcel(wb, nomFichier)
 }

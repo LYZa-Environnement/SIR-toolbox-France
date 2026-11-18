@@ -4,6 +4,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App.tsx'
+import { Porte } from './components/Porte.tsx'
 import './index.css'
 
 // Tools are loaded on demand. After a new deployment, a tab opened earlier
@@ -26,8 +27,10 @@ window.addEventListener('vite:preloadError', (event) => {
 // deep links, so a refresh on e.g. /accompagnement would 404 with a path-based router.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <HashRouter>
-      <App />
-    </HashRouter>
+    <Porte>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </Porte>
   </StrictMode>,
 )

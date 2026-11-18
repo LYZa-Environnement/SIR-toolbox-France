@@ -21,12 +21,15 @@ dans `docs/`.
 | 1. Contexte du site et plan d'investigation | [Assistant Site Setting](docs/site-setting.md) | Environnement d'une adresse ou de parcelles : eau, air, sols, faune et flore, risques, sur carte |
 | | [Données environnementales publiques](docs/pages-autonomes.md#données-environnementales-publiques) | Explorateur cartographique : ICPE, CASIAS, SIS, BSS, captages, photos aériennes historiques… |
 | | [Création maillage](docs/pages-autonomes.md#création-maillage) | Maillage d'investigation sur parcelles, exports terrain |
-| 2. Données de terrain | [Logs de forage](docs/pages-autonomes.md#logs-de-forage) | Logs de sondages et piézomètres au format ERM |
-| | [Conditions de la nappe](docs/conditions-nappe.md) | Paramètres physico-chimiques, redox, criblage USEPA 1998, entrées BIOCHLOR |
-| 3. Résultats d'analyses et interprétation | [Résultats labo](docs/resultats-labo.md) | Mise en forme des résultats, valeurs guides ERM, campagnes, export expert |
+| 2. Données de terrain | [Logs de forage](docs/pages-autonomes.md#logs-de-forage) | Logs de sondages et piézomètres au format ERM, résultats comparés aux valeurs guides |
+| 3. Résultats d'analyses et interprétation | [Résultats labo](docs/resultats-labo.md) | Lecture visuelle et mise en forme des résultats, fiches de prélèvement, [conditions de la nappe](docs/conditions-nappe.md), campagnes, export expert |
 | | [Interprétation PFAS](docs/interpretation-pfas.md) | Somme des 20, profils, indicateurs, pistes de sources, références |
 | 4. Contrôle de conformité | [Conformité des rejets](docs/conformite-rejets.md) | Rejets air / eau et arrêté du 2 février 1998 |
 | | [Vérification de livrables SSP](docs/verification-livrables.md) | ATTES, IOTA, NF X31-620, référentiel LNE SSP |
+
+L'accès au site et aux pages autonomes est protégé par un mot de passe
+(`frontend/src/lib/acces.ts`, empreinte SHA-256) : une simple barrière, le
+site étant statique.
 
 ## Développement
 
