@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import Accueil from './pages/Accueil'
 import ResultatsLabo from './pages/ResultatsLabo'
+import SuiviTemporel from './pages/SuiviTemporel'
 import ConformiteRejets from './pages/ConformiteRejets'
 import VerificationLivrables from './pages/VerificationLivrables'
 import SiteSetting from './pages/SiteSetting'
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/" element={<Accueil />} />
         <Route path="/site-setting" element={<SiteSetting />} />
         <Route path="/resultats-labo" element={<ResultatsLabo />} />
+        <Route path="/suivi-temporel" element={<SuiviTemporel />} />
         <Route path="/conformite-rejets" element={<ConformiteRejets />} />
         <Route path="/verification-livrables" element={<VerificationLivrables />} />
         <Route path="/interpretation-pfas" element={<InterpretationPfas />} />
