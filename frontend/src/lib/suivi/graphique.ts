@@ -81,7 +81,8 @@ function echelleY(valeurs: number[], log: boolean, haut: number, bas: number): E
 }
 
 /** Linear scale for a second axis (water level), tight around the values. */
-function echelleLibre(valeurs: number[], haut: number, bas: number): Echelle {
+/** Linear scale fitted to the values; `inverse` puts the smallest at the top (depths). */
+function echelleLibre(valeurs: number[], haut: number, bas: number, inverse = false): Echelle {
   let vmin = Math.min(...valeurs)
   let vmax = Math.max(...valeurs)
   if (vmax - vmin < 1e-9) {
@@ -95,7 +96,8 @@ function echelleLibre(valeurs: number[], haut: number, bas: number): Echelle {
   const max = Math.ceil(vmax / pas) * pas
   const graduations: Echelle['graduations'] = []
   for (let v = min; v <= max + pas / 2; v += pas) graduations.push({ v: Number(v.toPrecision(12)), principale: true })
-  return { min, max, log: false, vers: (v) => bas - ((v - min) / (max - min || 1)) * (bas - haut), graduations }
+  const f = (v: number) => (v - min) / (max - min || 1)
+  return { min, max, log: false, vers: (v) => (inverse ? haut + f(v) * (bas - haut) : bas - f(v) * (bas - haut)), graduations }
 }
 
 function graduationsTemps(t0: number, t1: number): { t: number; libelle: string | null }[] {
@@ -162,13 +164,15 @@ export interface OptionsChronique {
   afficherSen?: boolean
   afficherLissage?: boolean
   /** Water level on a second axis. */
-  niveaux?: { libelle: string; series: { nom: string; couleur: string; points: { t: number; v: number }[] }[] } | null
+  niveaux?: { libelle: string; inverse?: boolean; series: { nom: string; couleur: string; points: { t: number; v: number }[] }[] } | null
   ruptures?: { t: number; libelle: string }[]
   tMin?: number
   tMax?: number
   legende?: boolean
   /** Linear axis fitted to the values, without zero (water levels). */
   axeLibre?: boolean
+  /** With `axeLibre`: smallest values at the top (depth to water). */
+  inverse?: boolean
 }
 
 export interface Cible {
@@ -245,7 +249,7 @@ export function chronique(o: OptionsChronique): Rendu {
         : positives.length > 1 && positives.length === valeurs.length && Math.max(...etendue) / Math.min(...etendue) > 30
   const pourEchelle = [...valeurs, ...(refDansEchelle ? [ref!] : [])]
   if (!pourEchelle.length) pourEchelle.push(1)
-  const ey = o.axeLibre ? echelleLibre(pourEchelle, haut, bas) : echelleY(pourEchelle, log, haut, bas)
+  const ey = o.axeLibre ? echelleLibre(pourEchelle, haut, bas, !!o.inverse) : echelleY(pourEchelle, log, haut, bas)
   const Y = ey.vers
 
   const parties: string[] = []
@@ -285,7 +289,7 @@ export function chronique(o: OptionsChronique): Rendu {
   // Water level (second axis).
   if (avecNiveaux) {
     const vs = o.niveaux!.series.flatMap((s) => s.points.map((p) => p.v))
-    const en = echelleLibre(vs, haut + 6, bas - 6)
+    const en = echelleLibre(vs, haut + 6, bas - 6, !!o.niveaux!.inverse)
     for (const g of en.graduations) {
       const y = en.vers(g.v)
       if (y < haut - 0.5 || y > bas + 0.5) continue

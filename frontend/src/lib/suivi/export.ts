@@ -439,14 +439,25 @@ function feuillePiezo(wb: Workbook, ws: Worksheet, a: Analyse, images: Image[]) 
     return
   }
   const dates = [...new Set(a.piezo.flatMap((p) => p.serie.map((x) => x.date)))].sort()
-  dates.forEach((_, i) => (ws.getColumn(2 + i).width = 10.5))
-  r = bandeau(ws, r, a.piezo.every((p) => p.enCharge) ? 'Cote piézométrique (m NGF)' : "Niveau de l'eau (− profondeur sous repère, m)", 1 + dates.length)
-  entete(ws, r++, ['Ouvrage', ...dates.map(formatDate)])
+  ws.getColumn(2).width = 13
+  dates.forEach((_, i) => (ws.getColumn(3 + i).width = 10.5))
+  r = bandeau(
+    ws,
+    r,
+    a.piezo.every((p) => p.enCharge)
+      ? 'Cote piézométrique (m NGF)'
+      : a.piezo.every((p) => !p.enCharge)
+        ? "Profondeur de l'eau sous le repère (m) — repères sans cote NGF : chaque ouvrage se lit seul, pas de comparaison entre ouvrages"
+        : "Cote piézométrique (m NGF) ou, à défaut de cote du repère, profondeur de l'eau sous le repère (m)",
+    2 + dates.length,
+  )
+  entete(ws, r++, ['Ouvrage', 'Mesure', ...dates.map(formatDate)])
   for (const p of a.piezo) {
     ecrire(ws, r, 1, p.ouvrage.nom, { gras: true, taille: 9 })
+    ecrire(ws, r, 2, p.enCharge ? 'cote m NGF' : 'profondeur m', { taille: 9 })
     dates.forEach((d, i) => {
       const x = p.serie.find((y) => y.date === d)
-      ecrire(ws, r, 2 + i, x ? n3(x.v, 5) : '', { taille: 9, h: 'center' })
+      ecrire(ws, r, 3 + i, x ? n3(p.enCharge ? x.v : -x.v, 5) : '', { taille: 9, h: 'center' })
     })
     r++
   }
@@ -631,6 +642,7 @@ function feuilleMethode(ws: Worksheet, a: Analyse) {
       "Niveaux d'eau : niveau statique initial des fiches de prélèvement, ramené en cote NGF par la cote du repère (fiche, tableau des ouvrages ou saisie). Régime d'une campagne non renseigné : hautes eaux si les ouvrages sont en moyenne au-dessus de leur niveau médian, basses eaux sinon (4 relevés au moins par ouvrage), à défaut d'après le mois.",
       false,
     ],
+    ["Sans cote NGF du repère, seule la profondeur de l'eau sous le repère est connue : chaque ouvrage se lit seul (battement, tendance, lien avec les concentrations, régime), sans comparaison entre ouvrages ni sens d'écoulement ; les écarts au niveau médian de chaque ouvrage mettent les battements côte à côte.", false],
     ["Sens d'écoulement : plan ajusté par moindres carrés sur les cotes de la nappe d'au moins trois ouvrages non alignés ; direction de la plus forte pente et gradient, moyenne circulaire des directions sur la période.", false],
     ["Chlore moyen : nombre moyen d'atomes de chlore des chloroéthènes pondéré par les moles (PCE 4, TCE 3, DCE 2, CV 1, éthène et éthane 0), lu avec la tendance du total en moles (transformation ou dilution) et la composition des trois dernières campagnes (blocage au stade DCE : DCE ≥ 60 % et CV < 10 % des moles ; accumulation de CV : CV ≥ 30 %).", false],
     ['', false],
@@ -715,6 +727,7 @@ interface Figures {
   series: { nom: string; svg: string; largeur: number; hauteur: number }[]
   niveaux: { nom: string; svg: string; largeur: number; hauteur: number } | null
   ecoulement: { nom: string; svg: string; largeur: number; hauteur: number } | null
+  battement: { nom: string; svg: string; largeur: number; hauteur: number } | null
   degradation: { nom: string; svg: string; largeur: number; hauteur: number }[]
   indicateurs: { nom: string; svg: string; largeur: number; hauteur: number }
 }
@@ -747,7 +760,8 @@ function figures(a: Analyse): Figures {
     const r = figureSerie(a, s, { lissage: true, niveaux: a.piezo.some((p) => p.ouvrage === s.ouvrage) })
     return { nom: `${s.ouvrage.nom} - ${s.compose.nom}`, svg: r.svg, largeur: r.largeur, hauteur: r.hauteur }
   })
-  const rn = figureNiveaux(a)
+  const rn = figureNiveaux(a, { mode: 'niveau' })
+  const rb = a.piezo.length > 1 ? figureNiveaux(a, { mode: 'ecart' }) : null
   const degradation = a.degradation.map((d, i) => ({ nom: `Dechloration ${d.ouvrage.nom}`, svg: figureDegradation(a, i)!, largeur: 820, hauteur: 340 }))
   const indicateurs = {
     nom: 'Depassements par campagne',
@@ -769,6 +783,7 @@ function figures(a: Analyse): Figures {
     ouvrages,
     series,
     niveaux: rn ? { nom: 'Niveaux de la nappe', svg: rn.svg, largeur: rn.largeur, hauteur: rn.hauteur } : null,
+    battement: rb ? { nom: 'Battement de la nappe', svg: rb.svg, largeur: rb.largeur, hauteur: rb.hauteur } : null,
     ecoulement: re ? { nom: 'Ecoulement de la nappe', svg: re.svg, largeur: 620, hauteur: 460 } : null,
     degradation,
     indicateurs,
@@ -805,7 +820,7 @@ export async function construireClasseurSuivi(a: Analyse, site: string): Promise
   }
 
   feuilleIndicateurs(wb, wb.addWorksheet('Évolution d’ensemble', { views: [{ showGridLines: false }] }), a, [await img(f.indicateurs, 'Dépassements par campagne')])
-  feuillePiezo(wb, wb.addWorksheet('Piézométrie', { views: [{ showGridLines: false }] }), a, [...(f.niveaux ? [await img(f.niveaux)] : []), ...(f.ecoulement ? [await img(f.ecoulement, 'Écoulement de la nappe')] : [])])
+  feuillePiezo(wb, wb.addWorksheet('Piézométrie', { views: [{ showGridLines: false }] }), a, [...(f.niveaux ? [await img(f.niveaux)] : []), ...(f.battement ? [await img(f.battement, 'Battement de la nappe — écart au niveau médian de chaque ouvrage')] : []), ...(f.ecoulement ? [await img(f.ecoulement, 'Écoulement de la nappe')] : [])])
   feuilleAmontAval(wb.addWorksheet('Amont-aval', { views: [{ showGridLines: false }] }), a)
   if (a.degradation.length) feuilleDechloration(wb, wb.addWorksheet('Déchloration', { views: [{ showGridLines: false }] }), a, await Promise.all(f.degradation.map((x) => img(x))))
   feuillePistes(wb.addWorksheet('Pistes surveillance', { views: [{ showGridLines: false }] }), a)
@@ -849,6 +864,7 @@ export async function telechargerGraphiques(a: Analyse, site: string) {
   for (const x of f.ouvrages) await ajouter('2 - Par ouvrage', x)
   for (const x of f.series) await ajouter('3 - Séries clés', x)
   if (f.niveaux) await ajouter('4 - Piézométrie', f.niveaux)
+  if (f.battement) await ajouter('4 - Piézométrie', f.battement)
   if (f.ecoulement) await ajouter('4 - Piézométrie', f.ecoulement)
   for (const x of f.degradation) await ajouter('5 - Déchloration', x)
   await ajouter('6 - Ensemble', f.indicateurs)

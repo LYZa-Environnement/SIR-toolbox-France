@@ -119,10 +119,13 @@ livrables).
   marquants classés, pistes pour le programme de surveillance avec leur
   critère, qualité des données (LQ variables ou supérieures à la référence,
   lacunes), déchloration des chloroéthènes (parts molaires, chlore moyen,
-  total en moles, blocage au stade DCE), piézométrie (cotes NGF depuis le
-  repère, régime HE / BE d'après les niveaux, sens d'écoulement et gradient
-  par campagne, cohérence des positions amont / aval, lien concentration –
-  niveau), comparaison amont / aval, plan des ouvrages. Graphiques en SVG
+  total en moles, blocage au stade DCE), piézométrie (régime HE / BE
+  d'après les niveaux, battement et écart au niveau médian de chaque
+  ouvrage, lien concentration – niveau ; avec la cote NGF du repère, sens
+  d'écoulement et gradient par campagne et cohérence des positions amont /
+  aval — avec les seules profondeurs sous repère des fiches, chaque ouvrage
+  se lit seul, sans comparaison entre ouvrages), comparaison amont / aval,
+  plan des ouvrages. Graphiques en SVG
   (`graphique.ts`, `figures.ts`), identiques à l'écran et dans les exports :
   classeur Excel (synthèse, tendances, matrice, chroniques, graphiques
   intégrés, piézométrie, déchloration, pistes, méthode, données

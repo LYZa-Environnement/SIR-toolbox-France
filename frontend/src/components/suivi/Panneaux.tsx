@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CLASSES, direction, fr, LIBELLES_CENSURE, LIBELLES_PISTE, pTexte, type Analyse, type Fait, type NiveauFait, type TypePiste } from '../../lib/suivi/analyse'
 import { formatDate } from '../../lib/suivi/dates'
-import { figureDegradation, figureEcoulement, figureNiveaux, figurePlan } from '../../lib/suivi/figures'
+import { figureDegradation, figureEcoulement, figureNiveaux, figurePlan, type ModeNiveaux } from '../../lib/suivi/figures'
 import { barresSvg } from '../../lib/suivi/graphique'
 import { LIBELLES_POSITION } from '../../lib/resultats/expert/amontAval'
 import { Figure } from './Figure'
@@ -182,36 +182,60 @@ export function Degradation({ analyse }: { analyse: Analyse }) {
 }
 
 export function Piezometrie({ analyse }: { analyse: Analyse }) {
-  const r = figureNiveaux(analyse)
+  const enCharge = analyse.piezo.length > 0 && analyse.piezo.every((p) => p.enCharge)
+  const profondeursSeules = analyse.piezo.filter((p) => !p.enCharge)
+  const [mode, setMode] = useState<ModeNiveaux | null>(null)
+  const modeEffectif: ModeNiveaux = mode ?? (enCharge || profondeursSeules.length === analyse.piezo.length ? 'niveau' : 'ecart')
+  const r = figureNiveaux(analyse, { mode: modeEffectif })
   if (!r) return <p className="st-note">Aucun niveau d'eau : chargez les fiches de prélèvement ou un tableau historique avec un onglet « Niveaux ».</p>
+  const profondeur = (v: number, p: { enCharge: boolean }) => (p.enCharge ? v : -v)
   return (
     <>
-      <Figure svg={r.svg} largeur={r.largeur} hauteur={r.hauteur} cibles={r.cibles} nom="Niveaux de la nappe" />
+      {profondeursSeules.length > 0 && (
+        <p className="st-note" style={{ maxWidth: '62rem' }}>
+          {profondeursSeules.length === analyse.piezo.length ? "Aucun ouvrage n'a de cote NGF du repère" : `${profondeursSeules.map((p) => p.ouvrage.nom).join(', ')} : pas de cote NGF du repère`}{' '}
+          — seule la profondeur de l'eau sous le repère est connue. Chaque ouvrage se lit donc seul (battement, tendance, lien avec les concentrations, régime hautes / basses eaux), mais les
+          ouvrages ne se comparent pas entre eux : pas de sens d'écoulement ni de position amont / aval déduits des niveaux. La vue « écart au niveau médian » met néanmoins leurs
+          battements côte à côte. Pour aller plus loin, la cote du repère (nivellement) se saisit à l'étape 3.
+        </p>
+      )}
+      <div className="st-onglets" role="radiogroup" aria-label="Représentation des niveaux" style={{ marginBottom: '0.6rem' }}>
+        <button type="button" role="radio" aria-checked={modeEffectif === 'niveau'} className={`st-onglet${modeEffectif === 'niveau' ? ' st-onglet--actif' : ''}`} onClick={() => setMode('niveau')}>
+          {enCharge ? 'Cote de la nappe (m NGF)' : profondeursSeules.length === analyse.piezo.length ? "Profondeur de l'eau sous le repère" : 'Niveaux mesurés'}
+        </button>
+        <button type="button" role="radio" aria-checked={modeEffectif === 'ecart'} className={`st-onglet${modeEffectif === 'ecart' ? ' st-onglet--actif' : ''}`} onClick={() => setMode('ecart')}>
+          Écart au niveau médian de chaque ouvrage
+        </button>
+      </div>
+      <Figure svg={r.svg} largeur={r.largeur} hauteur={r.hauteur} cibles={r.cibles} nom={modeEffectif === 'ecart' ? 'Battement de la nappe' : 'Niveaux de la nappe'} />
       <div className="tableau-defile">
         <table className="tableau st-tableau">
           <thead>
             <tr>
               <th>Ouvrage</th>
               <th>Relevés</th>
+              <th>Niveau mesuré</th>
               <th>Min – max</th>
-              <th>Amplitude</th>
-              <th>Tendance du niveau</th>
+              <th>Battement</th>
+              <th>Évolution de la nappe</th>
               <th>Liens concentration – niveau (tau de Kendall)</th>
             </tr>
           </thead>
           <tbody>
             {analyse.piezo.map((p) => {
-              const vs = p.serie.map((x) => x.v)
+              const vs = p.serie.map((x) => profondeur(x.v, p))
+              const sens = p.mk && p.mk.pBilateral <= analyse.reglages.alpha ? (p.mk.S > 0 ? 'nappe en hausse' : 'nappe en baisse') : 'pas de tendance'
               return (
                 <tr key={p.ouvrage.cle}>
                   <th scope="row">{p.ouvrage.nom}</th>
                   <td>{p.serie.length}</td>
+                  <td style={{ fontSize: '0.8rem' }}>{p.enCharge ? 'cote NGF' : 'profondeur / repère'}</td>
                   <td>
                     {fr(Math.min(...vs), 4)} – {fr(Math.max(...vs), 4)} {p.enCharge ? 'm NGF' : 'm'}
                   </td>
                   <td>{fr(p.amplitude, 2)} m</td>
                   <td>
-                    {p.mk ? `${p.mk.pBilateral <= analyse.reglages.alpha ? (p.mk.S > 0 ? 'hausse' : 'baisse') : 'pas de tendance'} (${pTexte(p.mk.pBilateral)}${p.sen ? `, ${p.sen.pente > 0 ? '+' : ''}${fr(p.sen.pente, 2)} m/an` : ''})` : '–'}
+                    {p.mk ? `${sens} (${pTexte(p.mk.pBilateral)}${p.sen ? `, ${p.sen.pente > 0 ? '+' : ''}${fr(p.sen.pente, 2)} m/an` : ''})` : '–'}
                   </td>
                   <td style={{ fontSize: '0.82rem' }}>
                     {p.correlations
@@ -227,8 +251,9 @@ export function Piezometrie({ analyse }: { analyse: Analyse }) {
       </div>
       <Ecoulement analyse={analyse} />
       <p className="st-note">
-        Un tau positif : concentrations plus fortes quand la nappe est haute (remobilisation dans la zone de battement, lessivage de la zone non saturée) ; négatif : plus fortes en basses
-        eaux (moindre dilution). Liens affichés pour p ≤ 0,10, sur au moins 6 campagnes appariées.
+        Évolution et liens se calculent sur le niveau de la nappe (une profondeur qui diminue est une nappe qui monte), ouvrage par ouvrage : ils restent valables avec les seules
+        profondeurs. Un tau positif : concentrations plus fortes quand la nappe est haute (remobilisation dans la zone de battement, lessivage de la zone non saturée) ; négatif : plus
+        fortes en basses eaux (moindre dilution). Liens affichés pour p ≤ 0,10, sur au moins 6 campagnes appariées.
       </p>
     </>
   )
@@ -239,8 +264,9 @@ function Ecoulement({ analyse }: { analyse: Analyse }) {
   if (!e)
     return (
       <p className="st-note">
-        Sens d'écoulement : saisissez les coordonnées X / Y (en mètres) et la cote du repère (m NGF) d'au moins trois ouvrages non alignés à l'étape 3 — ou chargez des niveaux en m NGF —
-        pour calculer le gradient et la direction de chaque campagne.
+        Sens d'écoulement non calculé : il faut comparer les niveaux entre ouvrages, donc des cotes NGF (cote du repère nivelée, saisie à l'étape 3, ou niveaux en m NGF) et les
+        coordonnées X / Y (en mètres) d'au moins trois ouvrages non alignés. Avec les seules profondeurs sous repère, la position amont / aval des ouvrages vient de la carte
+        piézométrique de l'étude et se renseigne à l'étape 3.
       </p>
     )
   const r = figureEcoulement(analyse)

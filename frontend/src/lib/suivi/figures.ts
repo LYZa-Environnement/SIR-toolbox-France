@@ -63,17 +63,28 @@ function bornes(a: Analyse, o: OptionsFigure): { tMin?: number; tMax?: number; f
   return { tMin: base[0]?.t, tMax: base[base.length - 1]?.t, fenetre: f }
 }
 
+/**
+ * Water level on the second axis of a concentration chart: the head (m NGF)
+ * when every well shown has one, else the depth to water below the
+ * measuring point on an inverted axis (high water at the top) — depths of
+ * different wells are drawn together but are not comparable with one
+ * another.
+ */
 function niveauxPour(a: Analyse, ouvrages: Ouvrage[]): OptionsChronique['niveaux'] {
   const ps = a.piezo.filter((p) => ouvrages.includes(p.ouvrage))
   if (!ps.length) return null
   const enCharge = ps.every((p) => p.enCharge)
   return {
-    libelle: enCharge ? 'niveau de la nappe (m NGF)' : "niveau de l'eau (− profondeur, m)",
-    series: ps.map((p) => ({
-      nom: `niveau ${p.ouvrage.nom}`,
-      couleur: ouvrages.length > 1 ? PALETTE[ouvrages.indexOf(p.ouvrage) % PALETTE.length] : '#5f7d95',
-      points: p.serie.map((x) => ({ t: x.t, v: x.v })),
-    })),
+    libelle: enCharge ? 'niveau de la nappe (m NGF)' : "profondeur de l'eau sous le repère (m)",
+    inverse: !enCharge,
+    // Depths and heads are never drawn on one axis: with depths, the wells known only by a head are left out.
+    series: ps
+      .filter((p) => enCharge || !p.enCharge)
+      .map((p) => ({
+        nom: `niveau ${p.ouvrage.nom}`,
+        couleur: ouvrages.length > 1 ? PALETTE[ouvrages.indexOf(p.ouvrage) % PALETTE.length] : '#5f7d95',
+        points: p.serie.map((x) => ({ t: x.t, v: enCharge ? x.v : -x.v })),
+      })),
   }
 }
 
@@ -160,22 +171,48 @@ export function figureOuvrage(a: Analyse, ov: Ouvrage, composes: Compose[], o: O
   })
 }
 
-/** Water levels of every well. */
-export function figureNiveaux(a: Analyse, o: OptionsFigure = {}): Rendu | null {
+export type ModeNiveaux = 'niveau' | 'ecart'
+
+/**
+ * Water levels of every well. In m NGF when every well has a head; with
+ * depths only (sheets without the elevation of the measuring point), each
+ * well's depth below its own measuring point on an inverted axis — the
+ * wells cannot be compared with one another, only each with itself.
+ * `ecart`: each well's level minus its median level, which compares the
+ * seasonal swings of the wells whatever their reference.
+ */
+export function figureNiveaux(a: Analyse, o: OptionsFigure & { mode?: ModeNiveaux } = {}): Rendu | null {
   if (!a.piezo.length) return null
   const b = bornes(a, o)
   const enCharge = a.piezo.every((p) => p.enCharge)
-  return chronique({
-    titre: 'Niveaux de la nappe',
-    sousTitre: a.piezo.map((p) => `${p.ouvrage.nom} : amplitude ${fr(p.amplitude, 2)} m`).join('   '),
-    unite: enCharge ? 'cote piézométrique (m NGF)' : "− profondeur de l'eau (m)",
-    series: a.piezo.map((p, i) => ({
+  const aucune = a.piezo.every((p) => !p.enCharge)
+  const mode: ModeNiveaux = o.mode ?? (enCharge || aucune ? 'niveau' : 'ecart')
+  const mediane = (vs: number[]) => {
+    const s2 = [...vs].sort((x, y) => x - y)
+    return s2.length % 2 ? s2[(s2.length - 1) / 2] : (s2[s2.length / 2 - 1] + s2[s2.length / 2]) / 2
+  }
+  const series = a.piezo.map((p, i) => {
+    const med = mediane(p.serie.map((x) => x.v))
+    return {
       nom: p.ouvrage.nom,
       couleur: PALETTE[a.ouvrages.indexOf(p.ouvrage) % PALETTE.length] ?? PALETTE[i % PALETTE.length],
-      points: p.serie.map((x) => ({ t: x.t, valeur: x.v, inferieur: false, libelle: fr(x.v, 4) })),
-    })),
+      points: p.serie.map((x) => {
+        const v = mode === 'ecart' ? x.v - med : enCharge ? x.v : -x.v
+        return { t: x.t, valeur: v, inferieur: false, libelle: `${mode === 'ecart' && v > 0 ? '+' : ''}${fr(v, 3)}${mode === 'niveau' && !enCharge ? ' (profondeur)' : ''}` }
+      }),
+    }
+  })
+  return chronique({
+    titre: mode === 'ecart' ? 'Battement de la nappe — écart au niveau médian de chaque ouvrage' : enCharge ? 'Niveaux de la nappe' : "Profondeur de l'eau sous le repère de chaque ouvrage",
+    sousTitre:
+      mode === 'niveau' && !enCharge
+        ? 'Profondeurs mesurées sous des repères de cotes différentes : chaque ouvrage se lit seul, les ouvrages ne se comparent pas entre eux.'
+        : a.piezo.map((p) => `${p.ouvrage.nom} : amplitude ${fr(p.amplitude, 2)} m`).join('   '),
+    unite: mode === 'ecart' ? 'écart au niveau médian (m, + : nappe plus haute)' : enCharge ? 'cote piézométrique (m NGF)' : "profondeur de l'eau sous le repère (m)",
+    series,
     log: false,
     axeLibre: true,
+    inverse: mode === 'niveau' && !enCharge,
     fenetre: b.fenetre,
     tMin: b.tMin,
     tMax: b.tMax,

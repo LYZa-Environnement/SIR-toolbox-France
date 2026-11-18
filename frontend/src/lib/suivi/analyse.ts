@@ -1017,6 +1017,16 @@ function pistesSurveillance(
       critere: 'Au moins une campagne de hautes eaux et une de basses eaux par an (pratique courante, guide BRGM/INERIS « Surveillance de la qualité des eaux souterraines »).',
     })
   }
+  const sansCote = [...new Set(base.niveaux.filter((n) => n.charge === null && n.profondeur !== null).map((n) => n.ouvrage))]
+  if (sansCote.length && ouvrages.filter((o) => o.position === 'amont' || o.position === 'aval').length < 2) {
+    pistes.push({
+      type: 'completer',
+      portee: 'reseau',
+      cible: 'Nivellement des repères',
+      texte: `Les niveaux de ${sansCote.length} ouvrage${sansCote.length > 1 ? 's' : ''} ne sont connus qu'en profondeur sous le repère : sans cote NGF, ni le sens d'écoulement ni la position amont / aval ne se déduisent des mesures. Un nivellement des têtes d'ouvrages, ou la carte piézométrique de l'étude, permet de les établir.`,
+      critere: 'Cotes NGF des repères nécessaires pour comparer les niveaux entre ouvrages.',
+    })
+  }
   if (!base.niveaux.length && nC) {
     pistes.push({
       type: 'completer',
@@ -1080,6 +1090,12 @@ function notesQualite(base: Base, series: AnalyseSerie[], ouvrages: Ouvrage[], c
     const manquees = campagnes.filter((c) => !prelevees.has(c.id))
     if (manquees.length && manquees.length < campagnes.length) notes.push({ niveau: 'info', texte: `${o.nom} : pas de résultat aux campagnes du ${manquees.map((c) => formatDate(c.date)).join(', ')}.` })
   }
+  const sansCote = ouvrages.filter((o) => base.niveaux.some((n) => n.ouvrage === o.cle) && base.niveaux.filter((n) => n.ouvrage === o.cle).every((n) => n.charge === null))
+  if (sansCote.length)
+    notes.push({
+      niveau: 'info',
+      texte: `Niveaux en profondeur sous le repère seulement (pas de cote NGF du repère) : ${sansCote.map((o) => o.nom).join(', ')}. Ils servent ouvrage par ouvrage (régime hautes / basses eaux, battement, lien avec les concentrations), pas à comparer les ouvrages entre eux.`,
+    })
   const ctrl = base.controles.filter((c) => campagnes.some((k) => k.id === c.campagne))
   if (ctrl.length) notes.push({ niveau: 'info', texte: `${ctrl.length} échantillon${ctrl.length > 1 ? 's' : ''} de contrôle (blancs, doublons) mis à part : ${[...new Set(ctrl.map((c) => c.echantillon))].join(', ')}.` })
   const nonCompares = jamais.length
