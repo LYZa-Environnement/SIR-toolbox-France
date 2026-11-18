@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { CLASSES, fr, LIBELLES_CENSURE, LIBELLES_PISTE, pTexte, type Analyse, type Fait, type NiveauFait, type TypePiste } from '../../lib/suivi/analyse'
+import { CLASSES, direction, fr, LIBELLES_CENSURE, LIBELLES_PISTE, pTexte, type Analyse, type Fait, type NiveauFait, type TypePiste } from '../../lib/suivi/analyse'
 import { formatDate } from '../../lib/suivi/dates'
-import { figureDegradation, figureNiveaux, figurePlan } from '../../lib/suivi/figures'
+import { figureDegradation, figureEcoulement, figureNiveaux, figurePlan } from '../../lib/suivi/figures'
 import { barresSvg } from '../../lib/suivi/graphique'
 import { LIBELLES_POSITION } from '../../lib/resultats/expert/amontAval'
 import { Figure } from './Figure'
@@ -155,18 +155,28 @@ export function Degradation({ analyse }: { analyse: Analyse }) {
             ))}
           </select>
         </label>
-        {d.tendanceChlores && (
-          <p className="st-note" style={{ alignSelf: 'center' }}>
-            Nombre moyen d'atomes de chlore : {d.tendanceChlores.pBilateral > analyse.reglages.alpha ? 'pas de tendance significative' : d.tendanceChlores.S < 0 ? 'en baisse' : 'en hausse'} ({pTexte(d.tendanceChlores.pBilateral)}).
-          </p>
-        )}
       </div>
+      <ul className="st-lecture">
+        {d.lecture.map((t) => (
+          <li key={t}>{t}</li>
+        ))}
+      </ul>
       <Figure svg={svg} largeur={820} hauteur={340} nom={`Dechloration ${d.ouvrage.nom}`} />
-      <p className="st-note">
-        Parts molaires (µmol/l) des chloroéthènes quantifiés à chaque campagne : une part croissante des produits de dégradation (cis-DCE, chlorure de vinyle) et un nombre moyen
-        d'atomes de chlore en baisse traduisent une déchloration réductrice en cours (USEPA, 1998, EPA/600/R-98/128). L'éthène et l'éthane, s'ils sont analysés, confirment qu'elle va à
-        son terme.
-      </p>
+      <details className="st-explication">
+        <summary>Que dit le nombre moyen d'atomes de chlore ?</summary>
+        <p>
+          La déchloration réductrice retire un atome de chlore à chaque étape : PCE (4 Cl) → TCE (3) → DCE (2) → chlorure de vinyle (1) → éthène (0). Le nombre moyen d'atomes de chlore
+          par molécule, pondéré par les concentrations molaires (µmol/l), résume en un chiffre où en est le mélange : 4 pour un PCE pur, 2 pour un mélange dominé par le DCE, sous 1
+          quand l'éthène apparaît. Sa baisse dans le temps signe une déchloration en cours (USEPA, 1998, EPA/600/R-98/128).
+        </p>
+        <p>
+          Il se lit avec le total des chloroéthènes en moles : chlore en baisse et total stable, c'est une transformation ; total en baisse et composition inchangée, c'est plutôt une
+          dilution, une dispersion ou l'épuisement de la source ; un chlore moyen qui stagne autour de 2 avec beaucoup de DCE signale un blocage possible au stade DCE ; une part
+          croissante de chlorure de vinyle sans éthène, une dernière étape qui ne se fait pas. Ce n'est qu'un indicateur : il suppose des espèces de mobilité comparable et une
+          même source, et se confirme par les conditions redox (O2, nitrates, fer II, sulfates, méthane) et, au besoin, l'analyse de l'éthène, de l'éthane et des micro-organismes
+          déchlorants.
+        </p>
+      </details>
     </>
   )
 }
@@ -215,10 +225,68 @@ export function Piezometrie({ analyse }: { analyse: Analyse }) {
           </tbody>
         </table>
       </div>
+      <Ecoulement analyse={analyse} />
       <p className="st-note">
         Un tau positif : concentrations plus fortes quand la nappe est haute (remobilisation dans la zone de battement, lessivage de la zone non saturée) ; négatif : plus fortes en basses
         eaux (moindre dilution). Liens affichés pour p ≤ 0,10, sur au moins 6 campagnes appariées.
       </p>
+    </>
+  )
+}
+
+function Ecoulement({ analyse }: { analyse: Analyse }) {
+  const e = analyse.ecoulement
+  if (!e)
+    return (
+      <p className="st-note">
+        Sens d'écoulement : saisissez les coordonnées X / Y (en mètres) et la cote du repère (m NGF) d'au moins trois ouvrages non alignés à l'étape 3 — ou chargez des niveaux en m NGF —
+        pour calculer le gradient et la direction de chaque campagne.
+      </p>
+    )
+  const r = figureEcoulement(analyse)
+  return (
+    <>
+      <h4 className="st-sous-titre">Sens d'écoulement et gradient, campagne par campagne</h4>
+      <p className="st-note">
+        Plan ajusté par moindres carrés sur les cotes de la nappe (h = a·x + b·y + c) des ouvrages dont les coordonnées sont connues ; l'eau s'écoule selon la plus forte pente.
+        Direction moyenne vers le {direction(e.azimutMoyen)}, écart circulaire {Math.round(e.dispersion)}°, gradient médian {fr(e.gradientMedian * 1000, 2)} ‰. Le long de cet axe, de
+        l'amont vers l'aval : {e.ordre.map((x) => x.ouvrage.nom).join(' → ')}.
+      </p>
+      {e.incoherences.map((x) => (
+        <p key={x.ouvrage.cle} className="alerte">
+          {x.ouvrage.nom} est déclaré {x.declaree === 'amont' ? 'en amont' : 'en aval'} mais se trouve {x.attendue === 'amont' ? 'en amont' : 'en aval'} le long de l'écoulement : sa
+          position est à vérifier (étape 3).
+        </p>
+      ))}
+      <div className="st-cote-a-cote">
+        {r && <Figure svg={r.svg} largeur={620} hauteur={460} nom="Ecoulement de la nappe" />}
+        <div className="tableau-defile">
+          <table className="tableau st-tableau">
+            <thead>
+              <tr>
+                <th>Campagne</th>
+                <th>Régime</th>
+                <th>Ouvrages</th>
+                <th>Direction</th>
+                <th>Gradient (‰)</th>
+                <th>R²</th>
+              </tr>
+            </thead>
+            <tbody>
+              {e.campagnes.map((c) => (
+                <tr key={c.campagne.id}>
+                  <th scope="row">{formatDate(c.campagne.date)}</th>
+                  <td>{c.campagne.regime ?? '–'}</td>
+                  <td>{c.n}</td>
+                  <td>{direction(c.azimut)}</td>
+                  <td>{fr(c.gradient * 1000, 2)}</td>
+                  <td>{fr(c.r2, 2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </>
   )
 }

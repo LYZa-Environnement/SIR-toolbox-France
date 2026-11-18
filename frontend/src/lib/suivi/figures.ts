@@ -5,7 +5,7 @@
  * exports draw the same figures.
  */
 
-import { CLASSES, fr, pTexte, type Analyse, type AnalyseSerie } from './analyse.ts'
+import { CLASSES, direction, fr, pTexte, type Analyse, type AnalyseSerie } from './analyse.ts'
 import { formatDate } from './dates.ts'
 import { chronique, degradationSvg, PALETTE, planSvg, type OptionsChronique, type Rendu, type SerieGraphique } from './graphique.ts'
 import type { Compose, Ouvrage } from './modele.ts'
@@ -204,6 +204,7 @@ export function figurePlan(a: Analyse, c: Compose, largeur?: number): { svg: str
   return planSvg({
     titre: `${c.nom} — tendance et dernier résultat`,
     largeur,
+    fleche: a.ecoulement ? { azimut: a.ecoulement.azimutMoyen, libelle: `écoulement ${direction(a.ecoulement.azimutMoyen)}` } : null,
     points: ovs.map((o) => {
       const s = a.parCle.get(`${o.cle}|${c.cle}`)
       const d = s?.derniere
@@ -221,3 +222,30 @@ export function figurePlan(a: Analyse, c: Compose, largeur?: number): { svg: str
 }
 
 export const tDate = (iso: string) => anneeDecimale(iso)
+
+/** Wells at their coordinates with their median head, and the mean flow direction. */
+export function figureEcoulement(a: Analyse, largeur?: number): { svg: string; cibles: { x: number; y: number; nom: string }[] } | null {
+  const e = a.ecoulement
+  if (!e) return null
+  const ovs = a.ouvrages.filter((o) => o.x !== null && o.y !== null)
+  return planSvg({
+    titre: `Écoulement de la nappe — vers le ${direction(e.azimutMoyen)}, gradient médian ${fr(e.gradientMedian * 1000, 2)} ‰`,
+    largeur,
+    fleche: { azimut: e.azimutMoyen, libelle: `écart entre campagnes ${Math.round(e.dispersion)}°` },
+    points: ovs.map((o) => {
+      const p = a.piezo.find((x) => x.ouvrage === o && x.enCharge)
+      const vs = p ? p.serie.map((x) => x.v).sort((u, v) => u - v) : []
+      const med = vs.length ? vs[Math.floor(vs.length / 2)] : null
+      const rang = e.ordre.find((x) => x.ouvrage === o)
+      return {
+        nom: o.nom,
+        x: o.x!,
+        y: o.y!,
+        classe: null,
+        ratio: null,
+        position: o.position,
+        libelle: `${med !== null ? `${fr(med, 4)} m NGF` : 'cote inconnue'}${rang ? ` · ${rang.attendue === 'droit' ? 'intermédiaire' : rang.attendue}` : ''}`,
+      }
+    }),
+  })
+}

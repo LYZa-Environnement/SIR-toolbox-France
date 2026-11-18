@@ -48,12 +48,16 @@ export default function SuiviTemporel() {
   const [erreurExport, setErreurExport] = useState<string | null>(null)
 
   const lots = useMemo(() => fichiers.flatMap((f) => f.lots), [fichiers])
+  const fichesChargees = fichiers.some((f) => f.type === 'fiches')
   const releves = useMemo(() => fichiers.flatMap((f) => f.releves), [fichiers])
   const ouvragesDecrits = useMemo(() => fichiers.flatMap((f) => f.ouvrages), [fichiers])
   const base = useMemo(
     () => (lots.length ? construireBase({ lots, campagnes, releves, ouvragesDecrits, corrections }) : null),
     [lots, campagnes, releves, ouvragesDecrits, corrections],
   )
+
+  /** Regimes as the base reads them (from the water levels when they were not given). */
+  const regimes = useMemo(() => new Map((base?.campagnes ?? []).map((c) => [c.id, c])), [base])
 
   // Analysis window.
   const derniere = base?.campagnes[base.campagnes.length - 1]?.date ?? ''
@@ -356,6 +360,15 @@ export default function SuiviTemporel() {
             </div>
           )}
 
+          {fichiers.length > 0 && !fichesChargees && !base?.niveaux.length && (
+            <p className="st-note" style={{ maxWidth: '60rem' }}>
+              Ajoutez les fiches de prélèvement d'eau souterraine (un onglet par ouvrage) : le niveau statique initial de chaque campagne, ramené en cote NGF avec la cote du repère,
+              sert à proposer le régime hautes / basses eaux d'après les niveaux mesurés, à calculer le sens d'écoulement et le gradient, à vérifier la position amont / aval des
+              ouvrages et à rechercher un lien entre concentrations et battement de la nappe ; les paramètres de fin de purge (pH, redox, oxygène, conductivité) sont suivis comme les
+              autres composés.
+            </p>
+          )}
+
           {campagnes.length > 0 && (
             <>
               <h2 className="etape">
@@ -389,12 +402,14 @@ export default function SuiviTemporel() {
                           <input type="date" value={c.date} aria-label="Date de la campagne" style={{ width: '10rem' }} onChange={(e) => modifierCampagne(c.id, { date: e.target.value, ...(c.regimeAuto && e.target.value ? { regime: regimePropose(e.target.value) } : {}) })} />
                         </td>
                         <td>
-                          <select value={c.regime ?? ''} aria-label="Régime hydrologique" onChange={(e) => modifierCampagne(c.id, { regime: (e.target.value || null) as Regime, regimeAuto: false })}>
+                          <select value={(c.regimeAuto ? regimes.get(c.id)?.regime : c.regime) ?? c.regime ?? ''} aria-label="Régime hydrologique" onChange={(e) => modifierCampagne(c.id, { regime: (e.target.value || null) as Regime, regimeAuto: false })}>
                             <option value="">—</option>
                             <option value="HE">Hautes eaux</option>
                             <option value="BE">Basses eaux</option>
                           </select>
-                          {c.regimeAuto && c.regime && <span className="st-note"> proposé</span>}
+                          {c.regimeAuto && regimes.get(c.id)?.regime && (
+                            <span className="st-note"> {regimes.get(c.id)!.regimeSource === 'piezo' ? "d'après les niveaux" : "d'après le mois"}</span>
+                          )}
                         </td>
                         <td>
                           <input type="text" value={c.libelle} placeholder={c.date ? moisAnnee(c.date) : ''} aria-label="Libellé" onChange={(e) => modifierCampagne(c.id, { libelle: e.target.value })} style={{ width: '9rem' }} />
@@ -750,6 +765,7 @@ function TableOuvrages({
               <th>Position</th>
               <th>X</th>
               <th>Y</th>
+              <th>Cote du repère (m NGF)</th>
               <th>Rattacher à</th>
               <th>Écarter</th>
             </tr>
@@ -785,6 +801,9 @@ function TableOuvrages({
                   </td>
                   <td>
                     <input type="text" inputMode="decimal" defaultValue={o.y ?? ''} aria-label="Y" onBlur={(e) => onInfo(o.cle, { y: nombre(e.target.value) })} style={{ width: '6.5rem' }} />
+                  </td>
+                  <td>
+                    <input type="text" inputMode="decimal" defaultValue={o.repere ?? ''} aria-label="Cote du repère" onBlur={(e) => onInfo(o.cle, { repere: nombre(e.target.value) })} style={{ width: '6rem' }} />
                   </td>
                   <td>
                     <select value="" aria-label="Rattacher à un autre ouvrage" onChange={(e) => e.target.value && onRattacher(o.cle, e.target.value)}>

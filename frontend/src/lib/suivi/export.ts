@@ -11,9 +11,9 @@ import type { Workbook, Worksheet } from 'exceljs'
 import { LIBELLES_POSITION } from '../resultats/expert/amontAval.ts'
 import { argb, BANDEAU, eclaircir, ETAT } from '../resultats/couleurs.ts'
 import { ecrire, VERT_ENTETE, type Style } from '../resultats/export.ts'
-import { CLASSES, fr, LIBELLES_CENSURE, LIBELLES_PISTE, ORDRE_CLASSES, pTexte, type Analyse, type AnalyseSerie, type NiveauFait } from './analyse.ts'
+import { CLASSES, direction, fr, LIBELLES_CENSURE, LIBELLES_PISTE, ORDRE_CLASSES, pTexte, type Analyse, type AnalyseSerie, type NiveauFait } from './analyse.ts'
 import { formatDate } from './dates.ts'
-import { figureCompose, figureDegradation, figureNiveaux, figureOuvrage, figureSerie } from './figures.ts'
+import { figureCompose, figureDegradation, figureEcoulement, figureNiveaux, figureOuvrage, figureSerie } from './figures.ts'
 import { barresSvg, svgEnPng } from './graphique.ts'
 import { COLONNES_NIVEAUX, COLONNES_OUVRAGES, COLONNES_RESULTATS } from './historique.ts'
 import type { Compose } from './modele.ts'
@@ -469,6 +469,25 @@ function feuillePiezo(wb: Workbook, ws: Worksheet, a: Analyse, images: Image[]) 
     }
   }
   r++
+  const e = a.ecoulement
+  if (e) {
+    r = bandeau(ws, r, `Sens d'écoulement — vers le ${direction(e.azimutMoyen)}, gradient médian ${fr(e.gradientMedian * 1000, 2)} ‰, écart circulaire ${Math.round(e.dispersion)}°`, 8)
+    r = texte(ws, r, `Plan ajusté par moindres carrés sur les cotes de la nappe (h = a·x + b·y + c) des ouvrages dont les coordonnées sont connues ; de l'amont vers l'aval le long de l'écoulement moyen : ${e.ordre.map((x) => x.ouvrage.nom).join(' → ')}.`, 8)
+    for (const x of e.incoherences)
+      r = texte(ws, r, `${x.ouvrage.nom} : déclaré ${x.declaree === 'amont' ? 'en amont' : 'en aval'}, situé ${x.attendue === 'amont' ? 'en amont' : 'en aval'} le long de l'écoulement — position à vérifier.`, 8, { couleur: ETAT.alerte.texte, gras: true })
+    entete(ws, r++, ['Campagne', 'Régime', 'Ouvrages', 'Direction', 'Azimut (°)', 'Gradient (‰)', 'R²'])
+    for (const c of e.campagnes) {
+      ecrire(ws, r, 1, dateExcel(c.campagne.date), { taille: 9, fmt: FMT_DATE })
+      ecrire(ws, r, 2, c.campagne.regime ?? '–', { taille: 9 })
+      ecrire(ws, r, 3, c.n, { taille: 9 })
+      ecrire(ws, r, 4, direction(c.azimut), { taille: 9 })
+      ecrire(ws, r, 5, Math.round(c.azimut), { taille: 9 })
+      ecrire(ws, r, 6, n3(c.gradient * 1000), { taille: 9 })
+      ecrire(ws, r, 7, n3(c.r2, 2), { taille: 9 })
+      r++
+    }
+    r++
+  }
   placerImages(wb, ws, r, images)
 }
 
@@ -506,6 +525,7 @@ function feuilleDechloration(wb: Workbook, ws: Worksheet, a: Analyse, images: Im
     for (let i = 0; i < 2 * n + 3; i++) ws.getColumn(2 + i).width = Math.max(ws.getColumn(2 + i).width ?? 9, 9)
     r++
     r = bandeau(ws, r, `${d.ouvrage.nom}${d.tendanceChlores ? ` — nombre moyen de Cl : ${d.tendanceChlores.pBilateral > a.reglages.alpha ? 'pas de tendance significative' : d.tendanceChlores.S < 0 ? 'en baisse' : 'en hausse'} (${pTexte(d.tendanceChlores.pBilateral)})` : ''}`, 2 * n + 3)
+    for (const t of d.lecture) r = texte(ws, r, t, 2 * n + 3)
     entete(ws, r++, ['Campagne', ...d.especes.map((e) => `${e.code} µmol/l`), 'Total µmol/l', ...d.especes.map((e) => `${e.code} %`), 'Cl moyen'])
     for (const c of d.campagnes) {
       ecrire(ws, r, 1, dateExcel(c.campagne.date), { taille: 9, fmt: FMT_DATE })
@@ -607,6 +627,12 @@ function feuilleMethode(ws: Worksheet, a: Analyse) {
     ],
     ['Dégradation des chloroéthènes : parts molaires (PCE, TCE, DCE, chlorure de vinyle) et nombre moyen d’atomes de chlore par campagne, tendance de ce nombre (USEPA, 1998, EPA/600/R-98/128).', false],
     ['Lien concentration – niveau de la nappe : tau-b de Kendall entre les deux, campagne par campagne (6 paires au moins).', false],
+    [
+      "Niveaux d'eau : niveau statique initial des fiches de prélèvement, ramené en cote NGF par la cote du repère (fiche, tableau des ouvrages ou saisie). Régime d'une campagne non renseigné : hautes eaux si les ouvrages sont en moyenne au-dessus de leur niveau médian, basses eaux sinon (4 relevés au moins par ouvrage), à défaut d'après le mois.",
+      false,
+    ],
+    ["Sens d'écoulement : plan ajusté par moindres carrés sur les cotes de la nappe d'au moins trois ouvrages non alignés ; direction de la plus forte pente et gradient, moyenne circulaire des directions sur la période.", false],
+    ["Chlore moyen : nombre moyen d'atomes de chlore des chloroéthènes pondéré par les moles (PCE 4, TCE 3, DCE 2, CV 1, éthène et éthane 0), lu avec la tendance du total en moles (transformation ou dilution) et la composition des trois dernières campagnes (blocage au stade DCE : DCE ≥ 60 % et CV < 10 % des moles ; accumulation de CV : CV ≥ 30 %).", false],
     ['', false],
     ['Cadre', true],
     ['Méthodologie nationale de gestion des sites et sols pollués (MTES, avril 2017) : bilan des résultats de la surveillance, par exemple tous les quatre ans, qui valide la surveillance en place ou propose son évolution.', false],
@@ -688,6 +714,7 @@ interface Figures {
   ouvrages: { nom: string; svg: string; largeur: number; hauteur: number }[]
   series: { nom: string; svg: string; largeur: number; hauteur: number }[]
   niveaux: { nom: string; svg: string; largeur: number; hauteur: number } | null
+  ecoulement: { nom: string; svg: string; largeur: number; hauteur: number } | null
   degradation: { nom: string; svg: string; largeur: number; hauteur: number }[]
   indicateurs: { nom: string; svg: string; largeur: number; hauteur: number }
 }
@@ -736,7 +763,16 @@ function figures(a: Analyse): Figures {
     largeur: 820,
     hauteur: 300,
   }
-  return { composes, ouvrages, series, niveaux: rn ? { nom: 'Niveaux de la nappe', svg: rn.svg, largeur: rn.largeur, hauteur: rn.hauteur } : null, degradation, indicateurs }
+  const re = figureEcoulement(a)
+  return {
+    composes,
+    ouvrages,
+    series,
+    niveaux: rn ? { nom: 'Niveaux de la nappe', svg: rn.svg, largeur: rn.largeur, hauteur: rn.hauteur } : null,
+    ecoulement: re ? { nom: 'Ecoulement de la nappe', svg: re.svg, largeur: 620, hauteur: 460 } : null,
+    degradation,
+    indicateurs,
+  }
 }
 
 // ---- Workbooks -------------------------------------------------------------------------------------
@@ -769,7 +805,7 @@ export async function construireClasseurSuivi(a: Analyse, site: string): Promise
   }
 
   feuilleIndicateurs(wb, wb.addWorksheet('Évolution d’ensemble', { views: [{ showGridLines: false }] }), a, [await img(f.indicateurs, 'Dépassements par campagne')])
-  feuillePiezo(wb, wb.addWorksheet('Piézométrie', { views: [{ showGridLines: false }] }), a, f.niveaux ? [await img(f.niveaux)] : [])
+  feuillePiezo(wb, wb.addWorksheet('Piézométrie', { views: [{ showGridLines: false }] }), a, [...(f.niveaux ? [await img(f.niveaux)] : []), ...(f.ecoulement ? [await img(f.ecoulement, 'Écoulement de la nappe')] : [])])
   feuilleAmontAval(wb.addWorksheet('Amont-aval', { views: [{ showGridLines: false }] }), a)
   if (a.degradation.length) feuilleDechloration(wb, wb.addWorksheet('Déchloration', { views: [{ showGridLines: false }] }), a, await Promise.all(f.degradation.map((x) => img(x))))
   feuillePistes(wb.addWorksheet('Pistes surveillance', { views: [{ showGridLines: false }] }), a)
@@ -813,6 +849,7 @@ export async function telechargerGraphiques(a: Analyse, site: string) {
   for (const x of f.ouvrages) await ajouter('2 - Par ouvrage', x)
   for (const x of f.series) await ajouter('3 - Séries clés', x)
   if (f.niveaux) await ajouter('4 - Piézométrie', f.niveaux)
+  if (f.ecoulement) await ajouter('4 - Piézométrie', f.ecoulement)
   for (const x of f.degradation) await ajouter('5 - Déchloration', x)
   await ajouter('6 - Ensemble', f.indicateurs)
   zip.file(

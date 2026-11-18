@@ -72,6 +72,8 @@ export interface Releve {
   /** Water level elevation (m NGF). */
   charge: number | null
   terrain: Partial<Record<ParamTerrain, number>>
+  /** Elevation of the measuring point (m NGF), when the sheet gives it. */
+  repere?: number | null
   source: string
 }
 
@@ -104,6 +106,8 @@ export interface Campagne {
   t: number
   regime: Regime
   regimeAuto: boolean
+  /** Where the regime comes from: given, proposed from the water levels, or from the month. */
+  regimeSource: 'saisi' | 'piezo' | 'mois'
   libelle: string
   fichiers: string[]
 }
@@ -245,6 +249,41 @@ function positionsParCharges(niveaux: Niveau[]): Record<string, Position> {
   return Object.fromEntries(moyennes.map((m) => [m.o, m.c >= max - tiers ? 'amont' : m.c <= min + tiers ? 'aval' : 'droit'])) as Record<string, Position>
 }
 
+// ---- Regime from the water levels ---------------------------------------------------------------
+
+/**
+ * High or low water read on the levels themselves: for each well, its
+ * level at the campaign against its median level over the history; the
+ * campaign is "high water" when the wells stand above their median on
+ * average. Applied only to campaigns whose regime was not given, and only
+ * with 4 levels at least per well.
+ */
+function regimesPiezometriques(campagnes: Campagne[], niveaux: Niveau[]) {
+  const parOuvrage = new Map<string, Niveau[]>()
+  for (const n of niveaux) if (n.campagne) (parOuvrage.get(n.ouvrage) ?? parOuvrage.set(n.ouvrage, []).get(n.ouvrage)!).push(n)
+  const valeur = (n: Niveau, enCharge: boolean) => (enCharge ? n.charge : n.profondeur !== null ? -n.profondeur : null)
+  const ecarts = new Map<string, number[]>()
+  for (const ns of parOuvrage.values()) {
+    const enCharge = ns.every((n) => n.charge !== null)
+    const vs = ns.map((n) => valeur(n, enCharge)).filter((v): v is number => v !== null)
+    if (vs.length < 4) continue
+    const s = [...vs].sort((a, b) => a - b)
+    const med = s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2
+    for (const n of ns) {
+      const v = valeur(n, enCharge)
+      if (v === null) continue
+      ;(ecarts.get(n.campagne!) ?? ecarts.set(n.campagne!, []).get(n.campagne!)!).push(v - med)
+    }
+  }
+  for (const c of campagnes) {
+    const es = ecarts.get(c.id)
+    if (!c.regimeAuto || !es?.length) continue
+    const m = es.reduce((a, b) => a + b, 0) / es.length
+    c.regime = m >= 0 ? 'HE' : 'BE'
+    c.regimeSource = 'piezo'
+  }
+}
+
 // ---- Base ------------------------------------------------------------------------------------
 
 export interface Entrees {
@@ -268,6 +307,7 @@ export function construireBase(e: Entrees): Base {
     t: anneeDecimale(c.date),
     regime: c.regime,
     regimeAuto: c.regimeAuto,
+    regimeSource: c.regimeAuto ? 'mois' : 'saisi',
     libelle: c.libelle,
     fichiers: [...new Set(c.lots.map((id) => parLot.get(id)?.fichier).filter((f): f is string => !!f))],
   }))
@@ -400,7 +440,17 @@ export function construireBase(e: Entrees): Base {
   if (conversions.size) notes.push(`Unités harmonisées : ${[...conversions].join(' ; ')}.`)
   if (doublons) notes.push(`${doublons} résultat${doublons > 1 ? 's' : ''} en double pour un même ouvrage et une même campagne (deux échantillons rattachés au même ouvrage) : le plus élevé est retenu.`)
 
-  // Water levels and field readings.
+  // Elevation of each well's measuring point: entered, from a history table, else from the sampling sheets.
+  const decrits = new Map(e.ouvragesDecrits.map((o) => [cleDe(o.nom), o]))
+  const reperesFiches = new Map<string, number>()
+  for (const r of [...e.releves].sort((a, b) => a.date.localeCompare(b.date))) if (r.repere !== null && r.repere !== undefined) reperesFiches.set(cleDe(r.ouvrage), r.repere)
+  const repereDe = (cle: string): number | null => {
+    const info = e.corrections.ouvrages[cle]
+    if (info?.repere !== undefined && info.repere !== null) return info.repere
+    return decrits.get(cle)?.repere ?? reperesFiches.get(cle) ?? null
+  }
+
+  // Water levels and field readings. A depth to water becomes a head when the measuring point elevation is known.
   const niveaux: Niveau[] = []
   for (const r of e.releves) {
     if (!r.date) continue
@@ -410,7 +460,9 @@ export function construireBase(e: Entrees): Base {
       .filter((c) => ecartJours(c.date, r.date) <= 31)
       .sort((a, b) => ecartJours(a.date, r.date) - ecartJours(b.date, r.date))[0]
     if (r.profondeur !== null || r.charge !== null) {
-      niveaux.push({ ouvrage, date: r.date, t: anneeDecimale(r.date), campagne: proche?.id ?? null, profondeur: r.profondeur, charge: r.charge, source: r.source })
+      const z = repereDe(ouvrage)
+      const charge = r.charge ?? (z !== null && r.profondeur !== null ? Math.round((z - r.profondeur) * 1000) / 1000 : null)
+      niveaux.push({ ouvrage, date: r.date, t: anneeDecimale(r.date), campagne: proche?.id ?? null, profondeur: r.profondeur, charge, source: r.source })
     }
     if (!proche) continue
     for (const [id, valeur] of Object.entries(r.terrain) as [ParamTerrain, number][]) {
@@ -436,9 +488,9 @@ export function construireBase(e: Entrees): Base {
     }
   }
   niveaux.sort((a, b) => a.date.localeCompare(b.date))
+  regimesPiezometriques(campagnes, niveaux)
 
   // Wells.
-  const decrits = new Map(e.ouvragesDecrits.map((o) => [cleDe(o.nom), o]))
   for (const [cle, o] of decrits) noterOuvrage(cle, o.nom)
   const parNom = positionsAuto([...ouvrages.values()].flatMap((o) => [...o.noms.keys()].map((nom) => ({ nom, libelles: {} }))))
   const parCharges = positionsParCharges(niveaux)
@@ -456,7 +508,7 @@ export function construireBase(e: Entrees): Base {
       positionAuto: !info.position && !decrit?.position,
       x: info.x !== undefined ? info.x : (decrit?.x ?? null),
       y: info.y !== undefined ? info.y : (decrit?.y ?? null),
-      repere: info.repere !== undefined ? info.repere : (decrit?.repere ?? null),
+      repere: repereDe(o.cle),
       exclu: !!info.exclu,
     }
   })

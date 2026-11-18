@@ -6,7 +6,7 @@
 
 import { lireFiches, type ParamTerrain } from '../nappe/fiches.ts'
 import { LectureImpossible, lireClasseur, type Cell } from '../resultats/parse.ts'
-import { dateCampagne, dateDepuisNom, datesPrelevement } from './dates.ts'
+import { dateCampagne, dateDepuisNom, datesPrelevement, lireDate } from './dates.ts'
 import { lireHistorique, lotsHistorique, type OuvrageHistorique } from './historique.ts'
 import { nouvelId, type Lot, type Releve } from './modele.ts'
 
@@ -34,6 +34,7 @@ async function feuillesDe(f: File): Promise<{ nom: string; grille: Cell[][] }[]>
 }
 
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
+const niveaux = (n: number) => `${n} niveau${n > 1 ? 'x' : ''} d'eau`
 
 export async function lireFichier(f: File): Promise<FichierLu> {
   const feuilles = await feuillesDe(f)
@@ -62,7 +63,7 @@ export async function lireFichier(f: File): Promise<FichierLu> {
       ouvrages: h.ouvrages,
       resume: [
         h.lignes.length ? `${pluriel(h.lignes.length, 'résultat')} sur ${pluriel(lots.length, 'campagne')}` : null,
-        h.niveaux.length ? pluriel(h.niveaux.length, "niveau d'eau") : null,
+        h.niveaux.length ? niveaux(h.niveaux.length) : null,
         h.ouvrages.length ? `${pluriel(h.ouvrages.length, 'ouvrage')} décrit${h.ouvrages.length > 1 ? 's' : ''}` : null,
       ]
         .filter(Boolean)
@@ -77,14 +78,14 @@ export async function lireFichier(f: File): Promise<FichierLu> {
     const releves: Releve[] = []
     const sansDate: string[] = []
     for (const x of fiches) {
-      const date = /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? x.date : ''
+      const date = lireDate(x.date) ?? ''
       if (!date) {
         sansDate.push(x.ouvrage || x.onglet)
         continue
       }
       const terrain: Partial<Record<ParamTerrain, number>> = {}
       for (const [k, v] of Object.entries(x.finale) as [ParamTerrain, { valeur: number } | undefined][]) if (v) terrain[k] = v.valeur
-      releves.push({ ouvrage: x.ouvrage || x.onglet, date, profondeur: x.niveauStatique, charge: x.charge, terrain, source: f.name })
+      releves.push({ ouvrage: x.ouvrage || x.onglet, date, profondeur: x.niveauStatique, charge: x.charge, terrain, repere: x.altitudeRepere, source: f.name })
     }
     return {
       id,
@@ -93,7 +94,7 @@ export async function lireFichier(f: File): Promise<FichierLu> {
       lots: [],
       releves,
       ouvrages: [],
-      resume: `${pluriel(fiches.length, 'fiche')} de prélèvement · ${pluriel(releves.filter((r) => r.profondeur !== null || r.charge !== null).length, "niveau d'eau")}`,
+      resume: `${pluriel(fiches.length, 'fiche')} de prélèvement · ${niveaux(releves.filter((r) => r.profondeur !== null || r.charge !== null).length)}`,
       avertissements: sansDate.length ? [`Fiche${sansDate.length > 1 ? 's' : ''} sans date lisible : ${sansDate.join(', ')}.`] : [],
     }
   }

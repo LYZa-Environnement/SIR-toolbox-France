@@ -399,7 +399,7 @@ export function chronique(o: OptionsChronique): Rendu {
         items.push(`<text x="${x + 21}" y="${ly}" font-size="10" fill="#5f7d95">${echapper(lib)}</text>`)
       }
     }
-    {
+    if (tous.some((p) => p.inferieur)) {
       const lib = 'symbole vide : < LQ (placé à la LQ)'
       const x = place(26 + lib.length * 5.6)
       items.push(`<circle cx="${x + 8}" cy="${ly - 3.5}" r="3.4" fill="#fff" stroke="${GRIS}" stroke-width="1.3"/><text x="${x + 21}" y="${ly}" font-size="9.5" fill="${GRIS}">${echapper(lib)}</text>`)
@@ -527,7 +527,14 @@ export interface PointPlan {
   position: string
 }
 
-export function planSvg(o: { titre: string; points: PointPlan[]; largeur?: number; hauteur?: number }): { svg: string; cibles: { x: number; y: number; nom: string }[] } {
+export function planSvg(o: {
+  titre: string
+  points: PointPlan[]
+  largeur?: number
+  hauteur?: number
+  /** Groundwater flow: direction (degrees from north) and a label. */
+  fleche?: { azimut: number; libelle: string } | null
+}): { svg: string; cibles: { x: number; y: number; nom: string }[] } {
   const L = o.largeur ?? 620
   const H = o.hauteur ?? 460
   const marge = 56
@@ -547,6 +554,22 @@ export function planSvg(o: { titre: string; points: PointPlan[]; largeur?: numbe
   parties.push(
     `<line x1="20" x2="${n1(20 + dist * echelle)}" y1="${H - 18}" y2="${H - 18}" stroke="${ENCRE}" stroke-width="2"/><text x="20" y="${H - 24}" font-size="9.5" fill="${ENCRE}">${dist} m (si coordonnées en mètres)</text>`,
   )
+  if (o.fleche) {
+    const cx = L - 70
+    const cy = H - 72
+    const dx = Math.sin((o.fleche.azimut * Math.PI) / 180)
+    const dy = -Math.cos((o.fleche.azimut * Math.PI) / 180)
+    const x1 = cx - dx * 26
+    const y1 = cy - dy * 26
+    const x2 = cx + dx * 26
+    const y2 = cy + dy * 26
+    const px = -dy
+    const py = dx
+    parties.push(`<circle cx="${cx}" cy="${cy}" r="34" fill="#eef4fa" stroke="#bcd0e3"/>`)
+    parties.push(`<line x1="${n1(x1)}" y1="${n1(y1)}" x2="${n1(x2 - dx * 8)}" y2="${n1(y2 - dy * 8)}" stroke="#2f5f9e" stroke-width="3"/>`)
+    parties.push(`<path d="M${n1(x2)} ${n1(y2)}L${n1(x2 - dx * 12 + px * 6)} ${n1(y2 - dy * 12 + py * 6)}L${n1(x2 - dx * 12 - px * 6)} ${n1(y2 - dy * 12 - py * 6)}Z" fill="#2f5f9e"/>`)
+    parties.push(`<text x="${cx}" y="${cy + 50}" font-size="9.5" text-anchor="middle" fill="#2f5f9e">${echapper(o.fleche.libelle)}</text>`)
+  }
   const cibles: { x: number; y: number; nom: string }[] = []
   for (const p of o.points) {
     const x = X(p.x)

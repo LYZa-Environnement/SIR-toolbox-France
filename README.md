@@ -12,7 +12,8 @@ regroupés en quatre catégories, une couleur chacune, dans l'ordre d'une
 étude : **1. Contexte du site et plan d'investigation** (Site Setting,
 données environnementales publiques, création maillage), **2. Données de
 terrain** (logs de forage), **3. Résultats d'analyses et interprétation**
-(résultats labo, avec les conditions de la nappe, et interprétation PFAS) et
+(résultats labo, avec les conditions de la nappe, suivi temporel et
+interprétation PFAS) et
 **4. Contrôle de conformité** (conformité des rejets, vérification des
 livrables).
 
@@ -97,6 +98,37 @@ livrables).
   lors d'au moins deux campagnes, et « Statistiques campagnes » sur
   l'ensemble des données (distribution, par campagne, par régime, par
   ouvrage, corrélations de rang) dans l'export.
+- **Suivi temporel** (`frontend/src/pages/SuiviTemporel.tsx`,
+  `src/lib/suivi/`, `src/components/suivi/`) — analyse des chroniques de
+  surveillance des eaux souterraines pour le bilan quadriennal. Fichiers
+  déposés en vrac, reconnus par leur contenu (`import.ts`) : rapports de
+  laboratoire (lecteur de Résultats labo ; date lue sur la ligne « Date de
+  prélèvement » du rapport, sinon dans le nom du fichier — `dates.ts`),
+  fiches de prélèvement (niveau statique initial, cote du repère, paramètres
+  de fin de purge), tableau historique au format du modèle téléchargeable
+  ou export précédent de l'outil (`historique.ts`). Les fichiers sont
+  regroupés en campagnes (20 jours), les ouvrages et composés rapprochés
+  d'une campagne à l'autre, les unités harmonisées, les sommes COHV, BTEX,
+  HAP et C10–C40 recalculées (`modele.ts`). Pour chaque série ouvrage ×
+  composé (`analyse.ts`, `stats.ts`) : Mann-Kendall (loi exacte de S pour
+  les séries courtes sans ex aequo), pente de Theil-Sen et intervalle de
+  Gilbert, Kendall saisonnier HE / BE, rupture de Pettitt, LOWESS, classes
+  de tendance d'après MAROS, demi-vie et horizon de la valeur de référence,
+  résultats atypiques ; résultats < LQ selon trois conventions (censure à la
+  LQ la plus élevée par défaut, LQ, LQ/2). À l'échelle du réseau : faits
+  marquants classés, pistes pour le programme de surveillance avec leur
+  critère, qualité des données (LQ variables ou supérieures à la référence,
+  lacunes), déchloration des chloroéthènes (parts molaires, chlore moyen,
+  total en moles, blocage au stade DCE), piézométrie (cotes NGF depuis le
+  repère, régime HE / BE d'après les niveaux, sens d'écoulement et gradient
+  par campagne, cohérence des positions amont / aval, lien concentration –
+  niveau), comparaison amont / aval, plan des ouvrages. Graphiques en SVG
+  (`graphique.ts`, `figures.ts`), identiques à l'écran et dans les exports :
+  classeur Excel (synthèse, tendances, matrice, chroniques, graphiques
+  intégrés, piézométrie, déchloration, pistes, méthode, données
+  consolidées rechargeables — `export.ts`), archive des graphiques (PNG et
+  SVG), données consolidées seules. Un jeu d'exemple fictif (`exemple.ts`)
+  permet d'essayer l'outil.
 - **Interprétation PFAS** (`frontend/src/pages/InterpretationPfas.tsx`) —
   lecture des résultats PFAS en eaux souterraines ou en sols, depuis le
   fichier du laboratoire (plusieurs fichiers réunis, par exemple le TFA

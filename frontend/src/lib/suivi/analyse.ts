@@ -506,6 +506,38 @@ export interface Degradation {
   /** Per campaign: µmol/l of each species (0 when < LQ), total, mean chlorine number. */
   campagnes: { campagne: Campagne; moles: number[]; total: number; chlores: number | null }[]
   tendanceChlores: MannKendall | null
+  /** Trend of the total of the chloroethenes in moles: dilution or transformation. */
+  tendanceTotal: MannKendall | null
+  /** Ethene / ethane among the analyses (end of the chain). */
+  finAnalysee: boolean
+  /** Reading of the last campaigns. */
+  stade: 'stagnation-dce' | 'accumulation-cv' | 'complete' | null
+  /** Sentences explaining what the mean chlorine number and the total say. */
+  lecture: string[]
+}
+
+export interface EcoulementCampagne {
+  campagne: Campagne
+  /** Wells used (coordinates and head known). */
+  n: number
+  /** Hydraulic gradient (m/m). */
+  gradient: number
+  /** Direction the water flows to, in degrees from north, clockwise. */
+  azimut: number
+  /** Fit of the plane through the heads. */
+  r2: number
+}
+
+export interface Ecoulement {
+  campagnes: EcoulementCampagne[]
+  azimutMoyen: number
+  /** Circular standard deviation of the directions (degrees). */
+  dispersion: number
+  gradientMedian: number
+  /** Wells along the mean flow, upgradient first, with the position the flow gives them. */
+  ordre: { ouvrage: Ouvrage; abscisse: number; attendue: 'amont' | 'droit' | 'aval' }[]
+  /** Declared upgradient but downgradient along the flow, or the reverse. */
+  incoherences: { ouvrage: Ouvrage; declaree: string; attendue: string }[]
 }
 
 export interface PiezoOuvrage {
@@ -560,6 +592,7 @@ export interface Analyse {
   indicateurs: IndicateurCampagne[]
   degradation: Degradation[]
   piezo: PiezoOuvrage[]
+  ecoulement: Ecoulement | null
   amontAval: AmontAvalCompose[]
   /** First and last date of the window as analysed. */
   debut: string
@@ -631,10 +664,11 @@ export function analyser(base: Base, corrections: Corrections, r: Reglages): Ana
     }
   })
 
-  const degradation = degradations(base, ouvrages, campagnes)
+  const degradation = degradations(base, ouvrages, campagnes, r)
   const piezo = piezometrie(base, ouvrages, actives, r)
+  const ecoulement = ecoulements(base, ouvrages, campagnes)
   const amontAval = comparaisonAmontAval(base, ouvrages, campagnes, composesQuantifies)
-  const faits = faitsMarquants(actives, composesJamais, campagnes, degradation, piezo, amontAval, r)
+  const faits = faitsMarquants(actives, composesJamais, campagnes, degradation, piezo, amontAval, r, ecoulement)
   const pistes = pistesSurveillance(actives, ouvrages, composesJamais, composesQuantifies, campagnes, base, references, r)
   const qualite = notesQualite(base, actives, ouvrages, campagnes, composesJamais, references)
 
@@ -655,6 +689,7 @@ export function analyser(base: Base, corrections: Corrections, r: Reglages): Ana
     indicateurs,
     degradation,
     piezo,
+    ecoulement,
     amontAval,
     debut: campagnes[0]?.date ?? '',
     fin: campagnes[campagnes.length - 1]?.date ?? '',
@@ -673,6 +708,7 @@ function faitsMarquants(
   piezo: PiezoOuvrage[],
   amontAval: AmontAvalCompose[],
   r: Reglages,
+  ecoulement: Ecoulement | null,
 ): Fait[] {
   const faits: Fait[] = []
   const pAlpha = (s: AnalyseSerie) => (s.mk ? pTexte(s.mk.pBilateral) : '')
@@ -767,6 +803,15 @@ function faitsMarquants(
     })
   }
   for (const d of degr) {
+    if (d.stade === 'stagnation-dce' || d.stade === 'accumulation-cv') {
+      faits.push({
+        ouvrage: d.ouvrage.cle,
+        niveau: 'vigilance',
+        titre: `${d.stade === 'stagnation-dce' ? 'Déchloration bloquée au stade DCE ?' : 'Accumulation de chlorure de vinyle'} : ${d.ouvrage.nom}`,
+        detail: d.lecture.filter((t) => /représente/.test(t)).join(' '),
+        poids: 58,
+      })
+    }
     if (d.tendanceChlores && d.tendanceChlores.pBilateral <= r.alpha) {
       const baisse = d.tendanceChlores.S < 0
       faits.push({
@@ -779,6 +824,23 @@ function faitsMarquants(
         poids: baisse ? 38 : 55,
       })
     }
+  }
+  if (ecoulement) {
+    for (const x of ecoulement.incoherences) {
+      faits.push({
+        ouvrage: x.ouvrage.cle,
+        niveau: 'vigilance',
+        titre: `Position à vérifier : ${x.ouvrage.nom}`,
+        detail: `Déclaré ${x.declaree === 'amont' ? 'en amont' : 'en aval'}, mais situé ${x.attendue === 'amont' ? 'en amont' : 'en aval'} le long de l'écoulement déduit des cotes de la nappe (vers le ${direction(ecoulement.azimutMoyen)}) : la lecture amont / aval et les pistes qui en dépendent sont à revoir.`,
+        poids: 56,
+      })
+    }
+    faits.push({
+      niveau: 'info',
+      titre: `Écoulement vers le ${direction(ecoulement.azimutMoyen)}`,
+      detail: `Gradient hydraulique médian ${fr(ecoulement.gradientMedian * 1000, 2)} ‰ sur ${ecoulement.campagnes.length} campagne${ecoulement.campagnes.length > 1 ? 's' : ''} (plan ajusté sur les cotes de la nappe) ; ${ecoulement.dispersion > 45 ? `direction variable d'une campagne à l'autre (écart circulaire ${Math.round(ecoulement.dispersion)}°) : le rôle amont / aval des ouvrages peut changer selon la saison.` : `direction stable (écart circulaire ${Math.round(ecoulement.dispersion)}°).`}`,
+      poids: ecoulement.dispersion > 45 ? 45 : 18,
+    })
   }
   for (const p of piezo) {
     for (const c of p.correlations) {
@@ -1029,11 +1091,27 @@ function notesQualite(base: Base, series: AnalyseSerie[], ouvrages: Ouvrage[], c
 
 // ---- Dechlorination over time -----------------------------------------------------------------------
 
-function degradations(base: Base, ouvrages: Ouvrage[], campagnes: Campagne[]): Degradation[] {
-  const chaine = CHAINES[0]
-  const especes = chaine.especes
+/** End of the reductive dechlorination: no chlorine left. */
+const FIN_CHAINE = [
+  { code: 'Éthène', libelle: 'Éthène (éthylène)', variantes: ['ethylene', 'ethene'], masseMolaire: 28.05, chlores: 0, couleur: '#7f8c8d' },
+  { code: 'Éthane', libelle: 'Éthane', variantes: ['ethane'], masseMolaire: 30.07, chlores: 0, couleur: '#b7bec4' },
+]
+
+/**
+ * Chloroethenes in moles, campaign by campaign. The mean number of chlorine
+ * atoms per molecule — Σ(moles × Cl) / Σ moles, PCE 4, TCE 3, DCE 2, vinyl
+ * chloride 1, ethene and ethane 0 — falls as reductive dechlorination
+ * proceeds. Read with the total in moles: a falling chlorine number with a
+ * steady total is a transformation, a falling total with a steady
+ * composition is rather dilution, dispersion or source depletion.
+ */
+function degradations(base: Base, ouvrages: Ouvrage[], campagnes: Campagne[], r: Reglages): Degradation[] {
+  const especes = [...CHAINES[0].especes, ...FIN_CHAINE]
   const composesEspece = especes.map((e) => base.composes.find((c) => !c.calcule && e.variantes.includes(compact(c.nom))) ?? null)
-  if (composesEspece.filter(Boolean).length < 2) return []
+  if (composesEspece.slice(0, CHAINES[0].especes.length).filter(Boolean).length < 2) return []
+  const iDCE = especes.map((e, i) => (/DCE/.test(e.code) ? i : -1)).filter((i) => i >= 0)
+  const iCV = especes.findIndex((e) => e.code === 'CV')
+  const iFin = especes.map((e, i) => (e.chlores === 0 ? i : -1)).filter((i) => i >= 0)
   const out: Degradation[] = []
   for (const o of ouvrages) {
     const lignes: Degradation['campagnes'] = []
@@ -1041,25 +1119,74 @@ function degradations(base: Base, ouvrages: Ouvrage[], campagnes: Campagne[]): D
       const moles = especes.map((e, i) => {
         const comp = composesEspece[i]
         if (!comp) return 0
-        const x = base.resultats.find((r) => r.ouvrage === o.cle && r.compose === comp.cle && r.campagne === c.id && !r.exclu)
+        const x = base.resultats.find((y) => y.ouvrage === o.cle && y.compose === comp.cle && y.campagne === c.id && !y.exclu)
         if (!x || x.inferieur) return 0
         const ug = /mg/i.test(comp.unite) ? x.valeur * 1000 : /ng/i.test(comp.unite) ? x.valeur / 1000 : x.valeur
         return ug / e.masseMolaire
       })
       const total = moles.reduce((a, b) => a + b, 0)
-      const analysee = composesEspece.some((comp) => comp && base.resultats.some((r) => r.ouvrage === o.cle && r.compose === comp.cle && r.campagne === c.id))
+      const analysee = composesEspece.some((comp) => comp && base.resultats.some((y) => y.ouvrage === o.cle && y.compose === comp.cle && y.campagne === c.id))
       if (!analysee) continue
-      lignes.push({ campagne: c, moles, total, chlores: total > 0 ? moles.reduce((s, m, i) => s + m * especes[i].chlores, 0) / total : null })
+      lignes.push({ campagne: c, moles, total, chlores: total > 0 ? moles.reduce((s2, m, i) => s2 + m * especes[i].chlores, 0) / total : null })
     }
     const quantifiees = lignes.filter((l) => l.total > 0)
     if (quantifiees.length < 3) continue
     const presentes = especes.map((_, i) => quantifiees.some((l) => l.moles[i] > 0))
     if (presentes.filter(Boolean).length < 2) continue
+    const tendanceChlores = quantifiees.length >= 4 ? mannKendall(quantifiees.map((l) => l.chlores!)) : null
+    const tendanceTotal = quantifiees.length >= 4 ? mannKendall(quantifiees.map((l) => l.total)) : null
+    const finAnalysee = iFin.some((i) => composesEspece[i] !== null)
+    // Composition of the last three campaigns.
+    const fin = quantifiees.slice(-3)
+    const part = (is: number[]) => fin.reduce((a, l) => a + is.reduce((b, i) => b + l.moles[i], 0) / l.total, 0) / fin.length
+    const pDCE = part(iDCE)
+    const pCV = iCV >= 0 ? part([iCV]) : 0
+    const pFin = part(iFin)
+    const signif = (mk: MannKendall | null, sens: number) => !!mk && mk.pBilateral <= r.alpha && Math.sign(mk.S) === sens
+    let stade: Degradation['stade'] = null
+    if (pFin >= 0.1) stade = 'complete'
+    else if (pCV >= 0.3) stade = 'accumulation-cv'
+    else if (pDCE >= 0.6 && pCV < 0.1 && !signif(tendanceChlores, -1)) stade = 'stagnation-dce'
+    const clFin = fin.reduce((a, l) => a + l.chlores!, 0) / fin.length
+    const lecture: string[] = []
+    lecture.push(
+      `Nombre moyen d'atomes de chlore aux dernières campagnes : ${fr(clFin, 2)} (4 = PCE seul, 3 = TCE, 2 = DCE, 1 = chlorure de vinyle, 0 = éthène / éthane)${tendanceChlores ? ` ; ${signif(tendanceChlores, -1) ? 'en baisse significative' : signif(tendanceChlores, 1) ? 'en hausse significative' : 'sans tendance significative'} (${pTexte(tendanceChlores.pBilateral)})` : ''}.`,
+    )
+    if (tendanceTotal) {
+      const cl = signif(tendanceChlores, -1)
+      const tb = signif(tendanceTotal, -1)
+      const th = signif(tendanceTotal, 1)
+      lecture.push(
+        cl && !tb && !th
+          ? `Total des chloroéthènes (en moles) sans tendance (${pTexte(tendanceTotal.pBilateral)}) : la composition se décale vers les produits de dégradation sans perte de matière dissoute — une transformation (déchloration) plutôt qu'une dilution.`
+          : cl && tb
+            ? `Total des chloroéthènes en baisse (${pTexte(tendanceTotal.pBilateral)}) en même temps que le chlore moyen : déchloration et diminution de la masse dissoute.`
+            : !cl && tb
+              ? `Total des chloroéthènes en baisse (${pTexte(tendanceTotal.pBilateral)}) sans changement de composition : dilution, dispersion, épuisement ou traitement de la source plutôt que déchloration réductrice.`
+              : th
+                ? `Total des chloroéthènes en hausse (${pTexte(tendanceTotal.pBilateral)}) : apport depuis la source ou arrivée du panache.`
+                : `Total des chloroéthènes sans tendance nette (${pTexte(tendanceTotal.pBilateral)}).`,
+      )
+    }
+    if (stade === 'stagnation-dce')
+      lecture.push(
+        `Le DCE représente ${Math.round(pDCE * 100)} % des moles aux dernières campagnes et le chlorure de vinyle reste minoritaire : la déchloration peut être bloquée au stade DCE (milieu insuffisamment réducteur ou populations déchlorantes absentes, Dehalococcoides notamment).`,
+      )
+    if (stade === 'accumulation-cv')
+      lecture.push(
+        `Le chlorure de vinyle représente ${Math.round(pCV * 100)} % des moles aux dernières campagnes${finAnalysee ? '' : " et l'éthène / l'éthane ne sont pas analysés"} : la dernière étape (CV → éthène) est à vérifier — c'est le composé le plus toxique de la chaîne.`,
+      )
+    if (stade === 'complete') lecture.push(`L'éthène / l'éthane représentent ${Math.round(pFin * 100)} % des moles : la déchloration va jusqu'à son terme sur cet ouvrage.`)
+    if (!finAnalysee) lecture.push("Éthène et éthane non analysés : la fin de la chaîne n'est pas visible et le chlore moyen ne peut pas descendre sous 1.")
     out.push({
       ouvrage: o,
       especes: especes.map((e) => ({ code: e.code, libelle: e.libelle, couleur: e.couleur, chlores: e.chlores })),
       campagnes: lignes,
-      tendanceChlores: quantifiees.length >= 4 ? mannKendall(quantifiees.map((l) => l.chlores!)) : null,
+      tendanceChlores,
+      tendanceTotal,
+      finAnalysee,
+      stade,
+      lecture,
     })
   }
   return out
@@ -1073,9 +1200,10 @@ function piezometrie(base: Base, ouvrages: Ouvrage[], series: AnalyseSerie[], r:
   for (const o of ouvrages) {
     const ns: Niveau[] = base.niveaux.filter((n) => n.ouvrage === o.cle && dans(n.date))
     if (!ns.length) continue
-    const enCharge = ns.every((n) => n.charge !== null)
+    // Heads when they are the most complete record, else depths — never the two mixed in one series.
+    const enCharge = ns.filter((n) => n.charge !== null).length >= ns.filter((n) => n.profondeur !== null).length
     const serie = ns
-      .map((n) => ({ t: n.t, date: n.date, v: enCharge ? n.charge! : n.charge ?? (n.profondeur !== null ? -n.profondeur : NaN), campagne: n.campagne }))
+      .map((n) => ({ t: n.t, date: n.date, v: enCharge ? (n.charge ?? NaN) : n.profondeur !== null ? -n.profondeur : NaN, campagne: n.campagne }))
       .filter((x) => Number.isFinite(x.v))
     if (!serie.length) continue
     const vs = serie.map((x) => x.v)
@@ -1103,6 +1231,81 @@ function piezometrie(base: Base, ouvrages: Ouvrage[], series: AnalyseSerie[], r:
   }
   return out
 }
+
+// ---- Groundwater flow ----------------------------------------------------------------------------------
+
+/**
+ * Flow direction and hydraulic gradient of each campaign: the plane
+ * h = a·x + b·y + c fitted by least squares through the heads of the wells
+ * whose coordinates are known (3 wells at least, not aligned). The water
+ * flows down the slope, towards −(a, b). Coordinates in metres (Lambert 93
+ * or any projected system).
+ */
+function ecoulements(base: Base, ouvrages: Ouvrage[], campagnes: Campagne[]): Ecoulement | null {
+  const places = ouvrages.filter((o) => o.x !== null && o.y !== null)
+  if (places.length < 3) return null
+  const xm = places.reduce((a, o) => a + o.x!, 0) / places.length
+  const ym = places.reduce((a, o) => a + o.y!, 0) / places.length
+  const parCampagne: EcoulementCampagne[] = []
+  for (const c of campagnes) {
+    const pts = places.flatMap((o) => {
+      const n = base.niveaux.find((x) => x.ouvrage === o.cle && x.campagne === c.id && x.charge !== null)
+      return n ? [{ x: o.x! - xm, y: o.y! - ym, h: n.charge! }] : []
+    })
+    if (pts.length < 3) continue
+    // Normal equations for [a, b, c].
+    let sxx = 0, sxy = 0, syy = 0, sx = 0, sy = 0, sh = 0, sxh = 0, syh = 0
+    for (const p of pts) {
+      sxx += p.x * p.x; sxy += p.x * p.y; syy += p.y * p.y; sx += p.x; sy += p.y; sh += p.h; sxh += p.x * p.h; syh += p.y * p.h
+    }
+    const n = pts.length
+    const M = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]]
+    const v = [sxh, syh, sh]
+    const det = (m: number[][]) => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+    const D = det(M)
+    const echelle = (sxx + syy) ** 1.5 * n || 1
+    if (Math.abs(D) < 1e-9 * echelle) continue // wells aligned
+    const col = (k: number) => M.map((ligne, i) => ligne.map((x, j) => (j === k ? v[i] : x)))
+    const a = det(col(0)) / D
+    const b = det(col(1)) / D
+    const c0 = det(col(2)) / D
+    const hm = sh / n
+    const ssTot = pts.reduce((s2, p) => s2 + (p.h - hm) ** 2, 0)
+    const ssRes = pts.reduce((s2, p) => s2 + (p.h - (a * p.x + b * p.y + c0)) ** 2, 0)
+    const gradient = Math.hypot(a, b)
+    if (gradient === 0) continue
+    const azimut = ((Math.atan2(-a, -b) * 180) / Math.PI + 360) % 360
+    parCampagne.push({ campagne: c, n, gradient, azimut, r2: ssTot > 0 ? 1 - ssRes / ssTot : 1 })
+  }
+  if (!parCampagne.length) return null
+  const rad = parCampagne.map((e) => (e.azimut * Math.PI) / 180)
+  const S = rad.reduce((s2, x) => s2 + Math.sin(x), 0) / rad.length
+  const C = rad.reduce((s2, x) => s2 + Math.cos(x), 0) / rad.length
+  const azimutMoyen = ((Math.atan2(S, C) * 180) / Math.PI + 360) % 360
+  const R = Math.min(1, Math.hypot(S, C))
+  const dispersion = R > 0 ? (Math.sqrt(-2 * Math.log(R)) * 180) / Math.PI : 180
+  const ux = Math.sin((azimutMoyen * Math.PI) / 180)
+  const uy = Math.cos((azimutMoyen * Math.PI) / 180)
+  const abscisses = places.map((o) => ({ ouvrage: o, abscisse: (o.x! - xm) * ux + (o.y! - ym) * uy }))
+  const amin = Math.min(...abscisses.map((x) => x.abscisse))
+  const amax = Math.max(...abscisses.map((x) => x.abscisse))
+  const tiers = (amax - amin) / 3
+  const ordre = abscisses
+    .sort((p, q) => p.abscisse - q.abscisse)
+    .map((x) => ({ ...x, attendue: (x.abscisse <= amin + tiers ? 'amont' : x.abscisse >= amax - tiers ? 'aval' : 'droit') as 'amont' | 'droit' | 'aval' }))
+  const incoherences =
+    parCampagne.length >= 2 && dispersion <= 60
+      ? ordre
+          .filter((x) => (x.ouvrage.position === 'amont' && x.attendue === 'aval') || (x.ouvrage.position === 'aval' && x.attendue === 'amont'))
+          .map((x) => ({ ouvrage: x.ouvrage, declaree: x.ouvrage.position, attendue: x.attendue }))
+      : []
+  const gs = parCampagne.map((e) => e.gradient).sort((p, q) => p - q)
+  return { campagnes: parCampagne, azimutMoyen, dispersion, gradientMedian: gs[Math.floor(gs.length / 2)], ordre, incoherences }
+}
+
+const ROSE = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO']
+/** "SE (135°)" */
+export const direction = (azimut: number) => `${ROSE[Math.round(azimut / 22.5) % 16]} (${Math.round(azimut)}°)`
 
 // ---- Upgradient / downgradient -------------------------------------------------------------------------
 
