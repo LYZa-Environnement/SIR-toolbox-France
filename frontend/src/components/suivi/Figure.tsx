@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { svgEnPng, type Cible } from '../../lib/suivi/graphique'
-import { nomFichier, telechargerBlob } from '../../lib/suivi/ui'
+import { telechargerBlob } from '../../lib/fichiers'
+import { nomFichier } from '../../lib/suivi/ui'
 
 /**
  * A chart drawn from its SVG text, with its points made clickable and a
@@ -28,7 +29,7 @@ export function Figure({
   async function png() {
     const url = await svgEnPng(svg, largeur, hauteur, 3)
     const blob = await (await fetch(url)).blob()
-    telechargerBlob(`${nomFichier(nom)}.png`, blob)
+    telechargerBlob(blob, `${nomFichier(nom)}.png`)
   }
   return (
     <figure className="st-figure">
@@ -71,7 +72,7 @@ export function Figure({
           <button type="button" className="btn btn--ghost btn--petit" onClick={() => void png()}>
             PNG
           </button>
-          <button type="button" className="btn btn--ghost btn--petit" onClick={() => telechargerBlob(`${nomFichier(nom)}.svg`, new Blob([svg], { type: 'image/svg+xml' }))}>
+          <button type="button" className="btn btn--ghost btn--petit" onClick={() => telechargerBlob(new Blob([svg], { type: 'image/svg+xml' }), `${nomFichier(nom)}.svg`)}>
             SVG
           </button>
         </span>

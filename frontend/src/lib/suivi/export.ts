@@ -8,6 +8,7 @@
  */
 
 import type { Workbook, Worksheet } from 'exceljs'
+import { telechargerBlob, telechargerClasseurExcel } from '../fichiers.ts'
 import { LIBELLES_POSITION } from '../resultats/expert/amontAval.ts'
 import { argb, BANDEAU, eclaircir, ETAT } from '../resultats/couleurs.ts'
 import { ecrire, VERT_ENTETE, type Style } from '../resultats/export.ts'
@@ -17,19 +18,6 @@ import { figureCompose, figureDegradation, figureEcoulement, figureNiveaux, figu
 import { barresSvg, svgEnPng } from './graphique.ts'
 import { COLONNES_NIVEAUX, COLONNES_OUVRAGES, COLONNES_RESULTATS } from './historique.ts'
 import type { Compose } from './modele.ts'
-
-const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-
-function telecharger(nom: string, blob: Blob) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = nom
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1500)
-}
 
 const nomFichier = (s: string) =>
   s
@@ -866,7 +854,7 @@ export async function construireClasseurSuivi(a: Analyse, site: string): Promise
 
 export async function telechargerClasseurSuivi(a: Analyse, site: string) {
   const wb = await construireClasseurSuivi(a, site)
-  telecharger(`${nomFichier(site)} - suivi temporel.xlsx`, new Blob([await wb.xlsx.writeBuffer()], { type: XLSX_TYPE }))
+  await telechargerClasseurExcel(wb, `${nomFichier(site)} - suivi temporel.xlsx`)
 }
 
 export async function telechargerDonnees(a: Analyse, site: string) {
@@ -881,7 +869,7 @@ export async function telechargerDonnees(a: Analyse, site: string) {
     'Ce classeur se recharge tel quel dans l’outil « Suivi temporel » de la SIR Toolbox, seul ou avec les rapports des nouvelles campagnes.',
   ])
     n.addRow([t])
-  telecharger(`${nomFichier(site)} - donnees consolidees.xlsx`, new Blob([await wb.xlsx.writeBuffer()], { type: XLSX_TYPE }))
+  await telechargerClasseurExcel(wb, `${nomFichier(site)} - donnees consolidees.xlsx`)
 }
 
 export async function telechargerGraphiques(a: Analyse, site: string) {
@@ -907,6 +895,6 @@ export async function telechargerGraphiques(a: Analyse, site: string) {
     `${site} — graphiques du suivi temporel, période ${titrePeriode(a)}.\r\nChaque graphique en PNG (haute définition, pour Word) et en SVG (vectoriel, modifiable).\r\nSymboles vides : résultats < LQ placés à la LQ ; ronds : hautes eaux, losanges : basses eaux ; tirets rouges : valeur de référence ; pointillés orange : ${Math.round(a.reglages.vigilance * 100)} % de la valeur de référence ; tirets-points : pente de Sen.\r\nGénéré le ${new Date().toLocaleDateString('fr-FR')}.\r\n`,
   )
   const blob = await zip.generateAsync({ type: 'blob' })
-  telecharger(`${nomFichier(site)} - graphiques.zip`, blob)
+  telechargerBlob(blob, `${nomFichier(site)} - graphiques.zip`)
 }
 

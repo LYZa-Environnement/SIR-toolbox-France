@@ -2,17 +2,6 @@
 
 import { CLASSES, fr, frPente, pTexte, type AnalyseSerie } from './analyse.ts'
 
-export function telechargerBlob(nom: string, blob: Blob) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = nom
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
 export const nomFichier = (s: string) =>
   s
     .normalize('NFD')

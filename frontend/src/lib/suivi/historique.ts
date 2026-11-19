@@ -21,7 +21,9 @@
 import { facteurUnite } from '../resultats/guides.ts'
 import { lireMesure, type Cell, type Lecture, type Mesure, type Parametre, type Point } from '../resultats/parse.ts'
 import type { Position } from '../resultats/expert/amontAval.ts'
-import { dateCampagne, jourLocal, lireDate } from './dates.ts'
+import { jourIso } from '../format.ts'
+import { telechargerClasseurExcel } from '../fichiers.ts'
+import { dateCampagne, lireDate } from './dates.ts'
 
 export interface LigneHistorique {
   ouvrage: string
@@ -58,7 +60,7 @@ export interface Historique {
   ignorees: number
 }
 
-const texte = (c: Cell) => (c === null || c === undefined ? '' : c instanceof Date ? jourLocal(c) : String(c).replace(/\s+/g, ' ').trim())
+const texte = (c: Cell) => (c === null || c === undefined ? '' : c instanceof Date ? jourIso(c) : String(c).replace(/\s+/g, ' ').trim())
 const sansAccent = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 const COLONNES = {
@@ -317,14 +319,5 @@ export async function telechargerModele() {
     'L’onglet « Données consolidées » de l’export Excel de l’outil a la même structure : il peut être rechargé tel quel pour le bilan suivant.',
   ])
     notice.addRow([t])
-  const buffer = await wb.xlsx.writeBuffer()
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'Modele historique surveillance.xlsx'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await telechargerClasseurExcel(wb, 'Modele historique surveillance.xlsx')
 }

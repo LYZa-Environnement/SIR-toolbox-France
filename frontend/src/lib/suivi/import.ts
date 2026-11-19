@@ -4,8 +4,9 @@
  * lab report. Runs in the browser (SheetJS reads the workbook).
  */
 
+import { lireFeuilles } from '../fichiers.ts'
 import { lireFiches, type ParamTerrain } from '../nappe/fiches.ts'
-import { LectureImpossible, lireClasseur, type Cell } from '../resultats/parse.ts'
+import { LectureImpossible, lireClasseur } from '../resultats/parse.ts'
 import { dateCampagne, dateDepuisNom, datesPrelevement, lireDate } from './dates.ts'
 import { lireHistorique, lotsHistorique, type OuvrageHistorique } from './historique.ts'
 import { nouvelId, type Lot, type Releve } from './modele.ts'
@@ -24,20 +25,12 @@ export interface FichierLu {
   avertissements: string[]
 }
 
-async function feuillesDe(f: File): Promise<{ nom: string; grille: Cell[][] }[]> {
-  const XLSX = await import('xlsx')
-  const classeur = XLSX.read(await f.arrayBuffer(), { type: 'array' })
-  return classeur.SheetNames.map((nom) => ({
-    nom,
-    grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
-  }))
-}
 
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 const niveaux = (n: number) => `${n} niveau${n > 1 ? 'x' : ''} d'eau`
 
 export async function lireFichier(f: File): Promise<FichierLu> {
-  const feuilles = await feuillesDe(f)
+  const feuilles = await lireFeuilles(f)
   const id = nouvelId('f')
 
   // 1. History table (or an export of this tool).

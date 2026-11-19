@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useTri } from '../../lib/tri'
 import { EnTete } from '../Tri'
 import { lireNombre } from '../../lib/resultats/calc'
-import type { Cell, Lecture } from '../../lib/resultats/parse'
+import type { Lecture } from '../../lib/resultats/parse'
 import type { Rapport } from '../../lib/nappe/export'
 import { VisuelsNappe } from './VisuelsNappe'
 import { associationAuto, construireJeu, decalageFiches } from '../../lib/nappe/donnees'
@@ -26,17 +26,8 @@ import { formatValeur, LIBELLES_GROUPE, PARAMS, type Groupe } from '../../lib/na
 import { SOURCES } from '../../lib/nappe/sources'
 import { LIBELLES_ETAT, synthetiser, type Etat, type Synthese } from '../../lib/nappe/synthese'
 import { formatExtreme, formatMoyenne, recapTerrain, syntheseTerrain } from '../../lib/nappe/recap'
-
-type Feuille = { nom: string; grille: Cell[][] }
-
-async function lireOnglets(f: File): Promise<Feuille[]> {
-  const XLSX = await import('xlsx')
-  const classeur = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true })
-  return classeur.SheetNames.map((nom) => ({
-    nom,
-    grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
-  }))
-}
+import { lireFeuilles } from '../../lib/fichiers'
+import { nombreFrOuTiret } from '../../lib/format'
 
 const BADGE_CLASSE: Record<Classe, string> = {
   forte: 'badge badge--faible',
@@ -63,8 +54,7 @@ const BADGE_ETAT: Record<Etat, string> = {
 const ORDRE_CONDITIONS: Favorabilite[] = ['favorable', 'possible', 'limite', 'defavorable', 'indetermine']
 const COULEUR_NIVEAU: Record<Niveau, string> = { alerte: 'var(--level-elevee)', vigilance: 'var(--level-moderee)', info: 'var(--color-muted)' }
 
-const fr = (x: number | null | undefined, d = 2) =>
-  x === null || x === undefined || !Number.isFinite(x) ? '-' : Number(x.toPrecision(3)).toLocaleString('fr-FR', { maximumFractionDigits: d })
+const fr = nombreFrOuTiret
 
 /**
  * Groundwater conditions, within Résultats labo (groundwater): the sampling
@@ -108,7 +98,7 @@ export function ConditionsNappe({
     setChargement('fiches')
     setErreur(null)
     try {
-      const lus = await Promise.all(fs.map(async (f) => ({ f, ...lireFiches(await lireOnglets(f)) })))
+      const lus = await Promise.all(fs.map(async (f) => ({ f, ...lireFiches(await lireFeuilles(f, { cellDates: true })) })))
       const toutes = lus.flatMap((l) => l.fiches)
       if (!toutes.length) throw new Error("Aucune fiche de prélèvement reconnue : le tableau de purge (colonnes « pH », « Redox »…) n'a pas été trouvé.")
       setFiches((avant) => [...avant.filter((a) => !toutes.some((t) => cleOuvrage(t.ouvrage) === cleOuvrage(a.ouvrage))), ...toutes])

@@ -9,6 +9,7 @@
  * SheetJS returns them with `raw: true`, or as Date objects or text).
  */
 
+import { jourIso } from '../format.ts'
 import type { Cell, Lecture } from '../resultats/parse.ts'
 
 const ISO = (a: number, m: number, j: number) =>
@@ -16,19 +17,10 @@ const ISO = (a: number, m: number, j: number) =>
 
 const siecle = (a: number) => (a < 100 ? (a < 70 ? 2000 + a : 1900 + a) : a)
 
-/**
- * Calendar day of a Date in the user's time zone. Not `toISOString()`: SheetJS
- * builds dates at local midnight, which is the day before in UTC in France.
- */
-export function jourLocal(d: Date): string {
-  const deux = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${deux(d.getMonth() + 1)}-${deux(d.getDate())}`
-}
-
 /** A cell read as a date (ISO yyyy-mm-dd), or null. */
 export function lireDate(c: Cell): string | null {
   if (c === null || c === undefined || c === '') return null
-  if (c instanceof Date) return Number.isNaN(c.getTime()) ? null : jourLocal(c)
+  if (c instanceof Date) return Number.isNaN(c.getTime()) ? null : jourIso(c)
   if (typeof c === 'number') {
     // Excel serial date (1900 system): 25569 is 1970-01-01. Kept between 1970 and 2100.
     if (c < 25569 || c > 73051) return null

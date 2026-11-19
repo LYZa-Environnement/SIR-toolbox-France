@@ -8,6 +8,7 @@ import { ETAT } from '../resultats/couleurs.ts'
 import { ecrire, VERT_ENTETE } from '../resultats/export.ts'
 import type { Referentiel, Resultat, Source, Statut } from './controles.ts'
 import type { Document } from './extraction.ts'
+import { telechargerClasseurExcel } from '../fichiers.ts'
 
 const LIBELLES: Record<Statut, string> = { present: 'Trouvé', absent: 'Absent', invalide: 'À corriger', 'a-verifier': 'À vérifier', 'sans-objet': 'Sans objet' }
 const COULEURS: Record<Statut, { fond: string; texte: string }> = {
@@ -121,14 +122,5 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
     c.value = { text: s.url, hyperlink: s.url }
   }
 
-  const buffer = await wb.xlsx.writeBuffer()
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = window.document.createElement('a')
-  a.href = url
-  a.download = nomFichier
-  window.document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await telechargerClasseurExcel(wb, nomFichier)
 }

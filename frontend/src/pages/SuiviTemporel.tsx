@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState, type DragEvent } from 'react'
+import { useMemo, useState } from 'react'
+import ZoneDepot from '../components/ZoneDepot'
 import { analyser, CLASSES, fr, LIBELLES_CENSURE, REGLAGES_DEFAUT, type Analyse, type AnalyseSerie, type Censure, type Fait, type Reglages } from '../lib/suivi/analyse'
 import { formatDate, moisAnnee, regimePropose } from '../lib/suivi/dates'
 import { exemple } from '../lib/suivi/exemple'
@@ -34,8 +35,6 @@ export default function SuiviTemporel() {
   const [periode, setPeriode] = useState<Periode>('tout')
   const [erreurs, setErreurs] = useState<string[]>([])
   const [chargement, setChargement] = useState(false)
-  const [survol, setSurvol] = useState(false)
-  const input = useRef<HTMLInputElement>(null)
   const [ouverts, setOuverts] = useState<Set<string>>(new Set(['faits', 'matrice']))
   const [reglagesOuverts, setReglagesOuverts] = useState<Set<string>>(new Set())
   const [selection, setSelection] = useState<Selection>({ mode: 'compose', compose: '', ouvrage: '', ouvrages: [], composes: [] })
@@ -109,11 +108,7 @@ export default function SuiviTemporel() {
     setPeriode('tout')
   }
 
-  function deposer(e: DragEvent) {
-    e.preventDefault()
-    setSurvol(false)
-    void charger([...e.dataTransfer.files])
-  }
+
 
   // ---- Campaigns ------------------------------------------------------------------------------
 
@@ -281,34 +276,22 @@ export default function SuiviTemporel() {
           <h2 className="etape">
             <span>1</span> Données
           </h2>
-          <div
-            className={`depot${survol ? ' depot--survol' : ''}`}
-            onDragOver={(e) => {
-              e.preventDefault()
-              setSurvol(true)
-            }}
-            onDragLeave={() => setSurvol(false)}
-            onDrop={deposer}
-          >
-            <input
-              ref={input}
-              type="file"
-              multiple
-              accept=".xlsx,.xlsm,.xls,.csv"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                void charger([...(e.target.files ?? [])])
-                e.target.value = ''
-              }}
-            />
-            <p style={{ margin: 0, fontWeight: 600 }}>{chargement ? 'Lecture…' : 'Déposez ici tous les fichiers du suivi, en une ou plusieurs fois'}</p>
-            <p style={{ margin: '0.25rem 0 0.9rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-              Rapports du laboratoire (Excel, tout format de laboratoire : la date de prélèvement est lue dans le rapport, sinon dans le nom du fichier), fiches de prélèvement
-              d'eau souterraine (niveaux d'eau et paramètres de terrain), tableau historique au format du modèle, ou l'onglet « Données consolidées » d'un précédent export. Les
-              fichiers sont lus dans votre navigateur et ne sont envoyés nulle part.
-            </p>
+          <ZoneDepot
+            multiple
+            chargement={chargement}
+            libelleChargement="Lecture…"
+            titre="Déposez ici tous les fichiers du suivi, en une ou plusieurs fois"
+            aide={
+              <>
+                Rapports du laboratoire (Excel, tout format de laboratoire : la date de prélèvement est lue dans le rapport, sinon dans le nom du fichier), fiches de prélèvement
+                d'eau souterraine (niveaux d'eau et paramètres de terrain), tableau historique au format du modèle, ou l'onglet « Données consolidées » d'un précédent export. Les
+                fichiers sont lus dans votre navigateur et ne sont envoyés nulle part.
+              </>
+            }
+            onFichiers={(f) => void charger(f)}
+            actions={(choisir) => (
             <div className="st-boutons">
-              <button type="button" className="btn" onClick={() => input.current?.click()} disabled={chargement}>
+              <button type="button" className="btn" onClick={choisir} disabled={chargement}>
                 Choisir des fichiers
               </button>
               {!fichiers.some((f) => f.nom.startsWith('Exemple')) && (
@@ -320,7 +303,8 @@ export default function SuiviTemporel() {
                 Modèle de tableau historique
               </button>
             </div>
-          </div>
+            )}
+          />
           {erreurs.map((e) => (
             <p key={e} role="alert" className="alerte">
               {e}
