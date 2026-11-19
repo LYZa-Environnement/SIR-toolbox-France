@@ -28,3 +28,36 @@ Chaque point de contrôle est recherché dans le texte (`controles.ts`) :
 trouvé (avec le passage et la page), absent, invalide ou à vérifier. Il cite
 ses sources officielles (`sources.ts`) et indique où trouver l'information
 ou comment corriger. Rapport Excel (`export.ts`).
+
+## Exigences, bonnes pratiques et marque LNE
+
+Chaque point relève d'une **exigence** (texte réglementaire ou « doit » de la
+norme), d'une **bonne pratique** (attendu selon le cas) ou de l'**usage de la
+marque LNE SSP** (`portee`, `controles.ts`). Une non-conformité prend la
+couleur de ce qu'elle manque : rouge plein pour une exigence, ambre (bordure
+double) pour une bonne pratique, gris pointillé pour la marque. Le décompte
+en tête de résultats les sépare. Les points sur la marque LNE SSP (apposition,
+domaine, périmètre, prestations hors certification), moins critiques, sont
+regroupés dans un bloc replié en fin de liste, et en fin de rapport Excel.
+
+## Propositions d'ajout
+
+Pour chaque point absent ou à corriger, l'outil propose (`propositions.ts`) :
+
+- **le paragraphe** où l'insérer : un titre du document lu dans son texte
+  (`structure.ts` : titres numérotés, annexes, titres usuels, sans le
+  sommaire), sinon un paragraphe à créer, placé après ou avant ses voisins
+  dans l'ordre habituel d'un rapport (résumé, contexte, site, visite,
+  historique, vulnérabilité, programme, investigations, résultats, schéma
+  conceptuel, risques, gestion, incertitudes, conclusions, annexes) ;
+- **une phrase d'exemple** (`exemples.ts`, une par point), complétée avec les
+  éléments lus dans le document (`faits.ts`) : site, commune, adresse,
+  client, date, référence, milieux, substances, sondages et piézomètres,
+  laboratoire, usage, profondeur de la nappe, codes de prestation,
+  parcelles. Ce que le document ne dit pas reste [entre crochets], surligné,
+  à compléter. Pour une conclusion d'attestation ATTES, la phrase est la
+  formulation du modèle réglementaire.
+
+Les propositions figurent aussi dans le rapport Excel (colonnes « Proposition
+d'ajout »). Un test vérifie que chaque point de chaque référentiel a sa phrase.
+

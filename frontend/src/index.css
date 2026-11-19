@@ -363,6 +363,167 @@ a.card:hover {
   background: var(--level-indeterminee-bg);
 }
 
+/* ---- Vérification de livrables : exigence, bonne pratique, marque LNE ---- */
+
+/* The weight of a gap: a requirement filled red, a good practice outlined
+   amber, the LNE mark dashed grey. */
+.niveau {
+  display: inline-block;
+  padding: 0.15em 0.6em;
+  border-radius: var(--radius);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.niveau--exigence {
+  color: #fff;
+  background: var(--level-elevee);
+  border: 1.5px solid var(--level-elevee);
+}
+.niveau--bonne-pratique {
+  color: var(--level-moderee);
+  background: transparent;
+  border: 1.5px solid var(--level-moderee);
+}
+.niveau--marque {
+  color: var(--level-indeterminee);
+  background: transparent;
+  border: 1.5px dashed var(--level-indeterminee);
+  font-weight: 600;
+}
+
+.point-controle {
+  margin-bottom: 0.6rem;
+  padding: 0.9rem 1rem;
+  border-left: 5px solid var(--color-border);
+}
+.point-controle--nc.point-controle--exigence {
+  border-left-color: var(--level-elevee);
+  background: linear-gradient(90deg, var(--level-elevee-bg), var(--color-surface) 14rem);
+}
+.point-controle--nc.point-controle--bonne-pratique {
+  border-left-color: var(--level-moderee);
+  border-left-style: double;
+  border-left-width: 6px;
+}
+.point-controle--nc.point-controle--marque {
+  border-left-color: var(--level-indeterminee);
+  border-left-style: dashed;
+}
+
+.nc-synthese {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+.nc-synthese__case {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-size: 0.88rem;
+}
+.nc-synthese__case strong {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.nc-synthese__case--exigence {
+  border: 1.5px solid var(--level-elevee);
+  border-left-width: 6px;
+  color: var(--level-elevee);
+  background: var(--level-elevee-bg);
+}
+.nc-synthese__case--bonne-pratique {
+  border: 1.5px solid var(--level-moderee);
+  border-left: 6px double var(--level-moderee);
+  color: var(--level-moderee);
+}
+.nc-synthese__case--marque {
+  border: 1.5px dashed var(--level-indeterminee);
+  color: var(--level-indeterminee);
+}
+@media (max-width: 640px) {
+  .nc-synthese {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nc-legende {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  font-size: 0.83rem;
+  color: var(--color-muted);
+}
+.nc-legende li {
+  margin-bottom: 0.3rem;
+}
+.nc-legende .niveau {
+  margin-right: 0.35rem;
+  min-width: 7.5rem;
+  text-align: center;
+}
+
+.groupe-marque {
+  margin: 0.5rem 0 1.5rem;
+  border: 1.5px dashed var(--level-indeterminee);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  background: var(--color-surface);
+}
+.groupe-marque summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  align-items: baseline;
+}
+.groupe-marque__titre {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.groupe-marque__compte {
+  font-size: 0.82rem;
+  color: var(--level-indeterminee);
+}
+.groupe-marque__aide {
+  font-size: 0.83rem;
+  color: var(--color-muted);
+  margin: 0.4rem 0 0.7rem;
+}
+
+.proposition {
+  margin: 0.55rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--color-section);
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+.proposition p {
+  margin: 0.3rem 0 0;
+}
+.proposition__titre {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+}
+.proposition__etiquette {
+  font-weight: 600;
+  color: var(--color-muted);
+}
+mark.a-completer {
+  background: var(--level-moderee-bg);
+  color: inherit;
+  padding: 0 0.15em;
+  border-radius: 3px;
+}
+
 
 /* ---- Conversion labo ---- */
 

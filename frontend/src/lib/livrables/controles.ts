@@ -8,6 +8,7 @@
  */
 
 import type { Document } from './extraction.ts'
+import type { Proposition } from './propositions.ts'
 
 export interface Source {
   libelle: string
@@ -62,7 +63,23 @@ export interface Resultat {
   verdict: Verdict
   decision: Decision
   commentaire: string
+  /** What to add, and where, when the point is missing. */
+  proposition?: Proposition
 }
+
+/** How much a gap weighs: a requirement, a good practice, or the use of
+ *  the LNE SSP mark (the least critical, grouped apart). */
+export type Portee = 'exigence' | 'bonne-pratique' | 'marque'
+
+export const GROUPE_MARQUE = 'Marque LNE SSP — usage de la marque'
+
+export function portee(p: Point): Portee {
+  if (/(^|:)lne-m-/.test(p.id)) return 'marque'
+  return p.niveau === 'obligatoire' ? 'exigence' : 'bonne-pratique'
+}
+
+/** Missing or wrong: a gap to correct in the text. */
+export const nonConforme = (s: Statut) => s === 'absent' || s === 'invalide'
 
 /** A document a deliverable is made of, told by its title. */
 export interface Piece {

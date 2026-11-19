@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
-import { preparer, verifier, type Decision, type Resultat, type Statut } from '../lib/livrables/controles'
+import { GROUPE_MARQUE, nonConforme, portee, preparer, verifier, type Decision, type Portee, type Resultat, type Statut } from '../lib/livrables/controles'
 import { lireDocument, type Document } from '../lib/livrables/extraction'
+import { lireFaits } from '../lib/livrables/faits'
+import { proposer } from '../lib/livrables/propositions'
 import { categories, PAR_ID } from '../lib/livrables/referentiels'
+import { lireSections } from '../lib/livrables/structure'
 import type { Point, Source } from '../lib/livrables/controles'
 import ZoneDepot from '../components/ZoneDepot'
 import { jourIso } from '../lib/format'
@@ -32,6 +35,35 @@ const BADGE: Record<Statut, string> = {
   'a-verifier': 'badge badge--moderee',
   'sans-objet': 'badge badge--indeterminee',
 }
+
+/** A gap to a requirement in red, to a good practice in amber, to the use
+ *  of the LNE mark in grey: the same colours on the card, its tag and badge. */
+const PORTEES: Record<Portee, { libelle: string; nc: string; ncs: string; badge: string; aide: string }> = {
+  exigence: {
+    libelle: 'Exigence',
+    nc: 'exigence non satisfaite',
+    ncs: 'exigences non satisfaites',
+    badge: 'badge badge--elevee',
+    aide: 'Exigé par un texte réglementaire ou par la norme : la non-conformité est à corriger avant diffusion.',
+  },
+  'bonne-pratique': {
+    libelle: 'Bonne pratique',
+    nc: 'bonne pratique non suivie',
+    ncs: 'bonnes pratiques non suivies',
+    badge: 'badge badge--moderee',
+    aide: 'Attendu par la norme selon le cas, ou bonne pratique : à compléter, ou à justifier si le point ne s’applique pas.',
+  },
+  marque: {
+    libelle: 'Marque LNE SSP',
+    nc: 'point sur l’usage de la marque LNE SSP',
+    ncs: 'points sur l’usage de la marque LNE SSP',
+    badge: 'badge badge--indeterminee',
+    aide: 'Usage de la marque de certification LNE SSP : moins critique, regroupé à part.',
+  },
+}
+
+/** The badge of a status: a gap takes the colour of what it fails. */
+const badge = (s: Statut, po: Portee) => (nonConforme(s) ? PORTEES[po].badge : BADGE[s])
 
 const DECISIONS: { v: Decision; l: string }[] = [
   { v: '', l: '— selon l’outil —' },
@@ -107,10 +139,24 @@ export default function VerificationLivrables() {
   }, [referentiel, livrables])
   const livrable = livrables.length ? livrables[0] : null
 
+  /** What to add for each point, with the document's own facts and headings. */
+  const propositions = useMemo(() => {
+    if (!referentiel || !texte) return new Map()
+    const ctx = { faits: lireFaits(texte), sections: lireSections(texte), referentiel }
+    return new Map(points.map((p) => [p.id, proposer(p, ctx)]))
+  }, [referentiel, points, texte])
+  const verdicts = useMemo(() => (texte ? new Map(points.map((p) => [p.id, verifier(p, texte)])) : new Map()), [points, texte])
+
   const resultats: Resultat[] = useMemo(() => {
     if (!referentiel || !texte) return []
-    return points.map((point) => ({ point, verdict: verifier(point, texte), decision: decisions[point.id] ?? '', commentaire: commentaires[point.id] ?? '' }))
-  }, [referentiel, points, texte, decisions, commentaires])
+    return points.map((point) => ({
+      point,
+      verdict: verdicts.get(point.id)!,
+      decision: decisions[point.id] ?? '',
+      commentaire: commentaires[point.id] ?? '',
+      proposition: propositions.get(point.id),
+    }))
+  }, [referentiel, points, texte, verdicts, decisions, commentaires, propositions])
 
   /** The status shown: the reader's decision when given. */
   const effectif = (r: Resultat): Statut =>
@@ -119,9 +165,13 @@ export default function VerificationLivrables() {
     (c, r) => ({ ...c, [effectif(r)]: c[effectif(r)] + 1 }),
     { present: 0, absent: 0, invalide: 0, 'a-verifier': 0, 'sans-objet': 0 },
   )
-  const groupes = [...new Set(resultats.map((r) => r.point.groupe))]
+  /** The points on the LNE mark are gathered in one group, shown last. */
+  const groupeDe = (r: Resultat) => (portee(r.point) === 'marque' ? GROUPE_MARQUE : r.point.groupe)
+  const groupes = [...new Set(resultats.map(groupeDe))].sort((a, b) => Number(a === GROUPE_MARQUE) - Number(b === GROUPE_MARQUE))
   const visibles = (g: string) =>
-    resultats.filter((r) => r.point.groupe === g && (filtre === 'tous' || ['absent', 'invalide', 'a-verifier'].includes(effectif(r))))
+    resultats.filter((r) => groupeDe(r) === g && (filtre === 'tous' || ['absent', 'invalide', 'a-verifier'].includes(effectif(r))))
+  const ecarts = (po: Portee) => resultats.filter((r) => portee(r.point) === po && nonConforme(effectif(r))).length
+  const seulementMarque = resultats.length > 0 && resultats.every((r) => portee(r.point) === 'marque')
 
   async function exporter() {
     if (!referentiel || !livrable) return
@@ -319,6 +369,14 @@ export default function VerificationLivrables() {
             <h2 className="etape">
               <span>3</span> Points de contrôle
             </h2>
+            <div className="nc-synthese">
+              {(['exigence', 'bonne-pratique', 'marque'] as Portee[]).map((po) => (
+                <div key={po} className={`nc-synthese__case nc-synthese__case--${po}`} title={PORTEES[po].aide}>
+                  <strong>{ecarts(po)}</strong>
+                  <span>{ecarts(po) > 1 ? PORTEES[po].ncs : PORTEES[po].nc}</span>
+                </div>
+              ))}
+            </div>
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
               {(['invalide', 'absent', 'a-verifier', 'present', 'sans-objet'] as Statut[]).map((s) =>
                 comptes[s] ? (
@@ -332,27 +390,59 @@ export default function VerificationLivrables() {
                 seulement les points à traiter
               </label>
             </div>
+            <ul className="nc-legende" aria-label="Légende">
+              {(['exigence', 'bonne-pratique', 'marque'] as Portee[]).map((po) => (
+                <li key={po}>
+                  <span className={`niveau niveau--${po}`}>{PORTEES[po].libelle}</span> {PORTEES[po].aide}
+                </li>
+              ))}
+            </ul>
             <ul style={{ fontSize: '0.85rem', color: 'var(--color-muted)', margin: '0 0 1.25rem', paddingLeft: '1.1rem' }}>
               {limites.map((l) => (
                 <li key={l}>{l}</li>
               ))}
+              <li>
+                Pour chaque point absent ou à corriger, une proposition d’ajout indique le paragraphe du document où l’insérer et une phrase
+                d’exemple reprenant les éléments lus dans le document (site, commune, client, milieux, substances, ouvrages…) ; les passages{' '}
+                <mark className="a-completer">[entre crochets]</mark> sont à compléter.
+              </li>
             </ul>
 
             {groupes.map((g) => {
               const rs = visibles(g)
               if (!rs.length) return null
+              const cartes = rs.map((r) => (
+                <PointControle
+                  key={r.point.id}
+                  r={r}
+                  statut={effectif(r)}
+                  onDecision={(d) => setDecisions({ ...decisions, [r.point.id]: d })}
+                  onCommentaire={(c) => setCommentaires({ ...commentaires, [r.point.id]: c })}
+                />
+              ))
+              if (g === GROUPE_MARQUE) {
+                const n = rs.filter((r) => nonConforme(effectif(r))).length
+                return (
+                  <details key={g} className="groupe-marque" open={seulementMarque}>
+                    <summary>
+                      <span className="groupe-marque__titre">{g}</span>
+                      <span className="groupe-marque__compte">
+                        {rs.length} point{rs.length > 1 ? 's' : ''}
+                        {n > 0 ? ` · ${n} à traiter` : ''} · moins critique
+                      </span>
+                    </summary>
+                    <p className="groupe-marque__aide">
+                      Apposition de la marque, domaine certifié, périmètre et prestations hors certification : points du référentiel LNE SSP
+                      regroupés ici, à traiter après les exigences et les bonnes pratiques du livrable.
+                    </p>
+                    {cartes}
+                  </details>
+                )
+              }
               return (
                 <div key={g} style={{ marginBottom: '1.5rem' }}>
                   <h3 style={{ margin: '0 0 0.5rem' }}>{g}</h3>
-                  {rs.map((r) => (
-                    <PointControle
-                      key={r.point.id}
-                      r={r}
-                      statut={effectif(r)}
-                      onDecision={(d) => setDecisions({ ...decisions, [r.point.id]: d })}
-                      onCommentaire={(c) => setCommentaires({ ...commentaires, [r.point.id]: c })}
-                    />
-                  ))}
+                  {cartes}
                 </div>
               )
             })}
@@ -370,14 +460,18 @@ export default function VerificationLivrables() {
 function PointControle({ r, statut, onDecision, onCommentaire }: { r: Resultat; statut: Statut; onDecision: (d: Decision) => void; onCommentaire: (c: string) => void }) {
   const { point: p, verdict: v } = r
   const aTraiter = statut === 'absent' || statut === 'invalide' || statut === 'a-verifier'
+  const po = portee(p)
+  const nc = nonConforme(statut)
   return (
-    <div className="card" style={{ marginBottom: '0.6rem', padding: '0.9rem 1rem' }}>
+    <div className={`card point-controle${nc ? ` point-controle--nc point-controle--${po}` : ''}`}>
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
-        <span className={BADGE[statut]} style={{ fontSize: '0.72rem' }}>
+        <span className={badge(statut, po)} style={{ fontSize: '0.72rem' }}>
           {LIBELLES[statut]}
         </span>
         <strong style={{ flex: '1 1 20rem' }}>{p.intitule}</strong>
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>{p.niveau === 'obligatoire' ? 'Exigé par les textes' : 'Attendu (bonne pratique, ou selon le cas)'}</span>
+        <span className={`niveau niveau--${po}`} title={PORTEES[po].aide}>
+          {PORTEES[po].libelle}
+        </span>
       </div>
       <p style={{ margin: '0.45rem 0 0', fontSize: '0.88rem' }}>{p.exigence}</p>
       {v.detail && <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', fontWeight: statut === 'invalide' ? 600 : 400 }}>{v.detail}</p>}
@@ -395,12 +489,25 @@ function PointControle({ r, statut, onDecision, onCommentaire }: { r: Resultat; 
           <strong>Comment trouver ou corriger :</strong> {p.aide}
         </p>
       )}
-      {aTraiter && p.correction && (
+      {nc && r.proposition && (
+        <div className="proposition">
+          <strong className="proposition__titre">Proposition d’ajout</strong>
+          <p>
+            <span className="proposition__etiquette">Où :</span> {r.proposition.paragraphe}
+          </p>
+          <p>
+            <span className="proposition__etiquette">{r.proposition.modele ? 'Formulation du modèle :' : 'Exemple de phrase :'}</span> «&nbsp;
+            <Phrase texte={r.proposition.phrase} />
+            &nbsp;»{' '}
+            <button type="button" className="btn btn--ghost btn--petit" onClick={() => void navigator.clipboard?.writeText(r.proposition!.phrase)}>
+              Copier
+            </button>
+          </p>
+        </div>
+      )}
+      {statut === 'a-verifier' && p.correction && (
         <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>
-          <strong>Formulation du modèle :</strong> « {p.correction} »{' '}
-          <button type="button" className="btn btn--ghost btn--petit" onClick={() => void navigator.clipboard?.writeText(p.correction!)}>
-            Copier
-          </button>
+          <strong>Formulation du modèle :</strong> « {p.correction} »
         </p>
       )}
       <p style={{ margin: '0.45rem 0 0', fontSize: '0.8rem' }}>
@@ -429,5 +536,22 @@ function PointControle({ r, statut, onDecision, onCommentaire }: { r: Resultat; 
         />
       </div>
     </div>
+  )
+}
+
+/** The example sentence, its [parts to fill in] highlighted. */
+function Phrase({ texte }: { texte: string }) {
+  return (
+    <>
+      {texte.split(/(\[[^\]]*\])/).map((x, i) =>
+        x.startsWith('[') ? (
+          <mark key={i} className="a-completer">
+            {x}
+          </mark>
+        ) : (
+          <span key={i}>{x}</span>
+        ),
+      )}
+    </>
   )
 }

@@ -6,7 +6,7 @@
 import type { Worksheet } from 'exceljs'
 import { ETAT } from '../resultats/couleurs.ts'
 import { ecrire, VERT_ENTETE } from '../resultats/export.ts'
-import type { Referentiel, Resultat, Source, Statut } from './controles.ts'
+import { GROUPE_MARQUE, nonConforme, portee, type Portee, type Referentiel, type Resultat, type Source, type Statut } from './controles.ts'
 import type { Document } from './extraction.ts'
 import { telechargerClasseurExcel } from '../fichiers.ts'
 
@@ -17,6 +17,12 @@ const COULEURS: Record<Statut, { fond: string; texte: string }> = {
   invalide: ETAT.alerte,
   'a-verifier': ETAT.vigilance,
   'sans-objet': { fond: 'FFEDEDED', texte: 'FF555555' },
+}
+
+const PORTEES: Record<Portee, { libelle: string; nc: string; fond: string; texte: string }> = {
+  exigence: { libelle: 'Exigence', nc: 'Exigences non satisfaites', ...ETAT.alerte },
+  'bonne-pratique': { libelle: 'Bonne pratique', nc: 'Bonnes pratiques non suivies', ...ETAT.vigilance },
+  marque: { libelle: 'Marque LNE SSP', nc: 'Points sur l’usage de la marque LNE SSP (moins critiques)', fond: 'FFEDEDED', texte: 'FF555555' },
 }
 
 export interface RapportVerification {
@@ -45,6 +51,12 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
   let r = 4
   const comptes = new Map<Statut, number>()
   for (const x of rp.resultats) comptes.set(rp.statut(x), (comptes.get(rp.statut(x)) ?? 0) + 1)
+  for (const po of ['exigence', 'bonne-pratique', 'marque'] as Portee[]) {
+    const n = rp.resultats.filter((x) => portee(x.point) === po && nonConforme(rp.statut(x))).length
+    ecrire(ws, r, 1, PORTEES[po].nc, { gras: true, taille: 9, fond: PORTEES[po].fond, couleur: PORTEES[po].texte })
+    ecrire(ws, r++, 2, n, { h: 'center', gras: true })
+  }
+  r++
   for (const s of ['invalide', 'absent', 'a-verifier', 'present', 'sans-objet'] as Statut[]) {
     ecrire(ws, r, 1, LIBELLES[s], { gras: true, taille: 9, fond: COULEURS[s].fond, couleur: COULEURS[s].texte })
     ecrire(ws, r++, 2, comptes.get(s) ?? 0, { h: 'center', gras: true })
@@ -61,6 +73,8 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
     ['Constat', 45],
     ['Passages trouvés', 55],
     ['Comment trouver ou corriger', 50],
+    ['Proposition d’ajout : paragraphe', 40],
+    ['Proposition d’ajout : exemple de phrase ([…] à compléter)', 60],
     ['Commentaire', 35],
     ['Sources', 45],
   ]
@@ -70,35 +84,43 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
   })
   ws.views = [{ state: 'frozen', ySplit: r, showGridLines: false }]
   r++
-  for (const x of rp.resultats) {
+  // The points on the LNE mark, the least critical, gathered at the end.
+  const lignes = [...rp.resultats].sort((a, b) => Number(portee(a.point) === 'marque') - Number(portee(b.point) === 'marque'))
+  for (const x of lignes) {
     const st = rp.statut(x)
+    const po = portee(x.point)
+    const ajout = nonConforme(st) && x.proposition
     const vals: (string | number)[] = [
-      x.point.groupe,
+      po === 'marque' ? GROUPE_MARQUE : x.point.groupe,
       x.point.intitule,
-      x.point.niveau === 'obligatoire' ? 'Exigé' : 'Attendu',
+      PORTEES[po].libelle,
       LIBELLES[x.verdict.statut],
       x.decision === 'conforme' ? 'Conforme' : x.decision === 'non-conforme' ? 'Non conforme' : x.decision === 'sans-objet' ? 'Sans objet' : '-',
       LIBELLES[st],
       x.point.exigence,
       x.verdict.detail ?? '',
       (x.verdict.extraits ?? []).map((e) => `${e.document ? `${e.document}, ` : ''}p. ${e.page} : « ${e.texte} »`).join('\n'),
-      st === 'present' || st === 'sans-objet' ? '' : [x.point.aide, x.point.correction ? `Formulation du modèle : « ${x.point.correction} »` : ''].filter(Boolean).join('\n'),
+      st === 'present' || st === 'sans-objet' ? '' : x.point.aide,
+      ajout ? x.proposition!.paragraphe : '',
+      ajout ? `${x.proposition!.modele ? 'Formulation du modèle : ' : ''}« ${x.proposition!.phrase} »` : '',
       x.commentaire,
     ]
+    // A gap takes the colour of what it fails: requirement, good practice, mark.
+    const teinte = nonConforme(st) ? PORTEES[po] : { fond: COULEURS[st].fond, texte: COULEURS[st].texte }
     vals.forEach((v, j) =>
       ecrire(ws, r, j + 1, v, {
         taille: 8,
         wrap: true,
-        gras: j === 1 || j === 5,
-        fond: j === 5 ? COULEURS[st].fond : undefined,
-        couleur: j === 5 ? COULEURS[st].texte : undefined,
+        gras: j === 1 || j === 5 || (j === 2 && po === 'exigence'),
+        fond: j === 5 ? teinte.fond : j === 2 && nonConforme(st) ? PORTEES[po].fond : undefined,
+        couleur: j === 5 ? teinte.texte : j === 2 && nonConforme(st) ? PORTEES[po].texte : undefined,
         h: j >= 2 && j <= 5 ? 'center' : undefined,
       }),
     )
     // One source per line in the last column; the first as a link.
     const [premiere, ...autres] = x.point.sources
-    if (premiere) lien(ws, r, 12, premiere)
-    if (autres.length) ws.getCell(r, 12).note = autres.map((s) => (s.url ? `${s.libelle} : ${s.url}` : s.libelle)).join('\n')
+    if (premiere) lien(ws, r, 14, premiere)
+    if (autres.length) ws.getCell(r, 14).note = autres.map((s) => (s.url ? `${s.libelle} : ${s.url}` : s.libelle)).join('\n')
     r++
   }
   r++
