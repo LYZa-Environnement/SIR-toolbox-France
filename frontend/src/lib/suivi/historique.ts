@@ -21,7 +21,7 @@
 import { facteurUnite } from '../resultats/guides.ts'
 import { lireMesure, type Cell, type Lecture, type Mesure, type Parametre, type Point } from '../resultats/parse.ts'
 import type { Position } from '../resultats/expert/amontAval.ts'
-import { dateCampagne, lireDate } from './dates.ts'
+import { dateCampagne, jourLocal, lireDate } from './dates.ts'
 
 export interface LigneHistorique {
   ouvrage: string
@@ -58,7 +58,7 @@ export interface Historique {
   ignorees: number
 }
 
-const texte = (c: Cell) => (c === null || c === undefined ? '' : c instanceof Date ? c.toISOString().slice(0, 10) : String(c).replace(/\s+/g, ' ').trim())
+const texte = (c: Cell) => (c === null || c === undefined ? '' : c instanceof Date ? jourLocal(c) : String(c).replace(/\s+/g, ' ').trim())
 const sansAccent = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 const COLONNES = {
