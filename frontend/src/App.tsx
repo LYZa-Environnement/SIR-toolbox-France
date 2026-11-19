@@ -2,11 +2,11 @@ import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import Accueil from './pages/Accueil'
-
 // Each tool is loaded only when opened: the home page no longer downloads
 // every tool, their reference data and their libraries up front.
 const SiteSetting = lazy(() => import('./pages/SiteSetting'))
 const ResultatsLabo = lazy(() => import('./pages/ResultatsLabo'))
+const SuiviTemporel = lazy(() => import('./pages/SuiviTemporel'))
 const ConformiteRejets = lazy(() => import('./pages/ConformiteRejets'))
 const VerificationLivrables = lazy(() => import('./pages/VerificationLivrables'))
 const InterpretationPfas = lazy(() => import('./pages/InterpretationPfas'))
@@ -18,6 +18,7 @@ export default function App() {
         <Route path="/" element={<Accueil />} />
         <Route path="/site-setting" element={<SiteSetting />} />
         <Route path="/resultats-labo" element={<ResultatsLabo />} />
+        <Route path="/suivi-temporel" element={<SuiviTemporel />} />
         <Route path="/conformite-rejets" element={<ConformiteRejets />} />
         <Route path="/verification-livrables" element={<VerificationLivrables />} />
         <Route path="/interpretation-pfas" element={<InterpretationPfas />} />

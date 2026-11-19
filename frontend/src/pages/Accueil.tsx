@@ -74,7 +74,7 @@ const CATEGORIES: Categorie[] = [
     id: 'labo',
     titre: "Résultats d'analyses et interprétation",
     etape: 'Interpréter',
-    description: 'Mettre en forme les résultats du laboratoire et interpréter les familles de composés qui le demandent.',
+    description: 'Mettre en forme les résultats du laboratoire, suivre leur évolution d’une campagne à l’autre et interpréter les familles de composés qui le demandent.',
     outils: [
       {
         titre: 'Résultats labo',
@@ -83,6 +83,14 @@ const CATEGORIES: Categorie[] = [
           'Chargez un rapport de laboratoire (eau, sol, gaz du sol / air ambiant) et les fiches de prélèvement : tableau mis en forme, comparaison aux valeurs de référence, conditions de la nappe et qualité des prélèvements, export Excel.',
         points: ['Conversion µg/support → µg/m³, qualité des gaz du sol captés', 'Eaux : conditions physico-chimiques, purges, atténuation naturelle', 'Export standard ou expert'],
         route: '/resultats-labo',
+      },
+      {
+        titre: 'Suivi temporel',
+        accroche: 'Bilan quadriennal',
+        description:
+          'Chargez les rapports de laboratoire de toutes les campagnes : chaque ouvrage et chaque composé suivi dans le temps — tendances, ruptures, dépassements, déchloration, piézométrie — avec les faits marquants en direct et des pistes pour la surveillance.',
+        points: ['Mann-Kendall, pente de Sen, Pettitt (méthodes HYPE / BRGM)', 'Classeur Excel complet et graphiques pour le rapport'],
+        route: '/suivi-temporel',
       },
       {
         titre: 'Interprétation PFAS',
