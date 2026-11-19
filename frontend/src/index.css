@@ -425,7 +425,16 @@ a.card:hover {
   padding: 0.6rem 0.8rem;
   border-radius: var(--radius);
   background: var(--color-surface);
+  font: inherit;
   font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+.nc-synthese__case:hover {
+  filter: brightness(0.97);
+}
+.nc-synthese__case--actif {
+  box-shadow: 0 0 0 3px var(--color-ink);
 }
 .nc-synthese__case strong {
   font-size: 1.5rem;
@@ -450,6 +459,109 @@ a.card:hover {
   .nc-synthese {
     grid-template-columns: 1fr;
   }
+}
+
+/* Status × weight: the gaps in the colour of what they fail. */
+.nc-matrice__cadre {
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+.nc-matrice {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--color-surface);
+}
+.nc-matrice th,
+.nc-matrice td {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+.nc-matrice tbody th {
+  text-align: left;
+  font-weight: 400;
+}
+.nc-matrice .badge {
+  font-size: 0.72rem;
+}
+.nc-matrice__nc {
+  font-weight: 700;
+}
+.nc-matrice__nc--exigence {
+  color: #fff;
+  background: var(--level-elevee);
+}
+.nc-matrice__nc--bonne-pratique {
+  color: var(--level-moderee);
+  background: var(--level-moderee-bg);
+  box-shadow: inset 0 0 0 2px var(--level-moderee);
+}
+.nc-matrice__nc--marque {
+  color: var(--level-indeterminee);
+  background: var(--level-indeterminee-bg);
+}
+
+.bascule-vue {
+  display: inline-flex;
+  border: 1.5px solid var(--color-accent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bascule-vue button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.9rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+.bascule-vue button.actif {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.groupe-titre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin: 0 0 0.5rem;
+}
+.groupe-titre .niveau {
+  font-family: inherit;
+}
+
+.bloc-niveau {
+  margin-bottom: 1.5rem;
+  padding-left: 0.8rem;
+}
+.bloc-niveau--exigence {
+  border-left: 4px solid var(--level-elevee);
+}
+.bloc-niveau--bonne-pratique {
+  border-left: 6px double var(--level-moderee);
+}
+.bloc-niveau__titre {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.6rem;
+}
+.bloc-niveau__titre .niveau {
+  font-size: 0.85rem;
+}
+.bloc-niveau__vide {
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+.point-controle__rubrique {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
 }
 
 .nc-legende {

@@ -35,10 +35,23 @@ Chaque point relève d'une **exigence** (texte réglementaire ou « doit » de l
 norme), d'une **bonne pratique** (attendu selon le cas) ou de l'**usage de la
 marque LNE SSP** (`portee`, `controles.ts`). Une non-conformité prend la
 couleur de ce qu'elle manque : rouge plein pour une exigence, ambre (bordure
-double) pour une bonne pratique, gris pointillé pour la marque. Le décompte
-en tête de résultats les sépare. Les points sur la marque LNE SSP (apposition,
-domaine, périmètre, prestations hors certification), moins critiques, sont
-regroupés dans un bloc replié en fin de liste, et en fin de rapport Excel.
+double) pour une bonne pratique, gris pointillé pour la marque. Les points sur
+la marque LNE SSP (apposition, domaine, périmètre, prestations hors
+certification), moins critiques, sont regroupés à part. Dans tous les rendus :
+
+- **décompte** : trois cases (exigences non satisfaites, bonnes pratiques non
+  suivies, marque LNE), cliquables pour n'afficher que ces non-conformités, et
+  un tableau statut × niveau ;
+- **présentation par rubrique** : chaque titre de rubrique porte le nombre
+  d'exigences et de bonnes pratiques non conformes ; la marque LNE forme un
+  bloc replié en fin de liste ;
+- **présentation par niveau** : les non-conformités seules, exigences puis
+  bonnes pratiques puis marque LNE (bloc replié), chaque carte rappelant sa
+  rubrique ;
+- **rapport Excel** : feuille « Non-conformités » en tête, par niveau sous un
+  bandeau de couleur (avec paragraphe et phrase proposés) ; feuille
+  « Vérification » avec la colonne « Niveau » colorée et la marque LNE sous
+  son propre bandeau, en fin de tableau.
 
 ## Propositions d'ajout
 

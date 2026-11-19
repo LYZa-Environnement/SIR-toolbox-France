@@ -19,10 +19,98 @@ const COULEURS: Record<Statut, { fond: string; texte: string }> = {
   'sans-objet': { fond: 'FFEDEDED', texte: 'FF555555' },
 }
 
-const PORTEES: Record<Portee, { libelle: string; nc: string; fond: string; texte: string }> = {
-  exigence: { libelle: 'Exigence', nc: 'Exigences non satisfaites', ...ETAT.alerte },
-  'bonne-pratique': { libelle: 'Bonne pratique', nc: 'Bonnes pratiques non suivies', ...ETAT.vigilance },
-  marque: { libelle: 'Marque LNE SSP', nc: 'Points sur l’usage de la marque LNE SSP (moins critiques)', fond: 'FFEDEDED', texte: 'FF555555' },
+/** A requirement in red, a good practice in amber, the LNE mark in grey;
+ *  `bandeau` is the strong shade of the headings of each block. */
+const PORTEES: Record<Portee, { libelle: string; nc: string; fond: string; texte: string; bandeau: string; aide: string }> = {
+  exigence: {
+    libelle: 'Exigence',
+    nc: 'Exigences non satisfaites',
+    ...ETAT.alerte,
+    bandeau: 'FFC34A35',
+    aide: 'Exigé par un texte réglementaire ou par la norme : à corriger avant diffusion.',
+  },
+  'bonne-pratique': {
+    libelle: 'Bonne pratique',
+    nc: 'Bonnes pratiques non suivies',
+    ...ETAT.vigilance,
+    bandeau: 'FFA3671A',
+    aide: 'Attendu par la norme selon le cas, ou bonne pratique : à compléter, ou à justifier si le point ne s’applique pas.',
+  },
+  marque: {
+    libelle: 'Marque LNE SSP',
+    nc: 'Points sur l’usage de la marque LNE SSP (moins critiques)',
+    fond: 'FFEDEDED',
+    texte: 'FF555555',
+    bandeau: 'FF5C6B5E',
+    aide: 'Usage de la marque de certification LNE SSP : moins critique, regroupé à part.',
+  },
+}
+
+const ORDRE: Portee[] = ['exigence', 'bonne-pratique', 'marque']
+
+/** A band across the sheet, in the colour of a weight. */
+function bandeau(ws: Worksheet, r: number, colonnes: number, texte: string, po: Portee) {
+  ws.mergeCells(r, 1, r, colonnes)
+  ecrire(ws, r, 1, texte, { gras: true, taille: 10, fond: PORTEES[po].bandeau, couleur: 'FFFFFFFF' })
+  ws.getRow(r).height = 20
+}
+
+/** The gaps only, by weight: requirements, then good practices, then the
+ *  LNE mark, each under its band, with what to add and where. */
+function feuilleNonConformites(ws: Worksheet, rp: RapportVerification) {
+  const titres: [string, number][] = [
+    ['Rubrique', 24],
+    ['Point de contrôle', 40],
+    ['Statut', 12],
+    ['Constat', 40],
+    ['Comment trouver ou corriger', 45],
+    ['Proposition d’ajout : paragraphe', 40],
+    ['Proposition d’ajout : exemple de phrase ([…] à compléter)', 60],
+    ['Commentaire', 30],
+  ]
+  titres.forEach(([, l], j) => (ws.getColumn(j + 1).width = l))
+  ecrire(ws, 1, 1, `Non-conformités — ${rp.referentiel.titre} — ${rp.documents.map((d) => d.nom).join(' + ')}`, { gras: true, taille: 12, bord: false })
+  ecrire(ws, 2, 1, 'Exigences non satisfaites, puis bonnes pratiques non suivies, puis usage de la marque LNE SSP (moins critique).', { italique: true, taille: 9, bord: false })
+  let r = 4
+  for (const po of ORDRE) {
+    const rs = rp.resultats.filter((x) => portee(x.point) === po && nonConforme(rp.statut(x)))
+    if (po === 'marque' && !rs.length) continue
+    bandeau(ws, r++, titres.length, `${PORTEES[po].nc} : ${rs.length}`, po)
+    ws.mergeCells(r, 1, r, titres.length)
+    ecrire(ws, r++, 1, PORTEES[po].aide, { italique: true, taille: 8, couleur: PORTEES[po].texte, fond: PORTEES[po].fond })
+    if (!rs.length) {
+      ecrire(ws, r++, 1, 'Aucune.', { taille: 8, italique: true, bord: false })
+      r++
+      continue
+    }
+    titres.forEach(([t], j) => ecrire(ws, r, j + 1, t, { gras: true, taille: 8, fond: VERT_ENTETE, h: 'center', wrap: true }))
+    r++
+    for (const x of rs) {
+      const st = rp.statut(x)
+      const vals = [
+        x.point.groupe,
+        x.point.intitule,
+        LIBELLES[st],
+        x.verdict.detail ?? '',
+        x.point.aide,
+        x.proposition?.paragraphe ?? '',
+        x.proposition ? `${x.proposition.modele ? 'Formulation du modèle : ' : ''}« ${x.proposition.phrase} »` : '',
+        x.commentaire,
+      ]
+      vals.forEach((v, j) =>
+        ecrire(ws, r, j + 1, v, {
+          taille: 8,
+          wrap: true,
+          gras: j === 1 || j === 2,
+          fond: j === 0 || j === 2 ? PORTEES[po].fond : undefined,
+          couleur: j === 2 ? PORTEES[po].texte : undefined,
+          h: j === 2 ? 'center' : undefined,
+        }),
+      )
+      r++
+    }
+    r++
+  }
 }
 
 export interface RapportVerification {
@@ -45,13 +133,14 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
   wb.creator = 'ERM SIR Toolbox France'
+  feuilleNonConformites(wb.addWorksheet('Non-conformités', { views: [{ showGridLines: false }] }), rp)
   const ws = wb.addWorksheet('Vérification', { views: [{ showGridLines: false }] })
   ecrire(ws, 1, 1, `Vérification ${rp.referentiel.titre} — ${rp.documents.map((d) => d.nom).join(' + ')}`, { gras: true, taille: 12, bord: false })
   ecrire(ws, 2, 1, `${rp.referentiel.description} Vérifié le ${new Date().toLocaleDateString('fr-FR')} avec SIR Toolbox France.`, { italique: true, taille: 9, bord: false })
   let r = 4
   const comptes = new Map<Statut, number>()
   for (const x of rp.resultats) comptes.set(rp.statut(x), (comptes.get(rp.statut(x)) ?? 0) + 1)
-  for (const po of ['exigence', 'bonne-pratique', 'marque'] as Portee[]) {
+  for (const po of ORDRE) {
     const n = rp.resultats.filter((x) => portee(x.point) === po && nonConforme(rp.statut(x))).length
     ecrire(ws, r, 1, PORTEES[po].nc, { gras: true, taille: 9, fond: PORTEES[po].fond, couleur: PORTEES[po].texte })
     ecrire(ws, r++, 2, n, { h: 'center', gras: true })
@@ -86,9 +175,15 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
   r++
   // The points on the LNE mark, the least critical, gathered at the end.
   const lignes = [...rp.resultats].sort((a, b) => Number(portee(a.point) === 'marque') - Number(portee(b.point) === 'marque'))
+  let marque = false
   for (const x of lignes) {
     const st = rp.statut(x)
     const po = portee(x.point)
+    if (po === 'marque' && !marque && lignes.some((y) => portee(y.point) !== 'marque')) {
+      marque = true
+      r++
+      bandeau(ws, r++, titres.length, `${GROUPE_MARQUE} — moins critique`, 'marque')
+    }
     const ajout = nonConforme(st) && x.proposition
     const vals: (string | number)[] = [
       po === 'marque' ? GROUPE_MARQUE : x.point.groupe,
@@ -112,8 +207,9 @@ export async function telechargerVerification(rp: RapportVerification, nomFichie
         taille: 8,
         wrap: true,
         gras: j === 1 || j === 5 || (j === 2 && po === 'exigence'),
+        // The weight is always coloured; filled when the point is a gap.
         fond: j === 5 ? teinte.fond : j === 2 && nonConforme(st) ? PORTEES[po].fond : undefined,
-        couleur: j === 5 ? teinte.texte : j === 2 && nonConforme(st) ? PORTEES[po].texte : undefined,
+        couleur: j === 5 ? teinte.texte : j === 2 ? PORTEES[po].bandeau : undefined,
         h: j >= 2 && j <= 5 ? 'center' : undefined,
       }),
     )

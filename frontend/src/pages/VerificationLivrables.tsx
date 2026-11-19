@@ -82,6 +82,10 @@ export default function VerificationLivrables() {
   const [decisions, setDecisions] = useState<Record<string, Decision>>({})
   const [commentaires, setCommentaires] = useState<Record<string, string>>({})
   const [filtre, setFiltre] = useState<'tous' | 'problemes'>('tous')
+  /** Only the gaps of one weight (a click on its count), or all points. */
+  const [niveau, setNiveau] = useState<Portee | null>(null)
+  /** Points by section of the checklist, or gaps by weight. */
+  const [vue, setVue] = useState<'rubrique' | 'niveau'>('rubrique')
   const [export_, setExport] = useState(false)
   /** Deliverable families unfolded by the viewer: all folded at first. */
   const [ouvertes, setOuvertes] = useState<Set<string>>(new Set())
@@ -168,10 +172,42 @@ export default function VerificationLivrables() {
   /** The points on the LNE mark are gathered in one group, shown last. */
   const groupeDe = (r: Resultat) => (portee(r.point) === 'marque' ? GROUPE_MARQUE : r.point.groupe)
   const groupes = [...new Set(resultats.map(groupeDe))].sort((a, b) => Number(a === GROUPE_MARQUE) - Number(b === GROUPE_MARQUE))
-  const visibles = (g: string) =>
-    resultats.filter((r) => groupeDe(r) === g && (filtre === 'tous' || ['absent', 'invalide', 'a-verifier'].includes(effectif(r))))
-  const ecarts = (po: Portee) => resultats.filter((r) => portee(r.point) === po && nonConforme(effectif(r))).length
+  const retenu = (r: Resultat) =>
+    (filtre === 'tous' || ['absent', 'invalide', 'a-verifier'].includes(effectif(r))) && (!niveau || (portee(r.point) === niveau && nonConforme(effectif(r))))
+  const visibles = (g: string) => resultats.filter((r) => groupeDe(r) === g && retenu(r))
+  const ecartsDe = (rs: Resultat[], po: Portee) => rs.filter((r) => portee(r.point) === po && nonConforme(effectif(r))).length
+  const ecarts = (po: Portee) => ecartsDe(resultats, po)
   const seulementMarque = resultats.length > 0 && resultats.every((r) => portee(r.point) === 'marque')
+  const carte = (r: Resultat, rubrique?: string) => (
+    <PointControle
+      key={r.point.id}
+      r={r}
+      rubrique={rubrique}
+      statut={effectif(r)}
+      onDecision={(d) => setDecisions({ ...decisions, [r.point.id]: d })}
+      onCommentaire={(c) => setCommentaires({ ...commentaires, [r.point.id]: c })}
+    />
+  )
+  /** The block of the LNE mark, folded: the least critical. */
+  const blocMarque = (rs: Resultat[], rubriques: boolean) => {
+    const n = rs.filter((r) => nonConforme(effectif(r))).length
+    return (
+      <details key={GROUPE_MARQUE} className="groupe-marque" open={seulementMarque || niveau === 'marque'}>
+        <summary>
+          <span className="groupe-marque__titre">{GROUPE_MARQUE}</span>
+          <span className="groupe-marque__compte">
+            {rs.length} point{rs.length > 1 ? 's' : ''}
+            {n > 0 ? ` · ${n} à traiter` : ''} · moins critique
+          </span>
+        </summary>
+        <p className="groupe-marque__aide">
+          Apposition de la marque, domaine certifié, périmètre et prestations hors certification : points du référentiel LNE SSP regroupés
+          ici, à traiter après les exigences et les bonnes pratiques du livrable.
+        </p>
+        {rs.map((r) => carte(r, rubriques ? r.point.groupe : undefined))}
+      </details>
+    )
+  }
 
   async function exporter() {
     if (!referentiel || !livrable) return
@@ -371,24 +407,76 @@ export default function VerificationLivrables() {
             </h2>
             <div className="nc-synthese">
               {(['exigence', 'bonne-pratique', 'marque'] as Portee[]).map((po) => (
-                <div key={po} className={`nc-synthese__case nc-synthese__case--${po}`} title={PORTEES[po].aide}>
+                <button
+                  key={po}
+                  type="button"
+                  aria-pressed={niveau === po}
+                  className={`nc-synthese__case nc-synthese__case--${po}${niveau === po ? ' nc-synthese__case--actif' : ''}`}
+                  title={`${PORTEES[po].aide} Cliquer pour n’afficher que ces non-conformités.`}
+                  onClick={() => setNiveau(niveau === po ? null : po)}
+                >
                   <strong>{ecarts(po)}</strong>
                   <span>{ecarts(po) > 1 ? PORTEES[po].ncs : PORTEES[po].nc}</span>
-                </div>
+                </button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
-              {(['invalide', 'absent', 'a-verifier', 'present', 'sans-objet'] as Statut[]).map((s) =>
-                comptes[s] ? (
-                  <span key={s} className={BADGE[s]}>
-                    {comptes[s]} · {LIBELLES[s]}
-                  </span>
-                ) : null,
+            <div className="nc-matrice__cadre">
+              <table className="nc-matrice">
+                <thead>
+                  <tr>
+                    <th scope="col">Statut</th>
+                    {(['exigence', 'bonne-pratique', 'marque'] as Portee[]).map((po) => (
+                      <th key={po} scope="col">
+                        <span className={`niveau niveau--${po}`}>{PORTEES[po].libelle}</span>
+                      </th>
+                    ))}
+                    <th scope="col">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(['invalide', 'absent', 'a-verifier', 'present', 'sans-objet'] as Statut[]).map((s) => (
+                    <tr key={s}>
+                      <th scope="row">
+                        <span className={BADGE[s]}>{LIBELLES[s]}</span>
+                      </th>
+                      {(['exigence', 'bonne-pratique', 'marque'] as Portee[]).map((po) => {
+                        const n = resultats.filter((r) => portee(r.point) === po && effectif(r) === s).length
+                        return (
+                          <td key={po} className={n && nonConforme(s) ? `nc-matrice__nc nc-matrice__nc--${po}` : undefined}>
+                            {n || '–'}
+                          </td>
+                        )
+                      })}
+                      <td>{comptes[s] || '–'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: 'flex', gap: '0.6rem 1.2rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <div className="bascule-vue" role="radiogroup" aria-label="Présentation des points">
+                {(
+                  [
+                    ['rubrique', 'Par rubrique'],
+                    ['niveau', 'Non-conformités par niveau'],
+                  ] as const
+                ).map(([v, l]) => (
+                  <button key={v} type="button" role="radio" aria-checked={vue === v} className={vue === v ? 'actif' : undefined} onClick={() => setVue(v)}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {niveau && (
+                <button type="button" className="btn btn--ghost btn--petit" onClick={() => setNiveau(null)}>
+                  Afficher tous les niveaux
+                </button>
               )}
-              <label style={{ fontSize: '0.88rem', marginLeft: 'auto' }}>
-                <input type="checkbox" checked={filtre === 'problemes'} onChange={(e) => setFiltre(e.target.checked ? 'problemes' : 'tous')} /> Afficher
-                seulement les points à traiter
-              </label>
+              {vue === 'rubrique' && (
+                <label style={{ fontSize: '0.88rem', marginLeft: 'auto' }}>
+                  <input type="checkbox" checked={filtre === 'problemes'} onChange={(e) => setFiltre(e.target.checked ? 'problemes' : 'tous')} /> Afficher
+                  seulement les points à traiter
+                </label>
+              )}
             </div>
             <ul className="nc-legende" aria-label="Légende">
               {(['exigence', 'bonne-pratique', 'marque'] as Portee[]).map((po) => (
@@ -408,44 +496,51 @@ export default function VerificationLivrables() {
               </li>
             </ul>
 
-            {groupes.map((g) => {
-              const rs = visibles(g)
-              if (!rs.length) return null
-              const cartes = rs.map((r) => (
-                <PointControle
-                  key={r.point.id}
-                  r={r}
-                  statut={effectif(r)}
-                  onDecision={(d) => setDecisions({ ...decisions, [r.point.id]: d })}
-                  onCommentaire={(c) => setCommentaires({ ...commentaires, [r.point.id]: c })}
-                />
-              ))
-              if (g === GROUPE_MARQUE) {
-                const n = rs.filter((r) => nonConforme(effectif(r))).length
+            {vue === 'rubrique' &&
+              groupes.map((g) => {
+                const rs = visibles(g)
+                if (!rs.length) return null
+                if (g === GROUPE_MARQUE) return blocMarque(rs, false)
+                const tous = resultats.filter((r) => groupeDe(r) === g)
                 return (
-                  <details key={g} className="groupe-marque" open={seulementMarque}>
-                    <summary>
-                      <span className="groupe-marque__titre">{g}</span>
-                      <span className="groupe-marque__compte">
-                        {rs.length} point{rs.length > 1 ? 's' : ''}
-                        {n > 0 ? ` · ${n} à traiter` : ''} · moins critique
-                      </span>
-                    </summary>
-                    <p className="groupe-marque__aide">
-                      Apposition de la marque, domaine certifié, périmètre et prestations hors certification : points du référentiel LNE SSP
-                      regroupés ici, à traiter après les exigences et les bonnes pratiques du livrable.
-                    </p>
-                    {cartes}
-                  </details>
+                  <div key={g} style={{ marginBottom: '1.5rem' }}>
+                    <h3 className="groupe-titre">
+                      {g}
+                      {(['exigence', 'bonne-pratique'] as Portee[]).map((po) => {
+                        const n = ecartsDe(tous, po)
+                        return n ? (
+                          <span key={po} className={`niveau niveau--${po}`} title={PORTEES[po].aide}>
+                            {n} {n > 1 ? PORTEES[po].ncs : PORTEES[po].nc}
+                          </span>
+                        ) : null
+                      })}
+                    </h3>
+                    {rs.map((r) => carte(r))}
+                  </div>
                 )
-              }
-              return (
-                <div key={g} style={{ marginBottom: '1.5rem' }}>
-                  <h3 style={{ margin: '0 0 0.5rem' }}>{g}</h3>
-                  {cartes}
-                </div>
-              )
-            })}
+              })}
+
+            {vue === 'niveau' &&
+              (['exigence', 'bonne-pratique', 'marque'] as Portee[])
+                .filter((po) => !niveau || niveau === po)
+                .map((po) => {
+                  const rs = resultats.filter((r) => portee(r.point) === po && nonConforme(effectif(r)))
+                  if (po === 'marque') return rs.length ? blocMarque(rs, true) : null
+                  return (
+                    <div key={po} className={`bloc-niveau bloc-niveau--${po}`}>
+                      <h3 className="bloc-niveau__titre">
+                        <span className={`niveau niveau--${po}`}>{PORTEES[po].libelle}</span> {rs.length}{' '}
+                        {rs.length > 1 ? PORTEES[po].ncs : PORTEES[po].nc}
+                      </h3>
+                      {rs.length ? rs.map((r) => carte(r, r.point.groupe)) : <p className="bloc-niveau__vide">Aucune.</p>}
+                    </div>
+                  )
+                })}
+            {vue === 'niveau' && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+                Les points à vérifier à la lecture, trouvés ou sans objet figurent dans la présentation par rubrique.
+              </p>
+            )}
 
             <button type="button" className="btn" onClick={() => void exporter()} disabled={export_}>
               {export_ ? 'Préparation…' : 'Télécharger le rapport de vérification (Excel)'}
@@ -457,13 +552,27 @@ export default function VerificationLivrables() {
   )
 }
 
-function PointControle({ r, statut, onDecision, onCommentaire }: { r: Resultat; statut: Statut; onDecision: (d: Decision) => void; onCommentaire: (c: string) => void }) {
+function PointControle({
+  r,
+  rubrique,
+  statut,
+  onDecision,
+  onCommentaire,
+}: {
+  r: Resultat
+  /** Section of the checklist, named when the points are listed by weight. */
+  rubrique?: string
+  statut: Statut
+  onDecision: (d: Decision) => void
+  onCommentaire: (c: string) => void
+}) {
   const { point: p, verdict: v } = r
   const aTraiter = statut === 'absent' || statut === 'invalide' || statut === 'a-verifier'
   const po = portee(p)
   const nc = nonConforme(statut)
   return (
     <div className={`card point-controle${nc ? ` point-controle--nc point-controle--${po}` : ''}`}>
+      {rubrique && <p className="point-controle__rubrique">{rubrique}</p>}
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
         <span className={badge(statut, po)} style={{ fontSize: '0.72rem' }}>
           {LIBELLES[statut]}
