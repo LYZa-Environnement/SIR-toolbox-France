@@ -78,7 +78,8 @@ export interface OptionsExport {
   positions?: Record<string, Position>
   facteurAmontAval?: number
   /** Groundwater: other campaigns of the same wells, for the comparison
-   *  sheets (evolution, high / low water, charts). */
+   *  sheets (evolution, high / low water, charts). Standard export only:
+   *  the expert export leaves the temporal analysis out. */
   campagnes?: DonneesCampagnes
 }
 
@@ -959,7 +960,8 @@ export async function construireClasseur(lecture: Lecture, opts: OptionsExport):
     const { ajouterFeuillesNappe } = await import('../nappe/export.ts')
     ajouterFeuillesNappe(wb, opts.nappe, !!opts.expert)
   }
-  if (opts.campagnes) {
+  // Temporal analysis (campaign comparison): standard export only.
+  if (opts.campagnes && !opts.expert) {
     const { ajouterFeuillesCampagnes } = await import('./feuillesCampagnes.ts')
     ajouterFeuillesCampagnes(wb, opts.campagnes, opts.titre)
   }

@@ -536,9 +536,9 @@ export default function ResultatsLabo() {
           expert,
           positions: matrice === 'eau' ? positions : undefined,
           facteurAmontAval,
-          campagnes: campagnes.length > 1 ? { campagnes, ouvrages, facteur: facteurEvolution, guides: guidesCampagnes } : undefined,
+          campagnes: !expert && campagnes.length > 1 ? { campagnes, ouvrages, facteur: facteurEvolution, guides: guidesCampagnes } : undefined,
         },
-        `Tableau X - Résultats ${libelle}${campagnes.length > 1 ? ' - comparaison campagnes' : ''}${expert ? ' - expert' : ''}.xlsx`,
+        `Tableau X - Résultats ${libelle}${!expert && campagnes.length > 1 ? ' - comparaison campagnes' : ''}${expert ? ' - expert' : ''}.xlsx`,
       )
     } finally {
       setExport(null)

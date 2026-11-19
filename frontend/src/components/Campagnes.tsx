@@ -79,7 +79,7 @@ export function Campagnes({ campagnes, ouvrages, onInfo, onAjouter, onRetirer, o
     <div className="card" style={{ marginTop: '1.5rem' }}>
       <strong>Campagnes à comparer</strong>
       <p style={{ margin: '0.35rem 0 0.75rem', fontSize: '0.88rem', color: 'var(--color-muted)' }}>
-        Ajoutez le fichier d'une autre campagne sur les mêmes ouvrages : les exports comparent alors les campagnes (onglets
+        Ajoutez le fichier d'une autre campagne sur les mêmes ouvrages : le tableau des résultats (export standard) compare alors les campagnes (onglets
         « Comparaison campagnes », « Évolutions et tendances », « Graphiques évolution » et « Statistiques campagnes »). Indiquez la date et le régime de chaque
         campagne : les tendances hautes eaux / basses eaux demandent au moins une campagne de chaque. Les onglets de mise en forme
         portent sur le fichier principal.
