@@ -3,6 +3,7 @@ import { acronyme } from '../lib/resultats/acronymes'
 import { dessinerCamembert, dessinerEchelle, dessinerPastille, rayonPour } from '../lib/resultats/camembert'
 import type { Lecture } from '../lib/resultats/parse'
 import { estControle, type Qualification } from '../lib/resultats/qualite'
+import { telechargerBlob } from '../lib/fichiers'
 import { signatures } from '../lib/resultats/signatures'
 
 /** Pies for a map: drawn twice the sheet's size, so that they stay sharp. */
@@ -69,14 +70,7 @@ export function SignaturesApercu({ lecture, qualifications, metaux = false }: { 
         ].join('\r\n'),
       )
       const blob = await zip.generateAsync({ type: 'blob' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'Camemberts signatures - carte.zip'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      telechargerBlob(blob, 'Camemberts signatures - carte.zip')
     } finally {
       setPreparation(false)
     }

@@ -37,6 +37,7 @@ import type { Position } from './expert/amontAval.ts'
 import type { DonneesCampagnes } from './feuillesCampagnes.ts'
 import { libelleProfondeur, lireProfondeur } from './expert/profondeur.ts'
 import { LIBELLES_VERDICT, type QualitePoint } from './qualiteGaz.ts'
+import { telechargerClasseurExcel } from '../fichiers.ts'
 
 export interface Legende {
   titre: string
@@ -973,14 +974,5 @@ export async function construireClasseur(lecture: Lecture, opts: OptionsExport):
 
 export async function telechargerClasseur(lecture: Lecture, opts: OptionsExport, nomFichier: string) {
   const wb = await construireClasseur(lecture, opts)
-  const buffer = await wb.xlsx.writeBuffer()
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = nomFichier
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await telechargerClasseurExcel(wb, nomFichier)
 }
