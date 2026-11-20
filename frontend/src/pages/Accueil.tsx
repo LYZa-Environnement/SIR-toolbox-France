@@ -100,6 +100,14 @@ const CATEGORIES: Categorie[] = [
         points: ['Directive 2020/2184, ANSES, RIVM, littérature', 'Profil par longueur de chaîne, bilan du fluor'],
         route: '/interpretation-pfas',
       },
+      {
+        titre: 'Chromatogrammes hydrocarbures',
+        accroche: 'Nature, altération, âge',
+        description:
+          'Déposez le rapport du laboratoire ou une capture du chromatogramme C10–C40 : le tracé est numérisé et lu — produit probable, origine pétrolière ou végétale, stade de biodégradation, âge approché du déversement, comparaison entre échantillons.',
+        points: ['Démarche du rapport BRGM RP-64174-FR', 'n-C17/pristane (Christensen et Larsen), CPI, bosse non résolue'],
+        route: '/chromatogrammes',
+      },
     ],
   },
   {

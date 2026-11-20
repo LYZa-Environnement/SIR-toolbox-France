@@ -3574,3 +3574,243 @@ svg .halo {
   white-space: normal;
   vertical-align: top;
 }
+
+/* ---- Lecture des chromatogrammes ---- */
+
+.chromato-numerisation {
+  margin-top: 1rem;
+}
+
+.chromato-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.lien-bouton {
+  background: none;
+  border: none;
+  padding: 0 0.25rem;
+  font: inherit;
+  color: var(--color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.chromato-etapes {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.chromato-etapes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-muted);
+}
+
+.chromato-etapes li.actif {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.chromato-etapes li.fait::marker {
+  content: '✓  ';
+  color: var(--color-accent);
+}
+
+.chromato-tolerance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.chromato-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #fff;
+  touch-action: none;
+}
+
+.chromato-canvas--actif {
+  cursor: crosshair;
+}
+
+.chromato-champs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.chromato-saisie {
+  margin-top: 1.25rem;
+}
+
+.chromato-saisie > summary {
+  cursor: pointer;
+}
+
+.chromato-saisie h4 {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.chromato-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.chromato-entete .pfas-note {
+  flex: 1 1 18rem;
+  margin: 0;
+}
+
+.chromato-figure {
+  margin: 0;
+}
+
+.chromato-figure svg,
+.chromato-zoom {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chromato-zoom {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin-top: 0.5rem;
+}
+
+.chromato-zoom--actif {
+  cursor: crosshair;
+  border-color: var(--color-accent);
+}
+
+.chromato-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  margin-top: 0.4rem;
+}
+
+.chromato-legende span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.chromato-legende i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.chromato-doublets {
+  margin-top: 1rem;
+}
+
+.chromato-doublets > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.chromato-cibles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chromato-titre-resultats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.chromato-titre-resultats h2 {
+  margin: 0;
+}
+
+.chromato-resultats {
+  display: grid;
+  gap: 1rem;
+}
+
+.chromato-resultats .card h3 {
+  font-size: 1.1rem;
+  margin-top: 0;
+}
+
+.chromato-synthese p:not(.eyebrow) {
+  font-size: 1.02rem;
+  margin: 0;
+}
+
+.chromato-constats {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+}
+
+.chromato-constats li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.chromato-tableau {
+  font-size: 0.86rem;
+}
+
+.chromato-tableau th {
+  font-weight: 600;
+}
+
+.chromato-raisons {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.chromato-tableau th,
+.chromato-tableau td {
+  white-space: normal;
+  vertical-align: top;
+}
+
+.chromato-tableau tbody th {
+  position: static;
+  min-width: 10rem;
+}
+
+.chromato-resultats .grid > *,
+.chromato .card {
+  min-width: 0;
+}
+
+.chromato-tableau .tableau__conc {
+  white-space: nowrap;
+}
