@@ -16,6 +16,7 @@
  */
 
 import { bboxAround, bboxToPolygon, bearingDegrees, cardinalDirection, centroidOfGeometry, isPointInGeometry, minDistanceToGeometryBoundaryM, type PolygonGeometry } from './geo'
+import { requete } from './reseau'
 
 const API_CARTO_NATURE = 'https://apicarto.ign.fr/api/nature/'
 const GBIF_OCCURRENCE = 'https://api.gbif.org/v1/occurrence/search'
@@ -63,7 +64,7 @@ async function queryModule(endpoint: string, lat: number, lon: number, radiusM: 
   try {
     const url = new URL(endpoint, API_CARTO_NATURE)
     url.searchParams.set('geom', JSON.stringify(bboxToPolygon(bboxAround(lat, lon, radiusM))))
-    const response = await fetch(url.toString())
+    const response = await requete(url.toString())
     if (!response.ok) return null
     const json = (await response.json()) as { features?: NatureFeature[] }
     return json.features ?? []
@@ -148,7 +149,7 @@ const GROUPES: Record<string, string> = {
 
 async function frenchName(key: string): Promise<string | null> {
   try {
-    const response = await fetch(`https://api.gbif.org/v1/species/${encodeURIComponent(key)}/vernacularNames?limit=100`)
+    const response = await requete(`https://api.gbif.org/v1/species/${encodeURIComponent(key)}/vernacularNames?limit=100`)
     if (!response.ok) return null
     const json = (await response.json()) as { results?: { vernacularName?: string; language?: string }[] }
     const match = json.results?.find((entry) => entry.language === 'fra' && entry.vernacularName)
@@ -170,7 +171,7 @@ export async function fetchEspeces(lat: number, lon: number, radiusM = 2000): Pr
       facet: 'speciesKey',
       facetLimit: '12',
     })}`
-    const response = await fetch(url)
+    const response = await requete(url)
     if (!response.ok) return null
     const json = (await response.json()) as { count?: number; facets?: { field: string; counts: { name: string; count: number }[] }[] }
     // The facet field comes back upper-snake-cased ("SPECIES_KEY"), not as the
@@ -181,7 +182,7 @@ export async function fetchEspeces(lat: number, lon: number, radiusM = 2000): Pr
       counts.map(async (entry): Promise<Espece | null> => {
         try {
           const [taxonResponse, nomFrancais] = await Promise.all([
-            fetch(`https://api.gbif.org/v1/species/${encodeURIComponent(entry.name)}`),
+            requete(`https://api.gbif.org/v1/species/${encodeURIComponent(entry.name)}`),
             frenchName(entry.name),
           ])
           if (!taxonResponse.ok) return null

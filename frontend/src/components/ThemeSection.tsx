@@ -140,6 +140,8 @@ export default function ThemeSection({ id, titre, sousTitre, site, build, childr
   const [enAttente, setEnAttente] = useState(false)
   const containerRef = useRef<HTMLElement | null>(null)
   const [visible, setVisible] = useState(false)
+  // Bumped by « Réessayer » to run the rubrique again.
+  const [essai, setEssai] = useState(0)
 
   // Six rubriques firing dozens of API calls at once would hammer every
   // upstream service for data most visitors never scroll to — each one waits
@@ -157,6 +159,19 @@ export default function ThemeSection({ id, titre, sousTitre, site, build, childr
     return () => observer.disconnect()
   }, [visible])
 
+  // A new site, a new rubrique or a retry starts from a blank section. Reset
+  // while rendering rather than inside the effect below, so the stale report
+  // never paints for one frame before the effect clears it (React's « adjust
+  // state when a prop changes » pattern).
+  const [demande, setDemande] = useState<{ site: Site; build: Props['build']; essai: number } | null>(null)
+  if (visible && (demande?.site !== site || demande.build !== build || demande.essai !== essai)) {
+    setDemande({ site, build, essai })
+    setReport(null)
+    setState('loading')
+    setProgres({ attendus: 0, faits: 0 })
+    setEnAttente(true)
+  }
+
   // `state` and `report` must stay out of this effect's dependencies: they
   // are written by the effect itself, so listing them would re-run it, and
   // the cleanup would cancel the very request it just started — leaving the
@@ -164,10 +179,6 @@ export default function ThemeSection({ id, titre, sousTitre, site, build, childr
   useEffect(() => {
     if (!visible) return
     let cancelled = false
-    setReport(null)
-    setState('loading')
-    setProgres({ attendus: 0, faits: 0 })
-    setEnAttente(true)
 
     // Counters held outside React state: they are incremented from inside the
     // rubrique's own calls, where reading a stale render's value would lose
@@ -203,7 +214,7 @@ export default function ThemeSection({ id, titre, sousTitre, site, build, childr
     return () => {
       cancelled = true
     }
-  }, [visible, site, build])
+  }, [visible, site, build, essai])
 
   return (
     <section ref={containerRef} id={id} className="section" style={{ borderTop: 'var(--border-w) solid var(--color-border)', scrollMarginTop: '1rem' }}>
@@ -214,7 +225,13 @@ export default function ThemeSection({ id, titre, sousTitre, site, build, childr
         {state === 'loading' && <BarreProgression faits={progres.faits} attendus={progres.attendus} enAttente={enAttente} />}
         {state === 'error' && (
           <div className="card" style={{ borderColor: 'var(--level-elevee)' }}>
-            <p style={{ margin: 0 }}>Les données de cette rubrique n'ont pas pu être récupérées. Réessayez plus tard.</p>
+            <p style={{ margin: '0 0 0.75rem' }}>
+              Les données de cette rubrique n'ont pas pu être récupérées : un service public ne répond pas, ou la connexion a été
+              interrompue.
+            </p>
+            <button type="button" className="btn btn--petit" onClick={() => setEssai((n) => n + 1)}>
+              Réessayer
+            </button>
           </div>
         )}
 

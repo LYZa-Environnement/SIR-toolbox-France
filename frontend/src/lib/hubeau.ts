@@ -7,6 +7,7 @@
  */
 
 import { bboxAround, bboxParam, bearingDegrees, cardinalDirection, haversineMeters } from './geo'
+import { requete } from './reseau'
 
 const HUBEAU_BASE = 'https://hubeau.eaufrance.fr/api/'
 
@@ -14,7 +15,7 @@ async function getData(path: string, params: Record<string, string | number>): P
   try {
     const url = new URL(path, HUBEAU_BASE)
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, String(value)))
-    const response = await fetch(url.toString())
+    const response = await requete(url.toString())
     if (!response.ok && response.status !== 206) return null
     const json = (await response.json()) as { data?: unknown[] }
     return Array.isArray(json.data) ? (json.data as Record<string, unknown>[]) : []

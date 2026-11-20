@@ -11,6 +11,8 @@
  */
 
 import { bearingDegrees, cardinalDirection, haversineMeters } from './geo'
+import { codeCommuneEntiere } from './communes'
+import { requete } from './reseau'
 
 const GEORISQUES_BASE_URL = 'https://georisques.gouv.fr/api/v1/'
 const MAX_PAGES = 4
@@ -26,7 +28,7 @@ async function getRaw(path: string, params: Record<string, string | number>): Pr
   try {
     const url = new URL(path, GEORISQUES_BASE_URL)
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, String(value)))
-    const response = await fetch(url.toString())
+    const response = await requete(url.toString())
     if (!response.ok) return null
     return (await response.json()) as Json
   } catch {
@@ -515,7 +517,7 @@ export interface CatnatItem {
  * exactly "Inondations et/ou Coulées de Boue", already matched by "inond" —
  * the "coulée de boue" check is kept as a safety net for any other wording. */
 export async function fetchCatnatInondation(codeInsee: string): Promise<CatnatItem[] | null> {
-  const payload = await getRaw('gaspar/catnat', { code_insee: codeInsee })
+  const payload = await getRaw('gaspar/catnat', { code_insee: codeCommuneEntiere(codeInsee) })
   if (payload === null) return null
   const items = Array.isArray(payload.data) ? payload.data : []
   return items
@@ -577,7 +579,7 @@ export interface RisqueCommune {
 }
 
 export async function fetchRisquesCommune(codeInsee: string): Promise<RisqueCommune[] | null> {
-  const payload = await getRaw('gaspar/risques', { code_insee: codeInsee })
+  const payload = await getRaw('gaspar/risques', { code_insee: codeCommuneEntiere(codeInsee) })
   if (payload === null) return null
   const items = Array.isArray(payload.data) ? payload.data : []
   const first = items[0] as Record<string, unknown> | undefined
@@ -597,7 +599,12 @@ export async function fetchRisquesCommune(codeInsee: string): Promise<RisqueComm
  * shape and a different parameter from the rest of the Géorisques API —
  * verified live: it is `codeInsee` (camelCase; `code_insee` is silently
  * ignored and returns all 6 584 national records), and the payload paginates
- * as `content` / `totalElements` rather than `data` / `results`. */
+ * as `content` / `totalElements` rather than `data` / `results`.
+ *
+ * Re-checked 11/2026: pages now start at 1 (`page=0` is refused with a 400,
+ * « Le numéro de page et la taille de page doivent être strictement
+ * positifs »), and the page size is `page_size` — `size` is ignored and
+ * leaves the default of 10. */
 export interface PprItem {
   identifiant: string | null
   libelle: string
@@ -607,7 +614,8 @@ export interface PprItem {
 }
 
 async function fetchPpr(endpoint: 'pprn' | 'pprt', codeInsee: string): Promise<PprItem[] | null> {
-  const payload = await getRaw(`gaspar/${endpoint}`, { codeInsee, page: 0, size: 50 })
+  // A commune has at most a handful of plans (Marseille: 5); 100 is ample.
+  const payload = await getRaw(`gaspar/${endpoint}`, { codeInsee: codeCommuneEntiere(codeInsee), page: 1, page_size: 100 })
   if (payload === null) return null
   const content = Array.isArray(payload.content) ? payload.content : []
   return content.map((entry) => {

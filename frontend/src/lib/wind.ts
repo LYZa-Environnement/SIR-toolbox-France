@@ -4,6 +4,9 @@
 // ground-station product — the UI says so — but Météo-France's own API
 // requires an account/API key, which a client-only static site (no backend
 // to keep a secret on) can't use without exposing it to every visitor.
+
+import { requete } from './reseau'
+
 const OPEN_METEO_BASE = 'https://archive-api.open-meteo.com/v1/archive'
 
 export const DIRECTIONS_16 = [
@@ -39,7 +42,7 @@ export async function fetchWindRose(lat: number, lon: number): Promise<WindRose 
       end_date: `${year}-12-31`,
       hourly: 'wind_speed_10m,wind_direction_10m',
     })}`
-    const res = await fetch(url)
+    const res = await requete(url)
     if (!res.ok) return null
     const data = await res.json()
     const speeds: number[] = data?.hourly?.wind_speed_10m

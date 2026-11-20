@@ -166,12 +166,11 @@ function Loupe({
   onNaviguer: (index: number) => void
 }) {
   const periode = periodes[index]
-  const [charge, setCharge] = useState(false)
+  // The frame whose image has finished loading: moving to another frame
+  // fades it in again without having to reset anything.
+  const [chargee, setChargee] = useState<string | null>(null)
+  const charge = chargee === periode.id
   const boutonFermer = useRef<HTMLButtonElement | null>(null)
-
-  useEffect(() => {
-    setCharge(false)
-  }, [periode.id])
 
   // Escape closes, the arrows walk the timeline: a reader comparing decades
   // should not have to go back to the grid between two frames.
@@ -236,7 +235,7 @@ function Loupe({
         <img
           src={orthoImageUrl(site.lat, site.lon, periode.id, cote, PIXELS_LOUPE)}
           alt={`Vue aérienne du site, ${periode.label}`}
-          onLoad={() => setCharge(true)}
+          onLoad={() => setChargee(periode.id)}
           style={{
             position: 'absolute',
             inset: 0,
@@ -303,10 +302,18 @@ export default function FriseAerienne({ site, coteM }: { site: Site; coteM?: num
   // firing them together exceeds the browser's per-host connection limit —
   // requests then queue and time out, which would wrongly hide campaigns that
   // do have coverage.
-  useEffect(() => {
-    let annule = false
+  // Another site or frame size starts from an empty grid; reset while
+  // rendering rather than inside the effect below.
+  const cle = `${site.lat},${site.lon},${cote}`
+  const [cleVue, setCleVue] = useState(cle)
+  if (cle !== cleVue) {
+    setCleVue(cle)
     setCouverture({})
     setPrises({})
+  }
+
+  useEffect(() => {
+    let annule = false
     void (async () => {
       // Two sequential passes running side by side. Chaining the dates behind
       // the probes made a slow probe hide every date; running them as one
@@ -342,9 +349,7 @@ export default function FriseAerienne({ site, coteM }: { site: Site; coteM?: num
 
   // A frame vanishing from the grid while enlarged — the coverage probe
   // finishing late — must not leave the overlay pointing past the end.
-  useEffect(() => {
-    if (agrandie !== null && agrandie >= visibles.length) setAgrandie(visibles.length > 0 ? visibles.length - 1 : null)
-  }, [agrandie, visibles.length])
+  const agrandieVisible = agrandie !== null && agrandie >= visibles.length ? (visibles.length > 0 ? visibles.length - 1 : null) : agrandie
 
   return (
     <div className="card" style={{ marginTop: '1.5rem' }}>
@@ -409,8 +414,8 @@ export default function FriseAerienne({ site, coteM }: { site: Site; coteM?: num
         ).
       </p>
 
-      {agrandie !== null && visibles[agrandie] && (
-        <Loupe site={site} cadre={cadre} cote={cote} periodes={visibles} prises={prises} index={agrandie} onFermer={fermer} onNaviguer={naviguer} />
+      {agrandieVisible !== null && visibles[agrandieVisible] && (
+        <Loupe site={site} cadre={cadre} cote={cote} periodes={visibles} prises={prises} index={agrandieVisible} onFermer={fermer} onNaviguer={naviguer} />
       )}
     </div>
   )

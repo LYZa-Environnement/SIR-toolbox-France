@@ -10,10 +10,19 @@ import type { Site } from '../types/site'
 export default function RoseDesVents({ site }: { site: Site }) {
   const [rose, setRose] = useState<WindRose | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [essai, setEssai] = useState(0)
+
+  // A new point or a retry shows « Calcul en cours » again; reset while
+  // rendering rather than inside the effect.
+  const cle = `${site.lat},${site.lon},${essai}`
+  const [cleVue, setCleVue] = useState(cle)
+  if (cle !== cleVue) {
+    setCleVue(cle)
+    setState('loading')
+  }
 
   useEffect(() => {
     let cancelled = false
-    setState('loading')
     // Wrapped like every other source: a hanging request must end as
     // "indisponible", not as a spinner that never resolves.
     safe(fetchWindRose(site.lat, site.lon)).then((result) => {
@@ -28,15 +37,18 @@ export default function RoseDesVents({ site }: { site: Site }) {
     return () => {
       cancelled = true
     }
-  }, [site.lat, site.lon])
+  }, [site.lat, site.lon, essai])
 
   if (state === 'error') {
     return (
       <div className="card" style={{ marginTop: '1.5rem' }}>
         <h3 style={{ fontSize: '1.05rem' }}>Rose des vents</h3>
-        <p style={{ margin: 0, color: 'var(--color-muted)', fontSize: '0.9rem' }}>
+        <p style={{ margin: '0 0 0.75rem', color: 'var(--color-muted)', fontSize: '0.9rem' }}>
           Les données de vent n'ont pas pu être récupérées pour ce point.
         </p>
+        <button type="button" className="btn btn--petit" onClick={() => setEssai((n) => n + 1)}>
+          Réessayer
+        </button>
       </div>
     )
   }

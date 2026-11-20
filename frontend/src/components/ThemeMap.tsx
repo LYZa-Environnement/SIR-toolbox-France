@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Circle, CircleMarker, GeoJSON, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import '../leaflet-icon-fix'
 import { BASE_LAYERS } from '../lib/basemap'
 import { formatSurface } from '../lib/cadastre'
 import type { MapFeature, Site } from '../types/site'

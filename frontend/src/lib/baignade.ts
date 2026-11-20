@@ -23,6 +23,7 @@
  */
 
 import { bearingDegrees, cardinalDirection, haversineMeters } from './geo'
+import { requete } from './reseau'
 
 interface SiteBrut {
   nom?: string
@@ -49,7 +50,7 @@ let chargement: Promise<FichierBaignade | null> | null = null
 
 function charger(): Promise<FichierBaignade | null> {
   if (!chargement) {
-    chargement = fetch(`${import.meta.env.BASE_URL}data/baignade.json`)
+    chargement = requete(`${import.meta.env.BASE_URL}data/baignade.json`)
       .then((response) => (response.ok ? (response.json() as Promise<FichierBaignade>) : null))
       .catch(() => null)
   }

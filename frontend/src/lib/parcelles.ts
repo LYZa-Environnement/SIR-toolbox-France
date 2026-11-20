@@ -35,6 +35,7 @@ import {
   minDistanceToGeometryBoundaryM,
   type PolygonGeometry,
 } from './geo'
+import { requete } from './reseau'
 
 const WFS_SEARCH_URL = 'https://apicarto.ign.fr/api/wfs-geoportail/search'
 const RPG_SOURCE = 'RPG.LATEST:parcelles_graphiques'
@@ -93,7 +94,7 @@ async function queryRpgParcels(geometry: unknown): Promise<RpgFeature[] | null> 
     url.searchParams.set('source', RPG_SOURCE)
     url.searchParams.set('geom', JSON.stringify(geometry))
     url.searchParams.set('_limit', '200')
-    const response = await fetch(url.toString())
+    const response = await requete(url.toString())
     if (!response.ok) return null
     const json = (await response.json()) as { type?: string; features?: RpgFeature[] }
     if (json.type === 'FeatureCollection') return json.features ?? []

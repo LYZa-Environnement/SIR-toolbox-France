@@ -139,7 +139,7 @@ export default function SiteSetting() {
         </div>
       </section>
 
-      {site && etape === 'parcelles' && <SelecteurParcelles site={site} onValider={handleValider} onAnnuler={handleAnnuler} />}
+      {site && etape === 'parcelles' && <SelecteurParcelles key={`${site.adresseLat ?? site.lat},${site.adresseLon ?? site.lon}`} site={site} onValider={handleValider} onAnnuler={handleAnnuler} />}
 
       {site &&
         etape === 'lecture' &&

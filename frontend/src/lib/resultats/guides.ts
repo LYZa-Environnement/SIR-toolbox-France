@@ -32,7 +32,9 @@ export interface ValeurGuide {
 // ---- Name matching -------------------------------------------------------
 
 const SYNONYMES: [RegExp, string][] = [
-  [/\bethene\b/g, 'ethylene'],
+  // "-éthène" and "-éthylène" are the same compound, as a word ending too:
+  // "1,1-dichloroéthène", "tétrachloroéthène".
+  [/ethene\b/g, 'ethylene'],
   [/\bchloroforme\b/g, 'trichloromethane'],
   [/\btetrachlorure de carbone\b/g, 'tetrachloromethane'],
   [/\bchlorure de methylene\b/g, 'dichloromethane'],
@@ -45,8 +47,9 @@ const SYNONYMES: [RegExp, string][] = [
   [/^chrome total$/, 'chrome'],
   [/^mercure et composes$/, 'mercure'],
   [/^(pcb 7 congeneres|somme des 7 pcb|pcb totaux 7|somme des pcb 7|pcb somme des 7 congeneres)$/, 'pcb 7'],
-  // A lab's plain "COT" on soil is the raw-soil one, not the leachate one.
-  [/^cot$/, 'cot sur sol brut'],
+  // A lab's plain "COT" on soil is the raw-soil one, not the leachate one
+  // (a COT in a leachate family is renamed before matching, see sol()).
+  [/^(cot|carbone organique total( cot)?)$/, 'cot sur sol brut'],
   [/^(cod )?cot (sur )?eluat$/, 'cot sur eluat'],
   // "HAP : Somme de 4 HAP (2)" in the reference, "Somme de 4 HAP (calculée)" here.
   [/^(hap )?somme (de |des )?(4|6) hap( \d)?( calculee)?$/, 'somme $3 hap'],
@@ -115,7 +118,10 @@ function sol(p: Parametre, o: OptionsGuides): ValeurGuide | null {
   // A leachate result is not comparable to a raw-soil value: only the
   // leachate criteria (COT sur éluat) apply to it.
   if (ELUAT.test(p.famille) || ELUAT.test(p.nom)) {
-    const e = trouver(donnees.sol.organiques.filter((x) => ELUAT.test(x.nom)), p)
+    // In a leachate family the lab writes just "COT" or "Carbone organique
+    // total (COT)", which the synonyms read as the raw-soil COT.
+    const surEluat = ELUAT.test(p.nom) ? p : { ...p, nom: p.nom.replace(/^\s*(carbone organique total(\s*\(cot\))?|cot\b)/i, 'COT sur éluat') }
+    const e = trouver(donnees.sol.organiques.filter((x) => ELUAT.test(x.nom)), surEluat)
     return e && e.valeur !== null ? { valeur: e.valeur, unite: donnees.sol.unite, source: e.source } : null
   }
   const m = trouver(donnees.sol.metaux, p)
@@ -128,7 +134,10 @@ function sol(p: Parametre, o: OptionsGuides): ValeurGuide | null {
     const retenu = candidats.find(([v]) => v !== null)
     return retenu ? { valeur: retenu[0]!, unite: donnees.sol.unite, source: retenu[1] } : null
   }
-  const org = trouver(donnees.sol.organiques, p)
+  // And conversely a raw-soil result is never compared to a leachate
+  // criterion: "Carbone organique total" used to find the COT sur éluat
+  // (500 mg/kg) before the COT sur sol brut (30 000 mg/kg).
+  const org = trouver(donnees.sol.organiques.filter((x) => !ELUAT.test(x.nom)), p)
   if (!org) return null
   return org.valeur === null ? null : { valeur: org.valeur, unite: donnees.sol.unite, source: org.source }
 }

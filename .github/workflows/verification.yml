@@ -35,7 +35,7 @@ jobs:
         run: npx tsc -b
 
       - name: Lint
-        run: npx oxlint src
+        run: npx oxlint --deny-warnings src
 
       - name: Tests
         run: npm test

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GeoJSON, MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import '../leaflet-icon-fix'
 import {
   centreEmprise,
   diagonaleM,
@@ -64,7 +65,9 @@ export default function SelecteurParcelles({ site, onValider, onAnnuler }: Props
   const adresseLat = site.adresseLat ?? site.lat
   const adresseLon = site.adresseLon ?? site.lon
   const [parcelles, setParcelles] = useState<ParcelleCadastrale[]>(site.parcelles ?? [])
-  const [chargement, setChargement] = useState(false)
+  // Loading from the start when the parcel under the address is still to be
+  // fetched (the page remounts this selector for each new address).
+  const [chargement, setChargement] = useState(() => (site.parcelles?.length ?? 0) === 0)
   const [message, setMessage] = useState<string | null>(null)
 
   // The parcel under the address is pre-selected, so validating without
@@ -73,7 +76,6 @@ export default function SelecteurParcelles({ site, onValider, onAnnuler }: Props
   useEffect(() => {
     if ((site.parcelles?.length ?? 0) > 0) return
     let annule = false
-    setChargement(true)
     fetchParcelleAt(adresseLat, adresseLon)
       .then((parcelle) => {
         if (annule) return

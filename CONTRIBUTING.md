@@ -25,6 +25,8 @@ Utilitaires communs, à réutiliser plutôt qu'à réécrire :
   un fichier ou un classeur ExcelJS ;
 - `lib/format.ts` : nombres à trois chiffres significatifs, jour local
   (`jourIso`, à préférer à `toISOString()` qui donne le jour UTC) ;
+- `lib/reseau.ts` : `requete()`, le `fetch` à utiliser pour toute API
+  publique (délai maximal, la requête est abandonnée s'il est dépassé) ;
 - `components/ZoneDepot.tsx` : zone « Déposez ici… » ;
 - `lib/resultats/parse.ts` : lecture de tout fichier de laboratoire.
 
@@ -54,7 +56,7 @@ réglementaire ou scientifique, préférer des cas calculés à la main, en
 indiquant le calcul en commentaire.
 
 Avant de proposer une modification : `npm run verifier` (typage, lint,
-tests, build), comme la CI.
+tests, build), comme la CI. Le lint refuse aussi les avertissements.
 
 ## Données de référence
 

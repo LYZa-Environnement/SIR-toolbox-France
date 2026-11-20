@@ -1,4 +1,5 @@
 import type { Site } from '../types/site'
+import { requete } from './reseau'
 
 const BAN_SEARCH_URL = 'https://data.geopf.fr/geocodage/search'
 
@@ -17,7 +18,7 @@ export async function geocodeAddress(query: string, signal?: AbortSignal): Promi
     url.searchParams.set('q', q)
     url.searchParams.set('limit', '5')
     url.searchParams.set('autocomplete', '1')
-    const response = await fetch(url.toString(), { signal })
+    const response = await requete(url.toString(), { signal })
     if (!response.ok) return []
     payload = await response.json()
   } catch {

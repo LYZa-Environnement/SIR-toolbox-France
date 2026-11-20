@@ -18,6 +18,7 @@
  */
 
 import { haversineMeters } from './geo'
+import { requete } from './reseau'
 
 const BASE = 'https://air-quality-api.open-meteo.com/v1/air-quality'
 
@@ -100,7 +101,7 @@ export async function fetchAirQualite(lat: number, lon: number): Promise<AirQual
       current: 'european_aqi',
       timezone: 'Europe/Paris',
     })}`
-    const response = await fetch(url)
+    const response = await requete(url)
     if (!response.ok) return null
     const data = (await response.json()) as {
       latitude?: number
