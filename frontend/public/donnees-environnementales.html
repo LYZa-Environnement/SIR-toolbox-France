@@ -1269,11 +1269,21 @@ try {
     return 'https://orobnat.sante.gouv.fr/orobnat/afficherPage.do?methode=menu&usd=AEP&idRegion=' + region;
   }
 
+  // Paris, Lyon and Marseille: Hub'Eau knows the whole commune only, not its
+  // arrondissements (same rule as src/lib/communes.ts).
+  function codeCommuneEntiere(code){
+    var c = String(code || '').trim();
+    if (/^751(0[1-9]|1\d|20)$/.test(c)) return '75056';
+    if (/^6938[1-9]$/.test(c)) return '69123';
+    if (/^132(0[1-9]|1[0-6])$/.test(c)) return '13055';
+    return c;
+  }
+
   function loadEauPotable(citycode, communeName){
     var label = communeName || citycode;
     waterCard.className = 'water-card show';
     waterCard.innerHTML = '<div class="wc-title">Eau potable — ' + escapeHtml(label) + '</div><div style="color:var(--ink-dim);font-size:11.5px;">Chargement…</div>';
-    fetch('https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis?code_commune=' + encodeURIComponent(citycode) + '&size=100&sort=desc')
+    fetch('https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis?code_commune=' + encodeURIComponent(codeCommuneEntiere(citycode)) + '&size=100&sort=desc')
       .then(function(r){ return r.json(); })
       .then(function(j){
         var rows = j.data || [];

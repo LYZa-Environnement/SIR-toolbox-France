@@ -1,4 +1,5 @@
 import { cached, pointKey } from '../lib/cache'
+import { codeCommuneEntiere } from '../lib/communes'
 import { cardinalLabelFr, formatDistance } from '../lib/geo'
 import {
   estSeveso,
@@ -349,6 +350,11 @@ export async function buildRisques(site: Site, suivi?: Suivi): Promise<ThemeRepo
     "La base des installations classées ne publie ni date de création ni date de cessation : seul l'état administratif de l'établissement est repris ici.",
     "Les risques GASPAR, les PPR, la sismicité et le radon sont recensés à l'échelle de la commune : ils décrivent un contexte communal, pas la situation exacte de la parcelle. Seul le retrait-gonflement des argiles est évalué au point.",
   )
+  if (codeCommuneEntiere(site.citycode) !== site.citycode) {
+    lacunes.push(
+      `Le site est dans un arrondissement (${site.citycode}) : les risques GASPAR et les plans de prévention sont ceux de la commune entière (${codeCommuneEntiere(site.citycode)}), seuls publiés ; la sismicité et le radon sont ceux de l'arrondissement.`,
+    )
+  }
 
   return {
     commentaire,

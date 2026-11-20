@@ -18,6 +18,7 @@
  * "commune" and names the network the sampling came from.
  */
 
+import { codeCommuneEntiere } from './communes'
 import { requete } from './reseau'
 
 const BASE = 'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis'
@@ -67,7 +68,8 @@ export async function fetchEauPotable(codeCommune: string): Promise<EauPotableRe
   if (!codeCommune) return null
   try {
     const url = new URL(BASE)
-    url.searchParams.set('code_commune', codeCommune)
+    // Hub'Eau knows Paris, Lyon and Marseille as whole communes only.
+    url.searchParams.set('code_commune', codeCommuneEntiere(codeCommune))
     url.searchParams.set('sort', 'desc')
     url.searchParams.set('size', '200')
     const response = await requete(url.toString())
