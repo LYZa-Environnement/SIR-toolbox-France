@@ -437,7 +437,7 @@ export default function Chromatogrammes() {
                     Tolérance
                     <input type="range" min={20} max={200} value={reglages.tolerance} onChange={(e) => setReglages({ ...reglages, tolerance: Number(e.target.value) })} />
                   </label>
-                  <span>Vérifiez que la trace rouge suit le chromatogramme ; sinon, cliquez sur la courbe pour en prendre la couleur.</span>
+                  <span>Vérifiez que la trace rouge suit le chromatogramme et que le pointillé vert est sur l’axe des abscisses (le zéro ; graduations et étiquettes sous l’axe sont ignorées). Sinon, cliquez sur la courbe pour en prendre la couleur.</span>
                 </li>
               </ol>
               <Numeriseur

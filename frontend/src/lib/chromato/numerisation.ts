@@ -37,6 +37,8 @@ export interface TraceImage {
   y: number[]
   /** Columns without a trace pixel (interpolated). */
   manquantes: number
+  /** Image row of the zero of the signal (x axis found, else bottom of the frame). */
+  zero: number
 }
 
 export function normaliserCadre(c: Cadre, img: Pixels): Cadre {
@@ -116,47 +118,118 @@ export function couleurEn(img: Pixels, x: number, y: number): Couleur {
   return px(img, Math.min(img.width - 1, Math.max(0, Math.round(x))), Math.min(img.height - 1, Math.max(0, Math.round(y))))
 }
 
+/**
+ * Rows lit across most of the frame width, grouped into lines (a line can
+ * be several pixels thick): the x axis and the horizontal grid.
+ */
+function lignesHorizontales(masque: Uint8Array, l: number, h: number): [number, number][] {
+  const lignes: [number, number][] = []
+  for (let y = 0; y < h; y++) {
+    let n = 0
+    for (let x = 0; x < l; x++) n += masque[y * l + x]
+    if (n <= 0.6 * l) continue
+    const derniere = lignes[lignes.length - 1]
+    if (derniere && derniere[1] === y - 1) derniere[1] = y
+    else lignes.push([y, y])
+  }
+  return lignes
+}
+
+/**
+ * Whether a pixel belongs to the trace: close to its colour, or a blend of
+ * the trace and the paper — a thin line is anti-aliased into lighter
+ * shades, which a plain distance to the trace colour misses.
+ */
+function correspondance(trace: Couleur, fond: Couleur, tolerance: number): (c: Couleur) => boolean {
+  const d = { r: trace.r - fond.r, g: trace.g - fond.g, b: trace.b - fond.b }
+  const n2 = d.r * d.r + d.g * d.g + d.b * d.b
+  return (c) => {
+    if (distance(c, trace) <= tolerance) return true
+    if (n2 < 90 * 90) return false
+    // Position along paper → trace, and distance off that segment.
+    const t = ((c.r - fond.r) * d.r + (c.g - fond.g) * d.g + (c.b - fond.b) * d.b) / n2
+    if (t < 0.35) return false
+    const proche = { r: fond.r + t * d.r, g: fond.g + t * d.g, b: fond.b + t * d.b }
+    return distance(c, proche) <= tolerance / 2
+  }
+}
+
 export function extraireTrace(img: Pixels, cadreBrut: Cadre, couleur: Couleur, tolerance = 80): TraceImage {
   const cadre = normaliserCadre(cadreBrut, img)
   const l = cadre.x1 - cadre.x0 + 1
   const h = cadre.y1 - cadre.y0 + 1
   const masque = new Uint8Array(l * h)
-  for (let y = 0; y < h; y++) for (let x = 0; x < l; x++) if (distance(px(img, cadre.x0 + x, cadre.y0 + y), couleur) <= tolerance) masque[y * l + x] = 1
+  const correspond = correspondance(couleur, couleurFond(img, cadre), tolerance)
+  for (let y = 0; y < h; y++) for (let x = 0; x < l; x++) if (correspond(px(img, cadre.x0 + x, cadre.y0 + y))) masque[y * l + x] = 1
 
-  // Grid lines and axes: rows lit across most of the width.
-  for (let y = 0; y < h; y++) {
+  // The x axis: the lowest long horizontal line under which the trace does
+  // not go — only sparse tick marks and labels (C10, C40, axis title) are
+  // found there, in a minority of columns, whereas a grid line has the
+  // trace under it almost everywhere. It is the zero of the signal and
+  // everything under it is ignored. Without one, the bottom of the frame
+  // is the zero.
+  const lignes = lignesHorizontales(masque, l, h)
+  const colonnesSous = (fin: number) => {
     let n = 0
-    for (let x = 0; x < l; x++) n += masque[y * l + x]
-    if (n > 0.6 * l) for (let x = 0; x < l; x++) masque[y * l + x] = 0
+    for (let x = 0; x < l; x++) {
+      for (let y = fin + 1; y < h; y++) {
+        if (masque[y * l + x]) {
+          n++
+          break
+        }
+      }
+    }
+    return n
   }
-  // Vertical markers: columns lit over most of the height.
+  const axe = [...lignes].reverse().find(([debut, fin]) => debut >= 0.3 * h && colonnesSous(fin) < 0.4 * l)
+  const zero = axe ? axe[0] : h
+  // Grid lines above the axis, and the axis itself, are erased.
+  for (const [debut, fin] of lignes) for (let y = debut; y <= fin; y++) for (let x = 0; x < l; x++) masque[y * l + x] = 0
+  const hauteurUtile = Math.max(1, zero)
+
+  // Vertical lines over most of the height: the y axis and dashed markers
+  // are ignored; a single continuous line is kept, as it may be a tall
+  // peak drawn as a vertical stroke.
   const colonnesExclues = new Uint8Array(l)
   for (let x = 0; x < l; x++) {
     let n = 0
-    for (let y = 0; y < h; y++) n += masque[y * l + x]
-    if (n > 0.9 * h) colonnesExclues[x] = 1
+    let traits = 0
+    for (let y = 0; y < hauteurUtile; y++) {
+      const v = masque[y * l + x]
+      n += v
+      if (v && (y === 0 || !masque[(y - 1) * l + x])) traits++
+    }
+    const pointille = traits >= 4 && n > 0.3 * hauteurUtile
+    const axeY = n > 0.85 * hauteurUtile && x < 0.1 * l
+    if (pointille || axeY) colonnesExclues[x] = 1
   }
-  const allume = (x: number, y: number) => x >= 0 && x < l && y >= 0 && y < h && masque[y * l + x] === 1
+  const allume = (x: number, y: number) => x >= 0 && x < l && y >= 0 && y < hauteurUtile && masque[y * l + x] === 1
 
   const xs: number[] = []
   const ys: (number | null)[] = []
+  const exclues: boolean[] = []
   for (let x = 0; x < l; x++) {
     let haut: number | null = null
     if (!colonnesExclues[x]) {
-      for (let y = 0; y < h; y++) {
+      for (let y = 0; y < hauteurUtile; y++) {
         if (!allume(x, y)) continue
-        // A real trace pixel has a lit neighbour (below, or beside).
-        if (allume(x, y + 1) || allume(x - 1, y) || allume(x + 1, y) || allume(x - 1, y + 1) || allume(x + 1, y + 1)) {
+        // A real trace pixel has a lit neighbour (below, or beside); on the
+        // row just above the axis the trace may be one pixel thin.
+        if (y === hauteurUtile - 1 || allume(x, y + 1) || allume(x - 1, y) || allume(x + 1, y) || allume(x - 1, y + 1) || allume(x + 1, y + 1)) {
           haut = y
           break
         }
       }
     }
     xs.push(cadre.x0 + x)
-    ys.push(haut === null ? null : h - 1 - haut)
+    ys.push(haut === null ? null : hauteurUtile - 1 - haut)
+    exclues.push(!!colonnesExclues[x])
   }
 
-  // Fill the gaps linearly (or with the bottom of the frame at the ends).
+  // Empty columns: gaps filled linearly. With a detected axis, the trace
+  // lies on it (hidden by the erased axis line) at the ends of the frame,
+  // and between two points that are on the axis: those are zero and do not
+  // count as missing.
   let manquantes = 0
   const y: number[] = new Array(ys.length)
   for (let i = 0; i < ys.length; i++) {
@@ -164,16 +237,20 @@ export function extraireTrace(img: Pixels, cadreBrut: Cadre, couleur: Couleur, t
       y[i] = ys[i]!
       continue
     }
-    manquantes++
     let a = i - 1
     while (a >= 0 && ys[a] === null) a--
     let b = i + 1
     while (b < ys.length && ys[b] === null) b++
     const va = a >= 0 ? ys[a]! : null
     const vb = b < ys.length ? ys[b]! : null
+    if (axe && !exclues[i] && (va === null || vb === null || (va <= 3 && vb <= 3))) {
+      y[i] = va !== null && vb !== null ? va + ((vb - va) * (i - a)) / (b - a) : 0
+      continue
+    }
+    manquantes++
     y[i] = va !== null && vb !== null ? va + ((vb - va) * (i - a)) / (b - a) : (va ?? vb ?? 0)
   }
-  return { x: xs, y, manquantes }
+  return { x: xs, y, manquantes, zero: cadre.y0 + zero - 1 }
 }
 
 /** A numerical trace (CSV / text exported by the chromatography software): two numeric columns, time and signal. */
