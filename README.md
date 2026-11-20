@@ -25,6 +25,7 @@ dans `docs/`.
 | 3. Résultats d'analyses et interprétation | [Résultats labo](docs/resultats-labo.md) | Lecture visuelle et mise en forme des résultats, fiches de prélèvement, [conditions de la nappe](docs/conditions-nappe.md), campagnes, export expert |
 | | [Suivi temporel](docs/suivi-temporel.md) | Chroniques de surveillance des eaux souterraines pour le bilan quadriennal : tendances, piézométrie, déchloration, pistes et grille du guide BRGM/INERIS 2022 |
 | | [Interprétation PFAS](docs/interpretation-pfas.md) | Somme des 20, profils, indicateurs, pistes de sources, références |
+| | [Lecture des chromatogrammes](docs/chromatogrammes.md) | Chromatogrammes d'hydrocarbures C10–C40 (PDF, capture, CSV) : produit, origine, biodégradation, âge approché, comparaison d'échantillons (démarche BRGM RP-64174-FR) |
 | 4. Contrôle de conformité | [Conformité des rejets](docs/conformite-rejets.md) | Rejets air / eau et arrêté du 2 février 1998 |
 | | [Vérification de livrables SSP](docs/verification-livrables.md) | ATTES, IOTA, NF X31-620, référentiel LNE SSP |
 
