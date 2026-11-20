@@ -830,7 +830,7 @@ function uniteCommune(ps){
    Read as the « Résultats labo » tool reads them (src/lib/resultats/guides.ts):
    by CAS number, else by name, with the usual spellings. */
 const VG_SYN = [
-  [/\bethene\b/g, 'ethylene'],
+  [/ethene\b/g, 'ethylene'],
   [/\bchloroforme\b/g, 'trichloromethane'],
   [/\btetrachlorure de carbone\b/g, 'tetrachloromethane'],
   [/\bchlorure de methylene\b/g, 'dichloromethane'],
@@ -843,7 +843,7 @@ const VG_SYN = [
   [/^chrome total$/, 'chrome'],
   [/^mercure et composes$/, 'mercure'],
   [/^(pcb 7 congeneres|somme des 7 pcb|pcb totaux 7|somme des pcb 7|pcb somme des 7 congeneres)$/, 'pcb 7'],
-  [/^cot$/, 'cot sur sol brut'],
+  [/^(cot|carbone organique total( cot)?)$/, 'cot sur sol brut'],
   [/^(cod )?cot (sur )?eluat$/, 'cot sur eluat'],
 ];
 function vgNorm(nom){
@@ -867,7 +867,11 @@ function guideSol(p){
   const d = state.vg?.sol; if (!d || !p) return null;
   const out = (valeur, source) => valeur == null ? null : { valeur, unite:d.unite, source };
   // A leachate result is compared with the leachate criteria only.
-  if (p.eluat){ const e = vgTrouver(d.organiques.filter(x => ELUAT.test(x.nom)), p); return e ? out(e.valeur, e.source) : null; }
+  // A plain « COT » in a leachate family is the leachate's COT.
+  if (p.eluat){
+    const pe = ELUAT.test(p.name) ? p : { ...p, name: String(p.name).replace(/^\s*(carbone organique total(\s*\(cot\))?|cot\b)/i, 'COT sur éluat') };
+    const e = vgTrouver(d.organiques.filter(x => ELUAT.test(x.nom)), pe); return e ? out(e.valeur, e.source) : null;
+  }
   if (p.computed){
     const re = { 'sum-btex':/^btex/i, 'sum-hap':/somme des hap/i }[p.key];
     const e = re && d.organiques.find(x => re.test(x.nom)); return e ? out(e.valeur, e.source) : null;
