@@ -17,6 +17,7 @@
  */
 
 import { bearingDegrees, cardinalDirection, haversineMeters } from './geo'
+import { requete } from './reseau'
 
 export interface InstallationNucleaire {
   nom: string
@@ -55,7 +56,7 @@ let chargement: Promise<FichierInb[] | null> | null = null
 
 function charger(): Promise<FichierInb[] | null> {
   if (!chargement) {
-    chargement = fetch(`${import.meta.env.BASE_URL}data/inb.json`)
+    chargement = requete(`${import.meta.env.BASE_URL}data/inb.json`)
       .then((response) => (response.ok ? (response.json() as Promise<FichierInb[]>) : null))
       .catch(() => null)
   }

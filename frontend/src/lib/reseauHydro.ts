@@ -15,6 +15,7 @@
  */
 
 import { bboxAround, bboxToPolygon, bearingDegrees, cardinalDirection, haversineMeters, nearestPointOnSegment } from './geo'
+import { requete } from './reseau'
 
 const WFS_SEARCH_URL = 'https://apicarto.ign.fr/api/wfs-geoportail/search'
 const SOURCE = 'BDTOPO_V3:troncon_hydrographique'
@@ -99,7 +100,7 @@ async function queryTroncons(lat: number, lon: number, radiusM: number): Promise
     url.searchParams.set('source', SOURCE)
     url.searchParams.set('geom', JSON.stringify(bboxToPolygon(bboxAround(lat, lon, radiusM))))
     url.searchParams.set('_limit', '200')
-    const response = await fetch(url.toString())
+    const response = await requete(url.toString())
     if (!response.ok) return null
     const json = (await response.json()) as { features?: { geometry?: { type?: string; coordinates?: unknown }; properties?: Record<string, unknown> }[] }
     const out: Troncon[] = []
@@ -140,7 +141,7 @@ async function fetchNomsCoursDEau(lat: number, lon: number, radiusM: number): Pr
     url.searchParams.set('source', SOURCE_COURS)
     url.searchParams.set('geom', JSON.stringify(bboxToPolygon(bboxAround(lat, lon, radiusM))))
     url.searchParams.set('_limit', '150')
-    const response = await fetch(url.toString())
+    const response = await requete(url.toString())
     if (!response.ok) return noms
     const json = (await response.json()) as { features?: { properties?: Record<string, unknown> }[] }
     for (const feature of json.features ?? []) {

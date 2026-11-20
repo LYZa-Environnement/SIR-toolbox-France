@@ -4,6 +4,9 @@
 // une seule valeur — un site peut par exemple être en "alerte renforcée"
 // pour les eaux superficielles et seulement en "vigilance" pour l'eau
 // potable, d'où le tableau plutôt qu'un objet unique.
+
+import { requete } from './reseau'
+
 const VIGIEAU_BASE = 'https://api.vigieau.beta.gouv.fr'
 
 export type NiveauGravite = 'vigilance' | 'alerte' | 'alerte_renforcee' | 'crise'
@@ -66,7 +69,7 @@ export const TYPE_LABEL: Record<ZoneType, string> = {
 export async function fetchRestrictions(lat: number, lon: number): Promise<VigieauZone[] | null> {
   try {
     const url = `${VIGIEAU_BASE}/api/zones?${new URLSearchParams({ lat: String(lat), lon: String(lon) })}`
-    const res = await fetch(url)
+    const res = await requete(url)
     if (!res.ok) return null
     const data = await res.json()
     if (!Array.isArray(data)) return null

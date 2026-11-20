@@ -15,6 +15,7 @@ import {
   minDistanceToGeometryBoundaryM,
   type PolygonGeometry,
 } from './geo'
+import { requete } from './reseau'
 
 type Position = [number, number]
 
@@ -29,7 +30,7 @@ let ppeFeaturesPromise: Promise<PpeFeature[] | null> | null = null
 
 function loadPpeFeatures(): Promise<PpeFeature[] | null> {
   if (!ppeFeaturesPromise) {
-    ppeFeaturesPromise = fetch(`${import.meta.env.BASE_URL}data/ppe.geojson`)
+    ppeFeaturesPromise = requete(`${import.meta.env.BASE_URL}data/ppe.geojson`)
       .then((response) => (response.ok ? response.json() : null))
       .then((json: { features?: unknown[] } | null) => {
         if (!json || !Array.isArray(json.features)) return null

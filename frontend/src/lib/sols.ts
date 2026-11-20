@@ -31,6 +31,7 @@
  */
 
 import { centroidOfGeometry, fromLambert93, haversineMeters, isPointInGeometry, lambert93Bbox } from './geo'
+import { requete } from './reseau'
 
 const WFS_BASE = 'https://data.geopf.fr/wfs/ows'
 
@@ -53,7 +54,7 @@ async function queryWfs(typename: string, lat: number, lon: number, radiusM: num
       OUTPUTFORMAT: 'application/json',
       BBOX: `${lambert93Bbox(lat, lon, radiusM)},EPSG:2154`,
     })}`
-    const response = await fetch(url)
+    const response = await requete(url)
     if (!response.ok) return null
     const json = (await response.json()) as { features?: WfsFeature[] }
     return json.features ?? []

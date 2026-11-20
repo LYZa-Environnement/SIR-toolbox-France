@@ -1,3 +1,6 @@
+import 'leaflet/dist/leaflet.css'
+// Imported by the map components only, so that Leaflet stays out of the
+// main bundle and loads with the Site Setting.
 // Vite doesn't resolve Leaflet's default marker image paths automatically —
 // without this the marker renders as a broken image icon.
 import L from 'leaflet'

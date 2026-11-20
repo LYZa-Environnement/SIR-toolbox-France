@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run donnees && tsc -b && vite build",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings src",
     "preview": "vite preview",
     "donnees": "node scripts/baignade.mjs",
     "test": "vitest run",
-    "verifier": "tsc -b && oxlint src && vitest run && vite build"
+    "verifier": "tsc -b && oxlint --deny-warnings src && vitest run && vite build"
   },
   "dependencies": {
     "@turf/turf": "^7.4.0",

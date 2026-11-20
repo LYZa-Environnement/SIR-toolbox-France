@@ -11,6 +11,7 @@
  */
 
 import { bearingDegrees, cardinalDirection, haversineMeters } from './geo'
+import { requete } from './reseau'
 
 const GEORISQUES_BASE_URL = 'https://georisques.gouv.fr/api/v1/'
 const MAX_PAGES = 4
@@ -26,7 +27,7 @@ async function getRaw(path: string, params: Record<string, string | number>): Pr
   try {
     const url = new URL(path, GEORISQUES_BASE_URL)
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, String(value)))
-    const response = await fetch(url.toString())
+    const response = await requete(url.toString())
     if (!response.ok) return null
     return (await response.json()) as Json
   } catch {

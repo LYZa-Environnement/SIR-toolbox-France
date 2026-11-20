@@ -24,6 +24,7 @@
  */
 
 import { bboxAround, bboxToPolygon, bearingDegrees, cardinalDirection, haversineMeters, nearestPointOnSegment } from './geo'
+import { requete } from './reseau'
 
 const WFS_GEOPORTAIL = 'https://apicarto.ign.fr/api/wfs-geoportail/search'
 const WFS_GEOPF = 'https://data.geopf.fr/wfs/ows'
@@ -46,7 +47,7 @@ async function queryWfs(source: string, lat: number, lon: number, radiusM: numbe
     url.searchParams.set('source', source)
     url.searchParams.set('geom', JSON.stringify(bboxToPolygon(bboxAround(lat, lon, radiusM))))
     url.searchParams.set('_limit', '300')
-    const response = await fetch(url.toString())
+    const response = await requete(url.toString())
     if (!response.ok) return null
     const json = (await response.json()) as { features?: Feature[] }
     return json.features ?? []
@@ -150,7 +151,7 @@ async function findAerodromePeb(lat: number, lon: number): Promise<Aerodrome | n
       COUNT: '1000',
       OUTPUTFORMAT: 'application/json',
     })}`
-    const response = await fetch(url)
+    const response = await requete(url)
     if (!response.ok) return null
     const json = (await response.json()) as { features?: Feature[] }
     let best: Aerodrome | null = null

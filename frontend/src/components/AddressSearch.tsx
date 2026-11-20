@@ -16,10 +16,8 @@ export default function AddressSearch({ onSelect }: Props) {
   const selectedLabelRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (query.trim().length < 3) {
-      setResults([])
-      return
-    }
+    // Results for a query cut below three characters are cleared in onChange.
+    if (query.trim().length < 3) return
     if (query === selectedLabelRef.current) {
       return
     }
@@ -57,7 +55,10 @@ export default function AddressSearch({ onSelect }: Props) {
         autoComplete="off"
         placeholder="Ex : 12 rue des Fossés, Nantes"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          if (e.target.value.trim().length < 3) setResults([])
+        }}
         onFocus={() => results.length > 0 && setOpen(true)}
         style={{
           width: '100%',
