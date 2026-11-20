@@ -16,6 +16,25 @@ export interface Exemple {
   description: string
   trace: Trace
   calage: PointCalage[]
+  /** n-C10 and n-C40 standards added by the lab. */
+  etalons?: boolean
+}
+
+/**
+ * The same trace with what many lab chromatograms show: a solvent front
+ * before C10 and the n-C10 and n-C40 standards added to the extract, all
+ * three far taller than the product.
+ */
+export function avecEtalons(t: Trace, hauteur = 4): Trace {
+  const pics = [
+    { t: temps(9.2), h: hauteur * 1.5 },
+    { t: temps(10), h: hauteur },
+    { t: temps(40), h: hauteur },
+  ]
+  return {
+    x: t.x,
+    y: t.y.map((v, i) => v + pics.reduce((s, p) => s + p.h * Math.exp(-0.5 * ((t.x[i] - p.t) / 0.02) ** 2), 0)),
+  }
 }
 
 /** Retention time (min) of a carbon number: slightly curved, as with a temperature program. */
@@ -115,6 +134,14 @@ export function exemples(): Exemple[] {
       description: 'n-alcanes et isoprénoïdes consommés : il ne reste que la bosse non résolue.',
       trace: generer([gazole(0.99, 0.99)], 3),
       calage: CALAGE,
+    },
+    {
+      id: 'gazole-etalons',
+      nom: 'Gazole biodégradé + étalons C10/C40',
+      description: 'Le gazole biodégradé tel que le rendent certains laboratoires : front de solvant, puis n-C10 et n-C40 ajoutés comme repères, bien plus hauts que le produit.',
+      trace: avecEtalons(generer([gazole(0.6)], 2)),
+      calage: CALAGE,
+      etalons: true,
     },
     {
       id: 'huile',

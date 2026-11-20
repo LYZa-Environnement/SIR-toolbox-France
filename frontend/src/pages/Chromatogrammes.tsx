@@ -5,12 +5,15 @@ import Numeriseur, { type Mode, type Reglages } from '../components/chromato/Num
 import { GraphiqueComparaison, GraphiqueProfil, ZoomDoublets } from '../components/chromato/Graphique'
 import { LIBELLES_CIBLE, type CiblePic } from '../components/chromato/constantes'
 import { Bibliographie, Cite, Resultats } from '../components/chromato/Lecture'
+import { COMPOSES_VIDES, composesDepuisLecture, echantillonsComposes, type CodeBtex, type Composes } from '../lib/chromato/composes'
 import { exemples } from '../lib/chromato/exemple'
 import { comparer, entreeDepuisProfil, interpreter, LIBELLES_CORRESPONDANCE, type Entree, type Lecture, type Matrice, type OuiNon } from '../lib/chromato/interpretation'
-import { couleurEn, couleurFond, couleurTrace, extraireTrace, lireTraceTexte, normaliserCadre } from '../lib/chromato/numerisation'
+import { couleurEn, couleurFond, couleurTrace, etalonsProbables, extraireTrace, lireTraceTexte, normaliserCadre, type Cadre } from '../lib/chromato/numerisation'
 import { PRODUITS } from '../lib/chromato/produits'
 import { construireProfil, distributionFractions, picPres, POINTS_PAR_CARBONE_MIN, type Fraction, type Pic, type PointCalage, type Profil, type Trace } from '../lib/chromato/profil'
-import { telechargerBlob } from '../lib/fichiers'
+import { NOMS_HAP } from '../lib/resultats/expert/diagnostics'
+import { lireClasseur, type Lecture as LectureLabo } from '../lib/resultats/parse'
+import { lireFeuilles, telechargerBlob } from '../lib/fichiers'
 import { jourIso, nombreFr } from '../lib/format'
 
 type Source =
@@ -43,9 +46,11 @@ interface Saisie {
   plomb: OuiNon
   oxygenes: OuiNon
   produit: string
+  /** PAH typed by hand, by code (Nap, Phe…). */
+  hap: Record<string, string>
 }
 
-const SAISIE_VIDE: Saisie = { hct: '', lq: '', c17: '', pr: '', c18: '', ph: '', fractions: BANDES.map(() => ''), B: '', T: '', E: '', X: '', plomb: null, oxygenes: null, produit: '' }
+const SAISIE_VIDE: Saisie = { hct: '', lq: '', c17: '', pr: '', c18: '', ph: '', fractions: BANDES.map(() => ''), B: '', T: '', E: '', X: '', plomb: null, oxygenes: null, produit: '', hap: {} }
 
 const nb = (s: string): number | null => {
   const v = Number(s.replace(',', '.').trim())
@@ -96,6 +101,12 @@ async function imageDepuisFichier(f: Blob): Promise<ImageData> {
   return ctx.getImageData(0, 0, b.width, b.height)
 }
 
+/** Naphthalene / phenanthrene of a reading, formatted, or null. */
+function napPhe(l: Lecture): string | null {
+  const v = l.composes?.indices.find((i) => i.libelle.startsWith('Naphtalène'))?.valeur
+  return v === undefined || v === null ? null : nombreFr(v)
+}
+
 interface Echantillon {
   nom: string
   entree: Entree
@@ -115,17 +126,24 @@ export default function Chromatogrammes() {
   const [saisie, setSaisie] = useState<Saisie>(SAISIE_VIDE)
   const [comparaison, setComparaison] = useState<Echantillon[]>([])
   const [erreur, setErreur] = useState<string | null>(null)
+  /** n-C10 and n-C40 added by the lab as standards. */
+  const [etalons, setEtalons] = useState(true)
+  const [labo, setLabo] = useState<{ nom: string; lecture: LectureLabo; echantillons: string[] } | null>(null)
+  const [echantillonLabo, setEchantillonLabo] = useState('')
   const [chargement, setChargement] = useState(false)
 
-  function nouvelleSource(s: Source, calage?: PointCalage[]) {
+  function nouvelleSource(s: Source, calage?: PointCalage[], avecEtalons?: boolean) {
     setSource(s)
+    if (avecEtalons !== undefined) setEtalons(avecEtalons)
     setReglages(REGLAGES_VIDES)
     setManuels({})
     setCible(null)
     setMode(s.type === 'image' ? 'cadre' : null)
     setNom(s.nom.replace(/\.[a-z0-9]+$/i, ''))
-    setTemps10(calage ? String(calage[0].x) : '')
-    setTemps40(calage ? String(calage[1].x) : '')
+    // A numerical trace with the lab's standards: their peaks give C10 and C40.
+    const proposes = !calage && s.type === 'trace' && (avecEtalons ?? etalons) ? etalonsProbables(s.trace) : null
+    setTemps10(calage ? String(calage[0].x) : proposes ? String(Math.round(proposes.x10 * 1000) / 1000) : '')
+    setTemps40(calage ? String(calage[1].x) : proposes ? String(Math.round(proposes.x40 * 1000) / 1000) : '')
     setErreur(null)
   }
 
@@ -206,11 +224,11 @@ export default function Chromatogrammes() {
   const calcul = useMemo((): { profil: Profil } | { erreur: string } | null => {
     if (!trace || !calage) return null
     try {
-      return { profil: construireProfil(trace, calage) }
+      return { profil: construireProfil(trace, calage, { etalons }) }
     } catch (e) {
       return { erreur: e instanceof Error ? e.message : String(e) }
     }
-  }, [trace, calage])
+  }, [trace, calage, etalons])
   const profil = calcul && 'profil' in calcul ? calcul.profil : null
 
   const picsManuels = useMemo(() => {
@@ -223,15 +241,49 @@ export default function Chromatogrammes() {
     return r
   }, [profil, manuels])
 
+  // ---- The lab's PAH, BTEX and indices ----
+  async function chargerLabo(fichiers: File[]) {
+    const f = fichiers[0]
+    if (!f) return
+    setErreur(null)
+    try {
+      const lecture = lireClasseur(await lireFeuilles(f), 'tout')
+      const liste = echantillonsComposes(lecture)
+      if (!liste.length) throw new Error('aucun échantillon lu.')
+      setLabo({ nom: f.name, lecture, echantillons: liste })
+      // The sample whose name is closest to the chromatogram's, else the first.
+      const cle = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, '')
+      setEchantillonLabo(liste.find((n) => nom && (cle(n).includes(cle(nom)) || cle(nom).includes(cle(n)))) ?? liste[0])
+    } catch (e) {
+      setErreur(`${f.name} : ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  const composes: Composes | null = useMemo(() => {
+    const deFichier = labo && echantillonLabo ? composesDepuisLecture(labo.lecture, echantillonLabo) : null
+    const c: Composes = deFichier ? { ...deFichier, hap: { ...deFichier.hap }, btex: { ...deFichier.btex } } : { ...COMPOSES_VIDES, hap: {}, btex: {} }
+    // Values typed by hand complete or replace the file.
+    for (const [k, v] of Object.entries(saisie.hap)) {
+      const x = nb(v)
+      if (x !== null) c.hap[k] = x
+    }
+    for (const k of ['B', 'T', 'E', 'X'] as CodeBtex[]) {
+      const x = nb(saisie[k])
+      if (x !== null) c.btex[k] = x
+    }
+    return Object.keys(c.hap).length || Object.keys(c.btex).length || c.hct !== null || c.c5c10 !== null || c.fractions.length ? c : null
+  }, [labo, echantillonLabo, saisie])
+
   // ---- Reading ----
   const entree: Entree | null = useMemo(() => {
-    const fractions: Fraction[] = BANDES.flatMap(([bas, h], i) => {
+    const saisies: Fraction[] = BANDES.flatMap(([bas, h], i) => {
       const v = nb(saisie.fractions[i])
       return v !== null && v > 0 ? [{ bas, haut: h, valeur: v }] : []
     })
+    const fractions = saisies.length ? saisies : (composes?.fractions.filter((f) => f.valeur > 0) ?? [])
     const base: Entree | null = profil
       ? entreeDepuisProfil(nom || 'Échantillon', matrice, profil, picsManuels)
-      : fractions.length || nb(saisie.c17) !== null || nb(saisie.pr) !== null || saisie.plomb || [saisie.B, saisie.T, saisie.E, saisie.X].some((s) => nb(s) !== null)
+      : fractions.length || composes || nb(saisie.c17) !== null || nb(saisie.pr) !== null || saisie.plomb
         ? {
             nom: nom || 'Échantillon',
             matrice,
@@ -245,21 +297,21 @@ export default function Chromatogrammes() {
           }
         : null
     if (!base) return null
-    const lab = { c17: nb(saisie.c17), pr: nb(saisie.pr), c18: nb(saisie.c18), ph: nb(saisie.ph) }
-    const btex = { B: nb(saisie.B), T: nb(saisie.T), E: nb(saisie.E), X: nb(saisie.X) }
+    const iso = composes?.isoprenoides ?? {}
+    const lab = { c17: nb(saisie.c17) ?? iso.c17 ?? null, pr: nb(saisie.pr) ?? iso.pr ?? null, c18: nb(saisie.c18) ?? iso.c18 ?? null, ph: nb(saisie.ph) ?? iso.ph ?? null }
     return {
       ...base,
       // The lab's quantified isoprenoids, when given, replace the chromatogram heights.
       ...(lab.pr !== null ? { c17: lab.c17 ?? 0, pr: lab.pr, doublets: { c17: 'resolu' as const, c18: base.doublets?.c18 ?? 'resolu' } } : {}),
       ...(lab.ph !== null ? { c18: lab.c18 ?? 0, ph: lab.ph } : {}),
-      btex: Object.values(btex).every((v) => v !== null) ? (btex as { B: number; T: number; E: number; X: number }) : null,
+      composes,
       plomb: saisie.plomb,
       oxygenes: saisie.oxygenes,
-      hct: nb(saisie.hct),
+      hct: nb(saisie.hct) ?? composes?.hct ?? null,
       lq: nb(saisie.lq),
       produitImpose: saisie.produit || null,
     }
-  }, [profil, picsManuels, nom, matrice, saisie])
+  }, [profil, picsManuels, nom, matrice, saisie, composes])
   const lecture = useMemo(() => (entree ? interpreter(entree) : null), [entree])
 
   function ajouterComparaison() {
@@ -272,7 +324,7 @@ export default function Chromatogrammes() {
 
   function exporterComparaison() {
     const lignes = [
-      ['Échantillon', 'Produit', 'Stade', 'n-C17/Pr', 'n-C18/Ph', 'Pr/Ph', 'Part UCM', 'Médiane (C)', 'Âge (n-C17/Pr)'],
+      ['Échantillon', 'Produit', 'Stade', 'n-C17/Pr', 'n-C18/Ph', 'Pr/Ph', 'Émergence des n-alcanes', 'Médiane (C)', 'Origine des HAP', 'Séquence HAP / BTEX', 'Naphtalène / phénanthrène', 'Âge (n-C17/Pr)'],
       ...comparaison.map(({ nom: n, entree: e, lecture: l }) => [
         n,
         l.produit?.nom ?? '',
@@ -280,8 +332,11 @@ export default function Chromatogrammes() {
         e.c17 !== null && e.pr ? nombreFr(e.c17 / e.pr) : '',
         e.c18 !== null && e.ph ? nombreFr(e.c18 / e.ph) : '',
         e.pr && e.ph ? nombreFr(e.pr / e.ph) : '',
-        e.distribution?.partUcm != null ? `${Math.round(e.distribution.partUcm * 100)} %` : '',
+        e.indicateurs?.emergence != null ? nombreFr(e.indicateurs.emergence) : '',
         e.distribution ? nombreFr(e.distribution.q50, 1) : '',
+        l.composes?.origine?.verdict ?? '',
+        l.composes?.sequence?.libelle ?? '',
+        napPhe(l) ?? '',
         l.ages[0]?.applicable ? l.ages[0].valeur : '',
       ]),
     ]
@@ -290,6 +345,26 @@ export default function Chromatogrammes() {
   }
 
   const etape = !source ? 0 : source.type === 'trace' ? (calage ? 3 : 2) : !reglages.cadre ? 1 : !calage ? 2 : 3
+  /** The lab's standards on a digitised trace: proposed as C10 and C40. */
+  function etalonsSur(cadre: Cadre, couleurChoisie = reglages.couleur): { x10: number; x40: number } | null {
+    if (!image) return null
+    const couleur = couleurChoisie ?? couleurTrace(image, cadre, couleurFond(image, cadre))
+    return couleur ? etalonsProbables(extraireTrace(image, cadre, couleur, reglages.tolerance)) : null
+  }
+
+  function cadrer(cadre: Cadre) {
+    const proposes = etalons && reglages.x10 === null && reglages.x40 === null ? etalonsSur(cadre) : null
+    setReglages({ ...reglages, cadre, ...(proposes ?? {}) })
+    setMode(proposes || reglages.x10 !== null ? null : 'c10')
+  }
+
+  function calerSurEtalons() {
+    if (!reglages.cadre) return
+    const proposes = etalonsSur(reglages.cadre)
+    if (proposes) setReglages({ ...reglages, ...proposes })
+    else setErreur('Pics étalons C10 et C40 non trouvés : placez C10 et C40 à la main.')
+  }
+
   const choisirPoint = (m: Exclude<Mode, 'cadre'>, x: number, y: number) => {
     if (!image) return
     if (m === 'c10') setReglages({ ...reglages, x10: x })
@@ -369,7 +444,7 @@ export default function Chromatogrammes() {
                     type="button"
                     className="btn btn--ghost btn--petit"
                     title={ex.description}
-                    onClick={() => nouvelleSource({ type: 'trace', nom: `Exemple — ${ex.nom}`, trace: ex.trace, calage: ex.calage }, ex.calage)}
+                    onClick={() => nouvelleSource({ type: 'trace', nom: `Exemple — ${ex.nom}`, trace: ex.trace, calage: ex.calage }, ex.calage, !!ex.etalons)}
                   >
                     {ex.nom}
                   </button>
@@ -377,6 +452,13 @@ export default function Chromatogrammes() {
               </div>
             )}
           />
+          <label className="chromato-option">
+            <input type="checkbox" checked={etalons} onChange={(e) => setEtalons(e.target.checked)} />
+            <span>
+              Le laboratoire ajoute n-C10 et n-C40 comme étalons : leurs pics servent à caler l’axe et sont retirés du produit (aire, série de n-alcanes, échelle du
+              graphique).
+            </span>
+          </label>
           {erreur && (
             <p className="badge badge--elevee" role="alert" style={{ marginTop: '0.75rem' }}>
               {erreur}
@@ -427,7 +509,13 @@ export default function Chromatogrammes() {
                   <button type="button" className={`btn btn--petit${mode === 'c40' ? '' : ' btn--ghost'}`} onClick={() => setMode('c40')} disabled={!reglages.cadre}>
                     Placer C40
                   </button>
-                  <span>Cliquez sur les repères n-décane et n-tétracontane imprimés par le laboratoire (ou sur leurs pics).</span>
+                  <button type="button" className="btn btn--petit btn--ghost" onClick={calerSurEtalons} disabled={!reglages.cadre || !etalons}>
+                    Caler sur les pics étalons
+                  </button>
+                  <span>
+                    Cliquez sur les pics de n-décane et n-tétracontane (ou les repères imprimés par le laboratoire). Avec l’option « étalons », ils sont proposés dès le
+                    cadrage : vérifiez les deux traits bleus.
+                  </span>
                 </li>
                 <li className={etape === 3 ? 'actif' : ''}>
                   <button type="button" className={`btn btn--petit${mode === 'couleur' ? '' : ' btn--ghost'}`} onClick={() => setMode('couleur')} disabled={!reglages.cadre}>
@@ -445,10 +533,7 @@ export default function Chromatogrammes() {
                 reglages={reglages}
                 mode={mode}
                 trace={traceImage}
-                onCadre={(c) => {
-                  setReglages({ ...reglages, cadre: normaliserCadre(c, source.image) })
-                  setMode(reglages.x10 === null ? 'c10' : null)
-                }}
+                onCadre={(c) => cadrer(normaliserCadre(c, source.image))}
                 onPoint={choisirPoint}
               />
               {traceImage && traceImage.manquantes > 0.3 * traceImage.x.length && (
@@ -545,13 +630,52 @@ export default function Chromatogrammes() {
             </div>
           )}
 
-          <details className="card chromato-saisie" open={!source}>
+          <details className="card chromato-saisie" open={!source || !composes}>
             <summary>
-              <strong>2. Valeurs du laboratoire</strong> <span className="pfas-note">— facultatif, ou à la place du chromatogramme</span>
+              <strong>2. Résultats d’analyses du laboratoire</strong> <span className="pfas-note">— HAP, BTEX, indices : en complément du chromatogramme, ou à sa place</span>
             </summary>
             <p className="pfas-note">
-              Les teneurs dosées par le laboratoire remplacent les hauteurs lues sur l’image. Toutes les valeurs d’une même ligne dans la même unité.
+              Pristane et phytane ne sont presque jamais au programme ; les 16 HAP et les BTEX le sont. Ils donnent l’origine des HAP (pétrolière ou de combustion) et un
+              ordre d’altération (les composés légers disparaissent avant les lourds) <Cite ids={['brgm2014']} />.
             </p>
+            <div className="chromato-labo">
+              <ZoneDepot
+                titre="Déposez le fichier de résultats du laboratoire (Excel ou CSV)"
+                aide="HAP, BTEX, indice C10–C40, C5–C10, fractions — et pristane / phytane s’ils y figurent — sont lus pour l’échantillon choisi."
+                chargement={false}
+                onFichiers={chargerLabo}
+              />
+              {labo && (
+                <div className="chromato-champs">
+                  <label className="champ">
+                    Échantillon du fichier
+                    <select value={echantillonLabo} onChange={(e) => setEchantillonLabo(e.target.value)}>
+                      {labo.echantillons.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="pfas-note" style={{ alignSelf: 'end' }}>
+                    {labo.nom} :{' '}
+                    {composes
+                      ? [
+                          Object.keys(composes.hap).length && `${Object.keys(composes.hap).length} HAP`,
+                          Object.keys(composes.btex).length && `${Object.keys(composes.btex).length} BTEX`,
+                          composes.hct !== null && 'indice C10–C40',
+                          composes.c5c10 !== null && 'C5–C10',
+                          composes.fractions.length && `${composes.fractions.length} fractions`,
+                          Object.keys(composes.isoprenoides).length && 'isoprénoïdes',
+                        ]
+                          .filter(Boolean)
+                          .join(', ') || 'rien d’utile pour cet échantillon'
+                      : 'rien d’utile pour cet échantillon'}
+                    {composes?.unite && ` (${composes.unite})`}
+                  </p>
+                </div>
+              )}
+            </div>
             <div className="chromato-champs">
               {champ('hct', 'Indice C10–C40')}
               {champ('lq', 'LQ de l’indice')}
@@ -567,31 +691,7 @@ export default function Chromatogrammes() {
                 </select>
               </label>
             </div>
-            <h4>Isoprénoïdes</h4>
-            <div className="chromato-champs">
-              {champ('c17', 'n-C17')}
-              {champ('pr', 'Pristane')}
-              {champ('c18', 'n-C18')}
-              {champ('ph', 'Phytane')}
-            </div>
-            {!profil && (
-              <>
-                <h4>Fractions carbonées</h4>
-                <div className="chromato-champs">
-                  {BANDES.map(([a, b], i) => (
-                    <label className="champ" key={a}>
-                      C{a}–C{b}
-                      <input
-                        value={saisie.fractions[i]}
-                        inputMode="decimal"
-                        onChange={(e) => setSaisie({ ...saisie, fractions: saisie.fractions.map((v, k) => (k === i ? e.target.value : v)) })}
-                      />
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
-            <h4>Essences : BTEX et additifs</h4>
+            <h4>BTEX et additifs</h4>
             <div className="chromato-champs">
               {champ('B', 'Benzène')}
               {champ('T', 'Toluène')}
@@ -614,6 +714,50 @@ export default function Chromatogrammes() {
                 </select>
               </label>
             </div>
+            <details className="chromato-sous">
+              <summary>16 HAP (saisie à la main{composes && Object.keys(composes.hap).length ? ', complète le fichier' : ''})</summary>
+              <p className="pfas-note">Une valeur sous la LQ se saisit 0. Même unité pour tous.</p>
+              <div className="chromato-champs">
+                {Object.entries(NOMS_HAP).map(([code, libelle]) => (
+                  <label className="champ" key={code}>
+                    {libelle}
+                    <input
+                      value={saisie.hap[code] ?? ''}
+                      inputMode="decimal"
+                      placeholder={composes?.hap[code] !== undefined ? nombreFr(composes.hap[code]!) : ''}
+                      onChange={(e) => setSaisie({ ...saisie, hap: { ...saisie.hap, [code]: e.target.value } })}
+                    />
+                  </label>
+                ))}
+              </div>
+            </details>
+            {!profil && (
+              <details className="chromato-sous">
+                <summary>Fractions carbonées</summary>
+                <div className="chromato-champs">
+                  {BANDES.map(([a, b], i) => (
+                    <label className="champ" key={a}>
+                      C{a}–C{b}
+                      <input
+                        value={saisie.fractions[i]}
+                        inputMode="decimal"
+                        onChange={(e) => setSaisie({ ...saisie, fractions: saisie.fractions.map((v, k) => (k === i ? e.target.value : v)) })}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
+            )}
+            <details className="chromato-sous">
+              <summary>n-C17, pristane, n-C18, phytane (rarement proposés)</summary>
+              <p className="pfas-note">Seulement si un laboratoire les a dosés (empreinte CG/DIF détaillée) : ils remplacent alors les hauteurs lues sur l’image.</p>
+              <div className="chromato-champs">
+                {champ('c17', 'n-C17')}
+                {champ('pr', 'Pristane')}
+                {champ('c18', 'n-C18')}
+                {champ('ph', 'Phytane')}
+              </div>
+            </details>
           </details>
         </div>
       </section>
@@ -668,6 +812,7 @@ export default function Chromatogrammes() {
                     <th>Altération</th>
                     <th>n-C17/Pr</th>
                     <th>Pr/Ph</th>
+                    <th>HAP : origine, séquence</th>
                     <th>Âge (n-C17/Pr)</th>
                     <th />
                   </tr>
@@ -682,6 +827,11 @@ export default function Chromatogrammes() {
                         <td>{l.stade.libelle}</td>
                         <td className="tableau__conc">{e.c17 !== null && e.pr ? nombreFr(e.c17 / e.pr) : '—'}</td>
                         <td className="tableau__conc">{e.pr && e.ph ? nombreFr(e.pr / e.ph) : '—'}</td>
+                        <td>
+                          {l.composes?.origine || l.composes?.sequence
+                            ? [l.composes.origine?.verdict, l.composes.sequence?.libelle.toLowerCase(), napPhe(l) && `Nap/Phé ${napPhe(l)}`].filter(Boolean).join(' · ')
+                            : '—'}
+                        </td>
                         <td>{l.ages[0]?.applicable ? l.ages[0].valeur : '—'}</td>
                         <td>
                           <button type="button" className="btn btn--ghost btn--petit" onClick={() => setComparaison(comparaison.filter((x) => x.nom !== n))}>

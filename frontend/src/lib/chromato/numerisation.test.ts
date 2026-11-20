@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { exemples, temps } from './exemple.ts'
-import { couleurFond, couleurTrace, extraireTrace, lireTraceTexte, type Pixels } from './numerisation.ts'
+import { couleurFond, couleurTrace, etalonsProbables, extraireTrace, lireTraceTexte, type Pixels } from './numerisation.ts'
 import { construireProfil } from './profil.ts'
 import { entreeDepuisProfil, interpreter } from './interpretation.ts'
 
@@ -195,5 +195,20 @@ describe('couleur de la trace', () => {
     const c = couleurTrace(img, cadre, couleurFond(img, cadre))!
     expect(c.b).toBeGreaterThan(150)
     expect(c.g).toBeLessThan(100)
+  })
+})
+
+describe('pics étalons', () => {
+  test('n-C10 et n-C40 trouvés sur la trace, après le front de solvant', () => {
+    const ex = exemples().find((e) => e.id === 'gazole-etalons')!
+    const r = etalonsProbables(ex.trace)!
+    expect(r).not.toBeNull()
+    expect(Math.abs(r.x10 - temps(10))).toBeLessThan(0.05)
+    expect(Math.abs(r.x40 - temps(40))).toBeLessThan(0.05)
+  })
+
+  test('pas d’étalons sur un chromatogramme sans eux', () => {
+    const ex = exemples().find((e) => e.id === 'gazole')!
+    expect(etalonsProbables(ex.trace)).toBeNull()
   })
 })

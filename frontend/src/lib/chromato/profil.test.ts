@@ -118,3 +118,45 @@ describe('CPI (Bray et Evans, 1961)', () => {
     expect(ind.cpi).toBeGreaterThan(3)
   })
 })
+
+describe('étalons C10 et C40 ajoutés par le laboratoire', () => {
+  const ex = exemples().find((e) => e.id === 'gazole-etalons')!
+  const reference = exemples().find((e) => e.id === 'gazole-degrade')!
+
+  test('écartés : la distribution et les doublets sont ceux du produit seul', () => {
+    const p = construireProfil(ex.trace, ex.calage, { etalons: true })
+    const r = construireProfil(reference.trace, reference.calage)
+    expect(p.etalons?.c10).not.toBeNull()
+    expect(p.etalons?.c40).not.toBeNull()
+    expect(p.alcanes[10]).toBeNull()
+    const d = distributionProfil(p)!
+    const dr = distributionProfil(r)!
+    expect(Math.abs(d.q50 - dr.q50)).toBeLessThan(0.3)
+    expect(Math.abs(d.q95 - dr.q95)).toBeLessThan(0.5)
+    expect(p.alcanes[17]!.hauteur / p.pristane!.hauteur).toBeCloseTo(r.alcanes[17]!.hauteur / r.pristane!.hauteur, 1)
+  })
+
+  test('comptés comme produit si l’option est décochée : le pic de C40 déplace la distribution', () => {
+    const p = construireProfil(ex.trace, ex.calage)
+    const d = distributionProfil(p)!
+    const dr = distributionProfil(construireProfil(reference.trace, reference.calage))!
+    expect(d.q95).toBeGreaterThan(dr.q95 + 1)
+  })
+})
+
+describe('émergence des n-alcanes au-dessus de la bosse', () => {
+  const lire = (id: string) => {
+    const e = exemples().find((x) => x.id === id)!
+    const p = construireProfil(e.trace, e.calage)
+    return indicateursProfil(p, distributionProfil(p)!)
+  }
+  test('gazole frais : pics bien au-dessus de la bosse ; dégradé : moins ; très dégradé : noyés', () => {
+    const frais = lire('gazole').emergence!
+    const degrade = lire('gazole-degrade').emergence!
+    const severe = lire('gazole-severe').emergence!
+    expect(frais).toBeGreaterThan(degrade)
+    expect(degrade).toBeGreaterThan(severe)
+    expect(frais).toBeGreaterThan(1)
+    expect(severe).toBeLessThan(0.5)
+  })
+})

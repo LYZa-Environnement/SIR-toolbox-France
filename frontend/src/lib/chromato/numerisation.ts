@@ -273,3 +273,44 @@ export function lireTraceTexte(texte: string): { x: number[]; y: number[] } {
   const ordre = x.map((_, i) => i).sort((i, j) => x[i] - x[j])
   return { x: ordre.map((i) => x[i]), y: ordre.map((i) => y[i]) }
 }
+
+/**
+ * The n-C10 and n-C40 peaks added by the lab, found on a trace. Both are
+ * added at the same concentration, so their peaks are about as high —
+ * often off scale, far above the product. Narrow peaks of at least 30 % of
+ * the highest point are candidates; n-C40 is the last of them; n-C10 the
+ * last one in the first third of the trace whose height is within 25 % of
+ * the n-C40 peak (the solvent front, often taller, comes before it). A
+ * proposal for the user to check, not a certainty.
+ */
+export function etalonsProbables(t: { x: number[]; y: number[] }): { x10: number; x40: number } | null {
+  const n = t.y.length
+  if (n < 50) return null
+  const max = Math.max(...t.y)
+  if (max <= 0) return null
+  const demi = Math.max(2, Math.round(n / 400))
+  const large = Math.max(3, Math.round(n / 100))
+  const pics: number[] = []
+  for (let i = demi; i < n - demi; i++) {
+    const v = t.y[i]
+    if (v < 0.3 * max) continue
+    let ok = true
+    for (let k = 1; k <= demi && ok; k++) if (t.y[i - k] > v || t.y[i + k] > v) ok = false
+    if (!ok) continue
+    // Narrow: back under half its height within 1 % of the trace on both sides.
+    const gauche = t.y.slice(Math.max(0, i - large), i).some((w) => w < 0.5 * v)
+    const droite = t.y.slice(i + 1, i + 1 + large).some((w) => w < 0.5 * v)
+    if (!gauche || !droite) continue
+    // A flat top (clipped peak) gives several maxima: keep the first.
+    if (pics.length && i - pics[pics.length - 1] <= large) continue
+    pics.push(i)
+  }
+  if (pics.length < 2) return null
+  const i40 = pics[pics.length - 1]
+  const h40 = t.y[i40]
+  const premiers = pics.filter((i) => i < n / 3 && i < i40 && Math.abs(t.y[i] - h40) <= 0.25 * h40)
+  if (!premiers.length) return null
+  const i10 = premiers[premiers.length - 1]
+  if (i40 - i10 < 0.4 * n) return null
+  return { x10: t.x[i10], x40: t.x[i40] }
+}
