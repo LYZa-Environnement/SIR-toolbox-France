@@ -66,7 +66,20 @@ export interface Profil {
   recalage: number
   /** Points of the original trace per carbon (pixel columns for an image). */
   pointsParCarbone: number
+  /** n-C10 and n-C40 added by the lab as markers / standards: their peaks, left out of the product. */
+  etalons: { c10: Pic | null; c40: Pic | null } | null
 }
+
+export interface OptionsProfil {
+  /**
+   * The lab adds n-decane and n-tetracontane to the extract to mark the
+   * C10–C40 window: their peaks anchor the axis but are not the product.
+   */
+  etalons?: boolean
+}
+
+/** Half-width, in carbons, of the window around C10 and C40 where a standard peak is taken out. */
+export const DEMI_FENETRE_ETALON = 0.35
 
 /**
  * Below this density, pristane (0.07 carbon after n-C17) falls within two
@@ -335,7 +348,7 @@ function inverseCourbure(k: number): (lu: number) => number {
   }
 }
 
-export function construireProfil(trace: Trace, calage: PointCalage[]): Profil {
+export function construireProfil(trace: Trace, calage: PointCalage[], options: OptionsProfil = {}): Profil {
   if (trace.x.length < 20) throw new Error('Trace trop courte pour être interprétée.')
   const f = versCarbone(calage)
   const paires = trace.x.map((x, i) => ({ c: f(x), y: trace.y[i] })).sort((a, b) => a.c - b.c)
@@ -368,9 +381,26 @@ export function construireProfil(trace: Trace, calage: PointCalage[]): Profil {
     recalage = noeuds.length
   }
 
+  // Standards: their peaks (the tallest near C10 and near C40) are taken
+  // out of the signal — the hump under them is kept — once they have
+  // served to place the axis.
+  let etalons: Profil['etalons'] = null
+  if (options.etalons) {
+    const pres = (n: number) => plusHaut(a.pics.filter((p) => Math.abs(p.c - n) <= DEMI_FENETRE_ETALON))
+    etalons = { c10: pres(DEBUT), c40: pres(FIN) }
+    const dansFenetre = (c: number) => Math.abs(c - DEBUT) <= DEMI_FENETRE_ETALON || Math.abs(c - FIN) <= DEMI_FENETRE_ETALON
+    for (let i = 0; i < a.c.length; i++) {
+      if (!dansFenetre(a.c[i])) continue
+      a.signal[i] = a.ucm[i]
+      a.resolu[i] = 0
+    }
+    a.pics = a.pics.filter((p) => !dansFenetre(p.c))
+  }
+
   const alcanes: (Pic | null)[] = new Array(FIN + 1).fill(null)
   for (let n = DEBUT; n <= FIN; n++) {
     if (n === 17 || n === 18) continue
+    if (etalons && (n === DEBUT || n === FIN)) continue
     alcanes[n] = plusHaut(a.pics.filter((p) => Math.abs(p.c - n) <= 0.25))
   }
   const ecarts = cs
@@ -394,6 +424,7 @@ export function construireProfil(trace: Trace, calage: PointCalage[]): Profil {
     doublets: { c17: d17.etat, c18: d18.etat },
     recalage,
     pointsParCarbone,
+    etalons,
   }
 }
 
@@ -424,6 +455,8 @@ export interface Distribution {
   mode: number
   /** Distinct maxima of the profile smoothed over three carbons (bimodal products, mixtures). */
   lobes: number[]
+  /** Where the unresolved hump lies: its highest point and the range holding 90 % of it. */
+  bosse: { mode: number; q05: number; q95: number } | null
 }
 
 function quantile(c: number[], cum: number[], q: number): number {
@@ -485,7 +518,16 @@ function distributionSurGrille(c: number[], y: number[], ucm: number[] | null): 
   let iMode = 0
   for (let i = 1; i < lisse.length; i++) if (lisse[i] > lisse[iMode]) iMode = i
   const aireUcm = ucm ? bins.reduce((s, b) => s + (b.ucm ?? 0), 0) : null
+  let bosse: Distribution['bosse'] = null
+  if (ucm && aireUcm && aireUcm > 0.05 * aire) {
+    const cumU = [0]
+    for (let i = 1; i < c.length; i++) cumU.push(cumU[i - 1] + ((ucm[i] + ucm[i - 1]) / 2) * (c[i] - c[i - 1]))
+    let iMax = 0
+    for (let i = 1; i < ucm.length; i++) if (ucm[i] > ucm[iMax]) iMax = i
+    bosse = { mode: c[iMax], q05: quantile(c, cumU, 0.05), q95: quantile(c, cumU, 0.95) }
+  }
   return {
+    bosse,
     bins,
     aire,
     partUcm: aireUcm === null || !aire ? null : Math.min(1, aireUcm / aire),
@@ -543,6 +585,14 @@ export interface IndicateursProfil {
   dominance: number
   /** Bray and Evans (1961) carbon preference index on C24–C34 peak heights. */
   cpi: number | null
+  /**
+   * How far the n-alkanes rise above the hump: median, over the carbons of
+   * the distribution, of the n-alkane height above the hump divided by the
+   * hump height at that place (0 where the n-alkane is missing). Above 1,
+   * the peaks are taller than the hump, the condition the BRGM sets to read
+   * them (RP-64174-FR, § 6.2).
+   */
+  emergence: number | null
 }
 
 export function cpiBrayEvans(h: (n: number) => number): number | null {
@@ -569,6 +619,7 @@ export function indicateursProfil(p: Profil, d: Distribution): IndicateursProfil
   let n = 0
   let tot = 0
   for (let k = de; k <= a; k++) {
+    if (p.etalons && (k === DEBUT || k === FIN)) continue
     tot++
     if (present(k)) n++
   }
@@ -576,10 +627,24 @@ export function indicateursProfil(p: Profil, d: Distribution): IndicateursProfil
   const somme = hauteurs.reduce((s, v) => s + v, 0)
   let nCpi = 0
   for (let k = 24; k <= 34; k++) if (present(k)) nCpi++
+  const rapports: number[] = []
+  const maxSignal = Math.max(0, ...p.signal)
+  for (let k = de; k <= a; k++) {
+    if (p.etalons && (k === DEBUT || k === FIN)) continue
+    const q = p.alcanes[k]
+    if (!q || !present(k)) {
+      rapports.push(0)
+      continue
+    }
+    const i = Math.min(p.c.length - 1, Math.max(0, Math.round((q.c - p.c[0]) / (p.c[1] - p.c[0]))))
+    rapports.push(Math.min(20, q.hauteur / Math.max(p.ucm[i], 0.01 * maxSignal)))
+  }
+  rapports.sort((x, y) => x - y)
   return {
     serie: tot ? n / tot : 0,
     nAlcanes: p.alcanes.filter((x, k) => k >= DEBUT && x && x.hauteur >= seuil).length,
     dominance: somme ? hauteurs.slice(0, 3).reduce((s, v) => s + v, 0) / somme : 0,
     cpi: nCpi >= 6 ? cpiBrayEvans((k) => (present(k) ? p.alcanes[k]!.hauteur : 0)) : null,
+    emergence: rapports.length && p.recalage ? rapports[Math.floor(rapports.length / 2)] : rapports.length ? 0 : null,
   }
 }

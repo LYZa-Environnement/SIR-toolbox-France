@@ -64,12 +64,21 @@ export default function Numeriseur({ image, reglages, mode, trace, onCadre, onPo
       ctx.setLineDash([])
     }
     if (zoom && trace) {
+      // The zero used for the signal (the x axis when one was found).
+      ctx.strokeStyle = 'rgba(0, 117, 106, 0.9)'
+      ctx.lineWidth = ep
+      ctx.setLineDash([6 * ep, 4 * ep])
+      ctx.beginPath()
+      ctx.moveTo(0, trace.zero - vue.y0 + 0.5)
+      ctx.lineTo(l, trace.zero - vue.y0 + 0.5)
+      ctx.stroke()
+      ctx.setLineDash([])
       ctx.strokeStyle = 'rgba(227, 73, 72, 0.85)'
       ctx.lineWidth = ep
       ctx.beginPath()
       trace.x.forEach((x, i) => {
         const px = x - vue.x0
-        const py = vue.y1 - vue.y0 - trace.y[i]
+        const py = trace.zero - vue.y0 - trace.y[i]
         if (i) ctx.lineTo(px, py)
         else ctx.moveTo(px, py)
       })

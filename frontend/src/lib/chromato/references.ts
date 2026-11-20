@@ -125,6 +125,23 @@ export const REFERENCES: Reference[] = [
     verification: 'texte',
   },
   {
+    id: 'wang1999',
+    court: 'Wang et al., 1999',
+    citation: 'Wang Z., Fingas M., Page D.S. (1999). Oil spill identification. Journal of Chromatography A 843(1–2), 369–411.',
+    theme: 'produits',
+    apport: 'Rapport des HAP à 2–3 cycles sur les HAP à 4–6 cycles : supérieur à 1 pour une origine pétrogénique, inférieur pour une origine pyrolytique.',
+    verification: 'secondaire',
+  },
+  {
+    id: 'yunker2002',
+    court: 'Yunker et al., 2002',
+    citation:
+      'Yunker M.B., Macdonald R.W., Vingarzan R., Mitchell R.H., Goyette D., Sylvestre S. (2002). PAHs in the Fraser River basin: a critical appraisal of PAH ratios as indicators of PAH source and composition. Organic Geochemistry 33(4), 489–515.',
+    theme: 'produits',
+    apport: 'Rapports d’isomères Ant/(Ant+Phe), Fla/(Fla+Pyr), BaA/(BaA+Chr), IcdP/(IcdP+BghiP) et leurs seuils pétrogénique / combustion (repris de l’export expert de Résultats labo).',
+    verification: 'secondaire',
+  },
+  {
     id: 'brayEvans1961',
     court: 'Bray et Evans, 1961',
     citation: 'Bray E.E., Evans E.D. (1961). Distribution of n-paraffins as a clue to recognition of source beds. Geochimica et Cosmochimica Acta 22(1), 2–15.',

@@ -105,7 +105,7 @@ const CATEGORIES: Categorie[] = [
         accroche: 'Nature, altération, âge',
         description:
           'Déposez le rapport du laboratoire ou une capture du chromatogramme C10–C40 : le tracé est numérisé et lu — produit probable, origine pétrolière ou végétale, stade de biodégradation, âge approché du déversement, comparaison entre échantillons.',
-        points: ['Démarche du rapport BRGM RP-64174-FR', 'n-C17/pristane (Christensen et Larsen), CPI, bosse non résolue'],
+        points: ['Démarche du rapport BRGM RP-64174-FR', 'HAP et BTEX du laboratoire, étalons C10/C40, n-C17/pristane'],
         route: '/chromatogrammes',
       },
     ],

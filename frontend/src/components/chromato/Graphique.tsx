@@ -113,6 +113,12 @@ export function GraphiqueProfil({ p, produit, pr, ph }: { p: Profil; produit: Pr
         <text x={M.g - 6} y={M.h + 4} textAnchor="end" fontSize="10" fill="var(--color-muted)">
           signal
         </text>
+        {p.etalons &&
+          [10, 40].map((n) => (
+            <text key={`etalon-${n}`} x={e.x(n) + (n === 10 ? 4 : -4)} y={M.h + 10} textAnchor={n === 10 ? 'start' : 'end'} fontSize="10" fill="var(--color-muted)">
+              n-C{n} étalon retiré
+            </text>
+          ))}
         {iSurvol >= 0 && (
           <g pointerEvents="none">
             <line x1={e.x(p.c[iSurvol])} x2={e.x(p.c[iSurvol])} y1={M.h} y2={H - M.b} stroke="var(--color-muted)" strokeDasharray="2 2" />

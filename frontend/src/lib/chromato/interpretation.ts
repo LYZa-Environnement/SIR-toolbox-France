@@ -11,6 +11,7 @@
  */
 
 import { nombreFr } from '../format.ts'
+import { lireComposes, type Composes, type LectureComposes } from './composes.ts'
 import { PRODUITS, PRODUIT_PAR_ID, type Produit } from './produits.ts'
 import { distributionProfil, indicateursProfil, type Distribution, type EtatDoublet, type IndicateursProfil, type Pic, type Profil } from './profil.ts'
 
@@ -37,6 +38,8 @@ export interface Entree {
   lq?: number | null
   /** Product family chosen by the user, overriding the automatic reading. */
   produitImpose?: string | null
+  /** PAH, BTEX, indices of the lab for this sample. */
+  composes?: Composes | null
 }
 
 export type Niveau = 'info' | 'attention' | 'fort'
@@ -95,6 +98,8 @@ export interface Lecture {
   ratios: Ratio[]
   suites: Constat[]
   synthese: string
+  /** Reading of the PAH and BTEX, when given. */
+  composes: LectureComposes | null
 }
 
 const fr = (v: number, d = 2) => nombreFr(v, d)
@@ -166,10 +171,6 @@ export function evaluerProduits(d: Distribution, ind: IndicateursProfil | null):
     if (fEtendue < 0.9) raisons.push(`profil plus étroit (${C(d.q05)}–${C(d.q95)}) que le produit`)
     let fForme = fEtendue
     if (d.partUcm !== null) {
-      if (p.ucm === 'faible' && d.partUcm > 0.6) {
-        fForme *= 0.75
-        raisons.push(`bosse de ${Math.round(d.partUcm * 100)} % de l’aire pour un produit peu ramifié (altération ?)`)
-      }
       if (p.ucm === 'fort' && d.partUcm < 0.3) {
         fForme *= 0.6
         raisons.push(`bosse faible (${Math.round(d.partUcm * 100)} %) pour un produit lourd`)
@@ -242,17 +243,25 @@ export function evaluerStade(e: Entree, produit: Produit | null): Stade {
       confiance: 'faible',
     }
   }
-  const ucm = d.partUcm
   const serie = ind?.serie ?? null
+  const em = ind?.emergence ?? null
   const pristaneAbsent = e.doublets?.c17 === 'absent' || (e.doublets?.c17 === 'resolu' && !iso)
-  if (serie !== null && ucm !== null) {
+  if (serie !== null && em !== null) {
+    // The share of the hump in the area is high even for a fresh diesel
+    // (narrow peaks weigh little in area): the reading uses how far the
+    // n-alkanes rise above the hump instead — above 1 they are taller than
+    // it, the BRGM's condition to read them (§ 6.2); 3 is a tool marker.
     const refs = ['brgm2014', 'itrc2018', 'petersMoldowan2005']
-    if (serie < 0.15 && ucm > 0.6 && pristaneAbsent) {
-      return stade(4, `Ni série de n-alcanes ni pristane visibles, bosse de ${Math.round(ucm * 100)} % de l’aire : seule l’enveloppe non résolue subsiste. Au-delà, la CG/DIF ne permet plus de juger ; la CG/SM (hopanes, stéranes) prend le relais.`, refs, 'moyenne')
+    const ou = d.bosse ? `, bosse de ${C(d.bosse.q05)} à ${C(d.bosse.q95)}` : ''
+    const isoNonLus = 'Doublets isoprénoïdes non lus : stade approximatif.'
+    if (serie < 0.15) {
+      return pristaneAbsent
+        ? stade(4, `Plus de série de n-alcanes ni de pristane${ou} : seule l’enveloppe non résolue subsiste. Au-delà, la CG/DIF ne permet plus de juger ; la CG/SM (hopanes, stéranes) prend le relais.`, refs, 'moyenne')
+        : stade(3, `Plus de série de n-alcanes au-dessus de la bosse${ou} : n-alcanes consommés. ${isoNonLus}`, refs, 'faible')
     }
-    if (serie < 0.2 && ucm > 0.5) return stade(3, `Peu de n-alcanes visibles (${Math.round(serie * 100)} % des carbones) au-dessus d’une bosse de ${Math.round(ucm * 100)} % de l’aire : n-alcanes largement consommés. Les doublets isoprénoïdes n’étant pas lus, le stade reste approximatif.`, refs, 'faible')
-    if (serie < 0.6) return stade(1, `Série de n-alcanes incomplète (${Math.round(serie * 100)} % des carbones), bosse de ${Math.round(ucm * 100)} % de l’aire : altération engagée possible. Doublets isoprénoïdes non lus : stade approximatif.`, refs, 'faible')
-    return stade(0, `Série de n-alcanes complète (${Math.round(serie * 100)} % des carbones), bosse de ${Math.round(ucm * 100)} % de l’aire : pas de signe net de biodégradation. Doublets isoprénoïdes non lus : à confirmer.`, refs, 'faible')
+    if (em < 1) return stade(2, `Les n-alcanes restent repérables (${Math.round(serie * 100)} % des carbones) mais sont moins hauts que la bosse sous eux (rapport médian ${fr(em)}) : largement consommés. ${isoNonLus}`, refs, 'faible')
+    if (em < 3) return stade(1, `Les n-alcanes dépassent la bosse de peu (rapport médian ${fr(em)}, repère de l’outil : 3) : biodégradation engagée possible. ${isoNonLus}`, refs, 'faible')
+    return stade(0, `Les n-alcanes dominent nettement la bosse (rapport médian ${fr(em)}) : pas de signe net de biodégradation. ${isoNonLus}`, refs, 'faible')
   }
   return { code: null, libelle: 'Non évaluable', pm: '—', texte: 'Les fractions du laboratoire ne suffisent pas à juger la biodégradation : il faut le chromatogramme ou les teneurs en n-C17 et pristane.', refs: ['brgm2014'], confiance: 'faible' }
 }
@@ -304,8 +313,13 @@ function evaluerAges(e: Entree, produit: Produit | null, distillatDansMelange: b
   }
   ages.push(cl)
 
-  if (e.btex) {
-    const { B, T, E, X } = e.btex
+  const btex =
+    e.btex ??
+    (e.composes && (['B', 'T', 'E', 'X'] as const).every((k) => e.composes!.btex[k] !== undefined)
+      ? { B: e.composes.btex.B!, T: e.composes.btex.T!, E: e.composes.btex.E!, X: e.composes.btex.X! }
+      : null)
+  if (btex) {
+    const { B, T, E, X } = btex
     const k: Age = {
       methode: 'Rapport BTEX (B + T)/(E + X) (Kaplan et al., 1996)',
       applicable: false,
@@ -396,6 +410,12 @@ export function interpreter(e: Entree): Lecture {
     }
   }
 
+  // PAH and BTEX of the lab.
+  const lc = e.composes ? lireComposes(e.composes, e.matrice) : null
+  if (lc?.origine) {
+    origine.push({ niveau: lc.origine.verdict === 'pyrolytique' ? 'fort' : 'info', texte: lc.origine.texte, refs: lc.origine.refs })
+  }
+
   // Origin.
   if (ind?.cpi != null) {
     if (ind.cpi >= 2) {
@@ -435,10 +455,21 @@ export function interpreter(e: Entree): Lecture {
   }
 
   // Weathering.
-  const st: Stade =
+  let st: Stade =
     biogene && !impose
       ? { code: null, libelle: 'Non évaluable', pm: '—', texte: 'Profil dominé par des n-alcanes végétaux : les repères de biodégradation des produits pétroliers ne s’appliquent pas.', refs: ['brgm2014'], confiance: 'faible' }
       : evaluerStade(e, produit)
+  // Without isoprenoids, the PAH / BTEX sequence gives the stage when the
+  // chromatogram does not, and is a second line of evidence otherwise.
+  const seq = lc?.sequence
+  if (seq && seq.code !== null) {
+    if (st.code === null && !biogene) {
+      st = { code: seq.code, libelle: seq.libelle, pm: 'séquence HAP / BTEX', texte: seq.texte, refs: seq.refs, confiance: 'faible' }
+    } else {
+      alteration.push({ niveau: 'info', texte: `Séquence HAP / BTEX — ${seq.libelle.toLowerCase()} : ${seq.texte}`, refs: seq.refs })
+    }
+  }
+  if (lc) alteration.push(...lc.constats)
   if (d && produit?.distillatMoyen && d.q05 > 13) {
     alteration.push({
       niveau: 'attention',
@@ -446,11 +477,14 @@ export function interpreter(e: Entree): Lecture {
       refs: ['brgm2014'],
     })
   }
-  if (d && produit?.distillatMoyen && (d.partUcm ?? 0) > 0.6) {
+  if (d?.bosse && (d.partUcm ?? 0) > 0.3) {
+    // Where the hump lies says which product it comes from, even when no
+    // peak is left on it (a degraded diesel keeps a hump in the diesel range).
+    const pb = produitLePlusProche(d.bosse.mode)
     alteration.push({
       niveau: 'info',
-      texte: `Bosse non résolue de ${Math.round(d.partUcm! * 100)} % de l’aire pour un distillat moyen : enveloppe « patatoïde » d’un produit biodégradé, ou mélange avec un produit plus lourd.`,
-      refs: ['brgm2014', 'itrc2018'],
+      texte: `Bosse non résolue centrée sur ${C(d.bosse.mode)}, de ${C(d.bosse.q05)} à ${C(d.bosse.q95)} : dans la gamme ${pb.id === 'huile' ? 'des huiles' : pb.id === 'leger' ? 'des produits légers' : pb.id === 'bitume' ? 'des produits très lourds' : pb.id === 'fiouLourd' ? 'des fiouls lourds' : pb.id === 'kerosene' ? 'du kérosène' : 'du gazole'}. Elle est faite d’alcanes ramifiés, de cycloalcanes et de naphténo-aromatiques ; pour un distillat, elle grandit à mesure que les n-alcanes disparaissent.`,
+      refs: ['itrc2018', 'brgm2014'],
     })
   }
   if (e.c18 != null && e.ph != null && e.ph > 0 && e.c17 != null && e.pr) {
@@ -498,11 +532,18 @@ export function interpreter(e: Entree): Lecture {
       refs: ['brayEvans1961', 'brgm2014'],
     },
     {
-      libelle: 'Part de la bosse (UCM)',
+      libelle: 'Émergence des n-alcanes',
+      valeur: ind?.emergence ?? null,
+      format: (v) => fr(v),
+      lecture: 'Hauteur des n-alcanes au-dessus de la bosse, rapportée à la bosse (médiane). Au-dessus de 1, les pics dominent la bosse et se lisent ; elle baisse avec la biodégradation.',
+      refs: ['brgm2014'],
+    },
+    {
+      libelle: 'Part de la bosse (UCM) dans l’aire',
       valeur: d?.partUcm ?? null,
       format: (v) => `${Math.round(v * 100)} %`,
-      lecture: 'Croît avec la biodégradation ; forte d’origine pour les huiles et les résidus.',
-      refs: ['brgm2014', 'itrc2018'],
+      lecture: 'Souvent plus de la moitié même pour un gazole frais : les pics, fins, pèsent peu en aire. Se lit avec l’émergence des pics, pas seule.',
+      refs: ['itrc2018'],
     },
     {
       libelle: 'Série de n-alcanes',
@@ -517,7 +558,9 @@ export function interpreter(e: Entree): Lecture {
   if (!(e.pr && e.c17 !== null)) {
     suites.push({
       niveau: 'info',
-      texte: 'Niveau 2 : demander au laboratoire le dosage individuel des n-alcanes, du pristane et du phytane (CG/DIF haute résolution), pour les rapports n-C17/Pr, n-C18/Ph et Pr/Ph.',
+      texte:
+        'Pristane et phytane ne font pas partie des analyses courantes : les obtenir demande une empreinte CG/DIF détaillée (laboratoire de forensie environnementale). À défaut, les 16 HAP et les BTEX, presque toujours au programme, donnent l’origine et un ordre d’altération' +
+        (e.composes && Object.keys(e.composes.hap).length ? '.' : ' : ajoutez-les (fichier du laboratoire ou saisie).'),
       refs: ['brgm2014'],
     })
   }
@@ -546,7 +589,7 @@ export function interpreter(e: Entree): Lecture {
 
   // Summary.
   const morceaux: string[] = []
-  if (d) morceaux.push(`Profil centré sur ${C(d.q50)} (90 % de l’aire entre ${C(d.q05)} et ${C(d.q95)})${d.partUcm !== null ? `, bosse non résolue de ${Math.round(d.partUcm * 100)} %` : ''}.`)
+  if (d) morceaux.push(`Profil centré sur ${C(d.q50)} (90 % de l’aire entre ${C(d.q05)} et ${C(d.q95)})${d.bosse ? `, bosse non résolue centrée sur ${C(d.bosse.mode)}` : ''}.`)
   if (impose) morceaux.push(`Produit retenu par l’utilisateur : ${impose.nom.toLowerCase()}.`)
   else if (biogene) morceaux.push(`Signature de cires végétales (CPI = ${fr(ind!.cpi!)}) : hydrocarbures biogènes plutôt que pétroliers.`)
   else if (produit) morceaux.push(`Produit le plus compatible : ${produit.nom.toLowerCase()}${candidats[1] && candidats[1].verdict !== 'peu compatible' ? ` (ou ${candidats[1].produit.nom.toLowerCase()})` : ''}.`)
@@ -554,10 +597,11 @@ export function interpreter(e: Entree): Lecture {
   if (melange) morceaux.push('Plusieurs maxima : mélange possible.')
   if (origine.some((o) => o.niveau === 'fort')) morceaux.push('Origine pétrolière à confirmer (voir « Origine »).')
   morceaux.push(`${st.libelle}${st.code !== null ? ` (${st.pm})` : ''}.`)
+  if (lc?.origine && lc.origine.verdict !== 'pétrogénique') morceaux.push(lc.origine.verdict === 'pyrolytique' ? 'HAP plutôt issus de combustion.' : 'Origine des HAP mixte.')
   const age = ages.find((a) => a.applicable)
   if (age) morceaux.push(`Âge approché (${age.methode}) : ${age.valeur}.`)
 
-  return { qualite, candidats, produit, melange, origine, stade: st, alteration, ages, ratios, suites, synthese: morceaux.join(' ') }
+  return { qualite, candidats, produit, melange, origine, stade: st, alteration, ages, ratios: lc ? [...ratios, ...lc.indices.map((i) => ({ libelle: i.libelle, valeur: i.valeur, format: (v: number) => (i.libelle.startsWith('Part') ? `${Math.round(v * 100)} %` : fr(v)), lecture: i.lecture, refs: i.refs }))] : ratios, suites, synthese: morceaux.join(' '), composes: lc }
 }
 
 // ---- Comparison between samples -----------------------------------------------------------

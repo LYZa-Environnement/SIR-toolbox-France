@@ -12,10 +12,37 @@ export interface Feuille {
   grille: Cell[][]
 }
 
+/**
+ * Text of a CSV: UTF-8 when the bytes are valid UTF-8, else Windows-1252
+ * (the encoding of a CSV saved by a French Excel).
+ */
+export function decoderTexte(octets: ArrayBuffer): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(octets).replace(/^\uFEFF/, '')
+  } catch {
+    return new TextDecoder('windows-1252').decode(octets)
+  }
+}
+
 /** Every sheet of an Excel or CSV file, as rows of raw cell values. */
 export async function lireFeuilles(fichier: File, options: { cellDates?: boolean } = {}): Promise<Feuille[]> {
   const XLSX = await import('xlsx')
-  const classeur = XLSX.read(await fichier.arrayBuffer(), { type: 'array', ...(options.cellDates ? { cellDates: true } : {}) })
+  const octets = await fichier.arrayBuffer()
+  // A CSV is decoded here: read as bytes, SheetJS takes UTF-8 for Latin-1
+  // ("Naphtalène" → "NaphtalÃ¨ne"). A French CSV (";" separator) keeps its
+  // cells as text: SheetJS would read the decimal comma as a thousands
+  // separator ("0,4" → 4); the readers of the tools convert "0,4" themselves.
+  if (/\.(csv|txt)$/i.test(fichier.name) || /^text\//.test(fichier.type)) {
+    const texte = decoderTexte(octets)
+    const premiere = texte.split(/\r?\n/, 1)[0] ?? ''
+    const pointVirgule = (premiere.match(/;/g) ?? []).length > (premiere.match(/,/g) ?? []).length
+    const classeur = XLSX.read(texte, { type: 'string', ...(pointVirgule ? { FS: ';', raw: true } : {}), ...(options.cellDates && !pointVirgule ? { cellDates: true } : {}) })
+    return classeur.SheetNames.map((nom) => ({
+      nom,
+      grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
+    }))
+  }
+  const classeur = XLSX.read(octets, { type: 'array', ...(options.cellDates ? { cellDates: true } : {}) })
   return classeur.SheetNames.map((nom) => ({
     nom,
     grille: XLSX.utils.sheet_to_json<Cell[]>(classeur.Sheets[nom], { header: 1, raw: true, defval: null }),
