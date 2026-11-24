@@ -1,0 +1,823 @@
+/**
+ * Catalogue of the network sources queried around a site.
+ *
+ * National sources answer anywhere; local ones are queried only when the
+ * searched area meets their extent. Every source below was checked live
+ * (November 2026): it answers a cross-origin request from the browser and
+ * filters on an extent server side, so nothing is downloaded beyond the area
+ * under study.
+ *
+ * To add a local source: an entry with its access, its extent (`emprise`,
+ * west/south/east/north) and a `classer` that sorts each object into a
+ * network family; `sources.test.ts` checks the catalogue's consistency.
+ */
+
+import type { Classement, Proprietes, Reseau, SourceReseau } from './types'
+
+/** Attribute as text, `undefined` when empty. */
+export function texte(v: unknown): string | undefined {
+  if (v === null || v === undefined) return undefined
+  const s = String(v).trim()
+  return s === '' ? undefined : s
+}
+
+const ORE = 'https://opendata.agenceore.fr/data-fair/api/v1'
+const LICENCE_OUVERTE = 'Licence Ouverte 2.0'
+const ODBL = 'ODbL'
+
+function majOre(p: Proprietes): [string, string | undefined][] {
+  return [
+    ['Commune', texte(p.commune)],
+    ['Mise à jour', texte(p.date_maj)],
+  ]
+}
+
+/** One ORE electricity layer: the four datasets only differ by voltage and laying. */
+function ligneOre(id: string, dataset: string, tension: 'BT' | 'HTA', aerien: boolean, fiche: string): SourceReseau {
+  const pose = aerien ? 'aérienne' : 'souterraine'
+  return {
+    id,
+    titre: `Lignes électriques ${tension} ${aerien ? 'aériennes' : 'souterraines'}`,
+    producteur: 'Agence ORE (gestionnaires de réseaux de distribution)',
+    territoire: 'France',
+    reseaux: ['electricite'],
+    acces: { type: 'datafair', base: ORE, dataset },
+    fiche,
+    licence: LICENCE_OUVERTE,
+    note: 'Données publiées à titre indicatif par les gestionnaires de réseaux de distribution, sans classe de précision.',
+    classer: () => ({ reseau: 'electricite', element: `Ligne ${tension} ${pose}`, aerien }),
+    gestionnaire: (p) => texte(p.nom_grd),
+    details: (p) => [['Tension', texte(p.tension) ?? tension], ['Position', texte(p.position)], ...majOre(p)],
+  }
+}
+
+/** PCRS "affleurants" (CNIG standard): sub-theme of the network, class of the object. */
+const PCRS_RESEAU: Record<string, Reseau> = {
+  ASSA: 'assainissement',
+  AEP: 'eau',
+  INCE: 'eau',
+  ELEC: 'electricite',
+  ECL: 'eclairage',
+  GAZ: 'gaz',
+  COM: 'telecom',
+  CHAU: 'chaleur',
+}
+const PCRS_CLASSE: Record<string, string> = {
+  REG: 'Regard',
+  VAN: 'Vanne / bouche à clé',
+  COF: 'Coffret',
+  AVA: 'Avaloir',
+  GRIL: 'Grille',
+  LAMP: 'Lampadaire',
+  LUMI: 'Luminaire',
+  PLA: 'Plaque / tampon',
+  SUP_COM: 'Support télécom',
+  SUP_ELEC: 'Support électrique',
+  ARM: 'Armoire',
+  BOU: 'Bouche',
+  BORN: 'Borne',
+  POT: 'Poteau',
+  MAT: 'Mât',
+  REP: 'Repère',
+  TRANS: 'Poste de transformation',
+  PRISE: 'Prise',
+  FONT: 'Fontaine',
+}
+
+/** A5 easements cover drinking water and sewers alike: the generator's own name tells them apart. */
+function reseauA5(p: Proprietes): Reseau {
+  const nom = `${texte(p.nomgen) ?? ''} ${texte(p.typegen) ?? ''}`.toLowerCase()
+  return /assain|eaux? us|usée|refoul|collecteur|égout|egout/.test(nom) ? 'assainissement' : 'eau'
+}
+
+/** Public-utility easements whose generator is a network (GPU categories). */
+export function classerServitude(p: Proprietes): Classement | null {
+  const type = texte(p.suptype)?.toLowerCase()
+  switch (type) {
+    case 'a5':
+      return { reseau: reseauA5(p), element: 'Canalisation publique (servitude A5)' }
+    case 'i1':
+      return { reseau: 'hydrocarbures', element: 'Canalisation de transport (servitude I1)' }
+    case 'i3':
+      return { reseau: 'gaz', element: 'Canalisation de transport de gaz (servitude I3)' }
+    case 'i4':
+      return { reseau: 'electricite', element: 'Ligne électrique (servitude I4)' }
+    case 'i5':
+      return { reseau: 'hydrocarbures', element: 'Canalisation de produits chimiques (servitude I5)' }
+    case 'pt3':
+      return { reseau: 'telecom', element: 'Câble de télécommunication (servitude PT3)' }
+    default:
+      return null
+  }
+}
+
+const eauxRennes: Record<string, Reseau> = { EU: 'assainissement', UNIT: 'assainissement', ET: 'assainissement', EP: 'pluvial' }
+const reseauHautsDeSeine: Record<string, [Reseau, string]> = {
+  UN: ['assainissement', 'Collecteur unitaire'],
+  EU: ['assainissement', "Collecteur d'eaux usées"],
+  EP: ['pluvial', "Collecteur d'eaux pluviales"],
+}
+const reseauPlaineVallee: Record<string, [Reseau, string]> = {
+  '01': ['pluvial', 'Canalisation pluviale'],
+  '02': ['assainissement', "Canalisation d'eaux usées"],
+  '03': ['assainissement', 'Canalisation unitaire'],
+}
+const exploitantPlaineVallee: Record<string, string> = {
+  CAPV: 'CA Plaine Vallée',
+  DEP95: "Département du Val-d'Oise",
+  PRIVE: 'Privé',
+  SIAH: 'SIAH',
+  SIARE: 'SIARE',
+  CAVP: 'CA Val Parisis',
+}
+
+const DATASUD_WFS = 'https://www.datasud.fr/geoserver/ows'
+
+export const SOURCES: SourceReseau[] = [
+  // ——— National ———
+  ligneOre('ore-bt-aerien', 'reseau-aerien-basse-tension-bt', 'BT', true, 'https://www.data.gouv.fr/dataservices/6a2683d507132a6ce86468e0'),
+  ligneOre('ore-bt-souterrain', 'reseau-souterrain-basse-tension-bt', 'BT', false, 'https://www.data.gouv.fr/dataservices/6a2683ca72464adda2bacd38'),
+  ligneOre('ore-hta-aerien', 'reseau-aerien-moyenne-tension-hta', 'HTA', true, 'https://www.data.gouv.fr/dataservices/6a26951a858eaa9efae78e87'),
+  ligneOre('ore-hta-souterrain', 'reseau-souterrain-moyenne-tension-hta', 'HTA', false, 'https://www.data.gouv.fr/dataservices/6a268bb25fbde6067112bdf9'),
+  {
+    id: 'ore-postes',
+    titre: 'Postes de distribution publique (HTA/BT)',
+    producteur: 'Agence ORE (gestionnaires de réseaux de distribution)',
+    territoire: 'France',
+    reseaux: ['electricite'],
+    acces: { type: 'datafair', base: ORE, dataset: 'postes-de-distribution-publique-postes-htabt' },
+    fiche: 'https://www.data.gouv.fr/dataservices/6a26951629e17fdb14d90e94',
+    licence: LICENCE_OUVERTE,
+    note: 'Transformateurs HTA/BT ; les compteurs des abonnés ne sont pas publiés (données personnelles).',
+    classer: () => ({ reseau: 'electricite', element: 'Poste HTA/BT (transformateur)' }),
+    gestionnaire: (p) => texte(p.nom_grd),
+    details: (p) => [['Nom du poste', texte(p.nom_poste)], ...majOre(p)],
+  },
+  {
+    id: 'ore-gaz',
+    titre: 'Canalisations de distribution de gaz',
+    producteur: 'Agence ORE (gestionnaires de réseaux de distribution)',
+    territoire: 'France',
+    reseaux: ['gaz'],
+    acces: { type: 'datafair', base: ORE, dataset: 'infrastructures-reseau-gaz' },
+    fiche: 'https://www.data.gouv.fr/dataservices/6a0afacfe3360e0d4f9e9cbb',
+    licence: LICENCE_OUVERTE,
+    note: 'Pression le plus souvent « Inconnu » ; données à titre indicatif.',
+    classer: () => ({ reseau: 'gaz', element: 'Canalisation de distribution de gaz' }),
+    gestionnaire: (p) => texte(p.nom_grd),
+    details: (p) => [['Pression', texte(p.niveau_de_pression)], ...majOre(p)],
+  },
+  {
+    id: 'bdtopo-lignes',
+    titre: 'Lignes électriques haute tension (BD TOPO)',
+    producteur: 'IGN',
+    territoire: 'France',
+    reseaux: ['electricite'],
+    acces: { type: 'wfs', url: 'https://data.geopf.fr/wfs/ows', couche: 'BDTOPO_V3:ligne_electrique' },
+    fiche: 'https://geoservices.ign.fr/bdtopo',
+    licence: LICENCE_OUVERTE,
+    note: 'Lignes du réseau de transport (63 kV à 400 kV) relevées par photogrammétrie : précision planimétrique de quelques mètres. Le gestionnaire n’est pas donné ; ces lignes relèvent en général de RTE.',
+    classer: (p) => ({ reseau: 'electricite', element: `Ligne HTB${texte(p.voltage) && p.voltage !== 'Inconnue' ? ` ${texte(p.voltage)}` : ''}`, aerien: true }),
+    details: (p) => [['Tension', texte(p.voltage)], ['État', texte(p.etat_de_l_objet)], ['Précision planimétrique (m)', texte(p.precision_planimetrique)]],
+  },
+  {
+    id: 'bdtopo-postes',
+    titre: 'Postes de transformation (BD TOPO)',
+    producteur: 'IGN',
+    territoire: 'France',
+    reseaux: ['electricite'],
+    acces: { type: 'wfs', url: 'https://data.geopf.fr/wfs/ows', couche: 'BDTOPO_V3:poste_de_transformation' },
+    fiche: 'https://geoservices.ign.fr/bdtopo',
+    licence: LICENCE_OUVERTE,
+    note: 'Enceintes des postes sources et postes électriques de transport.',
+    classer: () => ({ reseau: 'electricite', element: 'Poste source / poste électrique' }),
+    details: (p) => [['Nom', texte(p.toponyme)], ['État', texte(p.etat_de_l_objet)]],
+  },
+  {
+    id: 'bdtopo-canalisations',
+    titre: 'Canalisations de transport (BD TOPO)',
+    producteur: 'IGN',
+    territoire: 'France',
+    reseaux: ['hydrocarbures'],
+    acces: { type: 'wfs', url: 'https://data.geopf.fr/wfs/ows', couche: 'BDTOPO_V3:canalisation' },
+    fiche: 'https://geoservices.ign.fr/bdtopo',
+    licence: LICENCE_OUVERTE,
+    note: 'Grandes canalisations (hydrocarbures et autres matières premières) ; tracé indicatif.',
+    classer: (p) => ({
+      reseau: 'hydrocarbures',
+      element: `Canalisation de transport (${(texte(p.nature) ?? 'nature inconnue').toLowerCase()})`,
+      aerien: Number(p.position_par_rapport_au_sol) > 0,
+    }),
+    details: (p) => [['Nature', texte(p.nature)], ['État', texte(p.etat_de_l_objet)], ['Position / sol', texte(p.position_par_rapport_au_sol)]],
+  },
+  {
+    id: 'gpu-servitudes',
+    titre: 'Servitudes d’utilité publique liées aux réseaux',
+    producteur: 'Géoportail de l’Urbanisme (DDT, gestionnaires)',
+    territoire: 'France, selon numérisation des servitudes',
+    reseaux: ['eau', 'assainissement', 'gaz', 'hydrocarbures', 'electricite', 'telecom'],
+    acces: { type: 'gpu' },
+    fiche: 'https://www.geoportail-urbanisme.gouv.fr/',
+    licence: LICENCE_OUVERTE,
+    note: 'Ouvrages qui génèrent une servitude (A5 eau et assainissement, I1/I3/I5 transport de gaz et hydrocarbures, I4 électricité, PT3 télécommunications) : seuls les réseaux grevant des terrains privés y figurent.',
+    classer: classerServitude,
+    details: (p) => [
+      ['Servitude', texte(p.suptype)?.toUpperCase()],
+      ['Ouvrage', texte(p.nomgen)],
+      ['Type', texte(p.typegen)],
+      ['Diamètre', texte(p.diametre)],
+      ['Tension', texte(p.tension)],
+    ],
+  },
+
+  // ——— Local: telecommunications ———
+  {
+    id: 'lyon-fibre',
+    titre: 'Réseau d’initiative publique « la fibre Grand Lyon »',
+    producteur: 'Métropole de Lyon',
+    territoire: 'Métropole de Lyon',
+    emprise: [4.6936, 45.5684, 5.0537, 45.9199],
+    reseaux: ['telecom'],
+    acces: { type: 'wfs', url: 'https://data.grandlyon.com/geoserver/metropole-de-lyon/ows', couche: 'metropole-de-lyon:tel_telecom.fibre_rip_thd' },
+    fiche: 'https://www.data.gouv.fr/datasets/reseau-dinitiative-publique-la-fibre-grand-lyon',
+    classer: () => ({ reseau: 'telecom', element: 'Fibre optique (RIP)' }),
+    gestionnaire: () => 'Métropole de Lyon (RIP)',
+    details: (p) => [['Mise à jour', texte(p.datemaj)]],
+  },
+  {
+    id: 'cotesdarmor-arteres',
+    titre: 'Artères fibre de la montée en débit',
+    producteur: 'Département des Côtes-d’Armor',
+    territoire: 'Côtes-d’Armor',
+    emprise: [-3.5712, 48.2269, -1.94, 48.8639],
+    reseaux: ['telecom'],
+    acces: { type: 'datafair', base: 'https://datarmor.cotesdarmor.fr/data-fair/api/v1', dataset: 'fibre-optique-infrastructure-generale-artere-de-la-montee-en-debit-dans-le-departement-des-cotes-darmor' },
+    fiche: 'https://www.data.gouv.fr/dataservices/6a450f31627a00d16dedc560',
+    licence: LICENCE_OUVERTE,
+    note: 'Artères (NRA vers armoires de montée en débit) établies en 2016.',
+    classer: (p) => ({ reseau: 'telecom', element: 'Artère fibre (montée en débit)', aerien: /a[ée]rien/i.test(texte(p.AR_TYP_LGQ) ?? '') }),
+    gestionnaire: (p) => texte(p.GEST_FOUR),
+    details: (p) => [['Fourreaux', texte(p.TYPE_FOUR)], ['Nombre de fibres', texte(p.NB_FIBRE)], ['Type', texte(p.AR_TYP_LGQ)], ['Qualité de géoréférencement', texte(p.AR_QLT_GEO)]],
+  },
+  {
+    id: 'cotesdarmor-noeuds',
+    titre: 'Chambres et nœuds de la montée en débit',
+    producteur: 'Département des Côtes-d’Armor',
+    territoire: 'Côtes-d’Armor',
+    emprise: [-3.5712, 48.2269, -1.94, 48.8639],
+    reseaux: ['telecom'],
+    acces: { type: 'datafair', base: 'https://datarmor.cotesdarmor.fr/data-fair/api/v1', dataset: 'fibre-optique-noeuds-de-la-montee-en-debit-dans-le-departement-des-cotes-darmor' },
+    fiche: 'https://www.data.gouv.fr/dataservices/6a45377cf70511ca26e9f910',
+    licence: LICENCE_OUVERTE,
+    classer: (p) => ({ reseau: 'telecom', element: texte(p.NO_TYPE_LQ) ?? 'Nœud télécom' }),
+    gestionnaire: (p) => texte(p.GEST_CHBRE),
+    details: (p) => [['Chambre', texte(p.NOM_CHBRE)], ['Type', texte(p.NO_TYPE_LQ)], ['Propriétaire', texte(p.PRO_CHBRE)]],
+  },
+
+  // ——— Local: water and sewers ———
+  {
+    id: 'lisieux-aep',
+    titre: 'Canalisations d’eau potable',
+    producteur: 'Communauté d’agglomération Lisieux Normandie',
+    territoire: 'Lisieux Normandie',
+    emprise: [-0.139, 48.9068, 0.4273, 49.2311],
+    reseaux: ['eau'],
+    acces: { type: 'arcgis', url: 'https://services-eu1.arcgis.com/LgKupPt7OXUNAfmU/arcgis/rest/services/aep_canalisation_opendata/FeatureServer/0' },
+    fiche: 'https://www.data.gouv.fr/datasets/aep-canalisations',
+    classer: () => ({ reseau: 'eau', element: 'Canalisation d’eau potable' }),
+    gestionnaire: (p) => texte(p.exploitant),
+    details: (p) => [['Matériau', texte(p.materiau)], ['Classe de précision', texte(p.prec_clas)], ['Rue', texte(p.rue)], ['Commune', texte(p.commune)]],
+  },
+  {
+    id: 'plainevallee-assainissement',
+    titre: 'Canalisations d’assainissement',
+    producteur: 'Communauté d’agglomération Plaine Vallée',
+    territoire: 'Plaine Vallée (Val-d’Oise)',
+    emprise: [2.22, 48.93, 2.42, 49.08],
+    reseaux: ['assainissement', 'pluvial'],
+    acces: { type: 'arcgis', url: 'https://services2.arcgis.com/rDH2Z04XoJ9VRLop/arcgis/rest/services/Canalisations__CAPV__OpenDATA/FeatureServer/0' },
+    fiche: 'https://www.data.gouv.fr/datasets/canalisations-capv-opendata-4',
+    classer: (p) => {
+      const r = reseauPlaineVallee[texte(p.TYPRESEAU) ?? '']
+      return r ? { reseau: r[0], element: r[1] } : { reseau: 'assainissement', element: 'Canalisation (type non précisé)' }
+    },
+    gestionnaire: (p) => exploitantPlaineVallee[texte(p.GEXPLOIT) ?? ''] ?? texte(p.GEXPLOIT),
+    details: (p) => [['Diamètre (mm)', texte(p.DIAMETRE)]],
+  },
+  {
+    id: 'hautsdeseine-collecteurs',
+    titre: 'Collecteurs du réseau départemental d’assainissement',
+    producteur: 'Département des Hauts-de-Seine',
+    territoire: 'Hauts-de-Seine',
+    emprise: [2.1541, 48.7309, 2.3364, 48.949],
+    reseaux: ['assainissement', 'pluvial'],
+    acces: { type: 'ods', portail: 'https://opendata.hauts-de-seine.fr', dataset: 'collecteurs-du-reseau-departemental-dassainissement', champGeo: 'geo_shape' },
+    fiche: 'https://opendata.hauts-de-seine.fr/explore/dataset/collecteurs-du-reseau-departemental-dassainissement/',
+    licence: LICENCE_OUVERTE,
+    note: 'Réseau départemental seulement : les réseaux communaux et ceux du SIAAP n’y figurent pas.',
+    classer: (p) => {
+      const r = reseauHautsDeSeine[texte(p.reseau) ?? '']
+      return r ? { reseau: r[0], element: r[1] } : { reseau: 'assainissement', element: 'Collecteur' }
+    },
+    gestionnaire: () => 'Département des Hauts-de-Seine',
+    details: (p) => [['Ouvrage', texte(p.nommo)], ['Réseau', texte(p.reseau)]],
+  },
+  {
+    id: 'rennes-eaux-usees',
+    titre: 'Réseaux structurants d’eaux usées',
+    producteur: 'Rennes Métropole',
+    territoire: 'Rennes Métropole',
+    emprise: [-1.9483, 47.9633, -1.4745, 48.3041],
+    reseaux: ['assainissement'],
+    acces: { type: 'ods', portail: 'https://data.rennesmetropole.fr', dataset: 'reseaux_structurants_eaux_usees', champGeo: 'geo_shape' },
+    fiche: 'https://data.rennesmetropole.fr/explore/dataset/reseaux_structurants_eaux_usees/',
+    licence: ODBL,
+    note: 'Collecteurs principaux seulement (2022).',
+    classer: () => ({ reseau: 'assainissement', element: 'Collecteur structurant d’eaux usées' }),
+    gestionnaire: (p) => (texte(p.gestion) === 'DA' ? 'Rennes Métropole (direction de l’assainissement)' : texte(p.gestion)),
+    details: (p) => [['Système', texte(p.systeme_eu)], ['Écoulement', texte(p.ecoulement)]],
+  },
+  {
+    id: 'rennes-ouvrages-assainissement',
+    titre: 'Ouvrages d’assainissement',
+    producteur: 'Rennes Métropole',
+    territoire: 'Rennes Métropole',
+    emprise: [-1.9463, 47.9647, -1.4773, 48.3041],
+    reseaux: ['assainissement', 'pluvial'],
+    acces: { type: 'ods', portail: 'https://data.rennesmetropole.fr', dataset: 'ouvrage_assainissement', champGeo: 'geo_shape' },
+    fiche: 'https://data.rennesmetropole.fr/explore/dataset/ouvrage_assainissement/',
+    licence: ODBL,
+    classer: (p) => ({ reseau: eauxRennes[texte(p.effluent) ?? ''] ?? 'assainissement', element: texte(p.nature) ?? 'Ouvrage d’assainissement' }),
+    gestionnaire: (p) => texte(p.proprietaire),
+    details: (p) => [['Ouvrage', texte(p.designation)], ['Effluent', texte(p.effluent)], ['Fonctionnement', texte(p.fonctionnement)], ['Commune', texte(p.nom_commune)]],
+  },
+  {
+    id: 'rennes-pei',
+    titre: 'Points d’eau incendie',
+    producteur: 'Rennes Métropole',
+    territoire: 'Rennes Métropole',
+    emprise: [-2.2311, 47.9393, -1.473, 48.3637],
+    reseaux: ['eau'],
+    acces: { type: 'ods', portail: 'https://data.rennesmetropole.fr', dataset: 'deci-pei', champGeo: 'geo_shape' },
+    fiche: 'https://data.rennesmetropole.fr/explore/dataset/deci-pei/',
+    licence: ODBL,
+    note: 'Les poteaux et bouches d’incendie signalent une conduite d’eau potable sous la voie.',
+    // Only hydrants sit on the water main; tanks, ponds and streams are other water points.
+    classer: (p) => (/poteau|bouche/i.test(texte(p.type) ?? 'poteau') ? { reseau: 'eau', element: texte(p.type) ?? 'Poteau incendie' } : null),
+    gestionnaire: (p) => texte(p.gestionnaire),
+    details: (p) => [['Type', texte(p.type)], ['État', texte(p.etat)]],
+  },
+  {
+    id: 'strasbourg-pei',
+    titre: 'Points d’eau incendie',
+    producteur: 'Eurométropole de Strasbourg',
+    territoire: 'Eurométropole de Strasbourg',
+    emprise: [7.5501, 48.4634, 7.8521, 48.6884],
+    reseaux: ['eau'],
+    acces: { type: 'ods', portail: 'https://data.strasbourg.eu', dataset: 'deci_pei', champGeo: 'geo_point_2d' },
+    fiche: 'https://data.strasbourg.eu/explore/dataset/deci_pei/',
+    licence: LICENCE_OUVERTE,
+    note: 'Les poteaux et bouches d’incendie signalent une conduite d’eau potable sous la voie.',
+    classer: () => ({ reseau: 'eau', element: 'Point d’eau incendie' }),
+    details: (p) => [['Identifiant', texte(p.identifiant)], ['Débit (m³/h)', texte(p.debit_classe)]],
+  },
+  {
+    id: 'angers-pei',
+    titre: 'Bornes incendie',
+    producteur: 'Angers Loire Métropole',
+    territoire: 'Angers Loire Métropole',
+    emprise: [-0.7539, 47.3355, -0.286, 47.6318],
+    reseaux: ['eau'],
+    acces: { type: 'ods', portail: 'https://data.angers.fr', dataset: 'borne-incendie-angers-loire-metropole', champGeo: 'geo_shape' },
+    fiche: 'https://data.angers.fr/explore/dataset/borne-incendie-angers-loire-metropole/',
+    licence: ODBL,
+    note: 'Les bornes incendie signalent une conduite d’eau potable sous la voie.',
+    classer: (p) => ({ reseau: 'eau', element: `Borne incendie${texte(p.type) ? ` (${texte(p.type)})` : ''}` }),
+    details: (p) => [['Diamètre', texte(p.diametre)], ['Débit', texte(p.debit)], ['Adresse', texte(p.adresse)]],
+  },
+  {
+    id: 'angers-ep-collecteurs',
+    titre: 'Eaux pluviales — collecteurs',
+    producteur: 'Angers Loire Métropole',
+    territoire: 'Angers Loire Métropole',
+    emprise: [-0.7531, 47.3403, -0.3008, 47.6233],
+    reseaux: ['pluvial'],
+    acces: { type: 'ods', portail: 'https://data.angers.fr', dataset: 'ep-collec-alm', champGeo: 'geo_shape' },
+    fiche: 'https://data.angers.fr/explore/dataset/ep-collec-alm/',
+    licence: ODBL,
+    classer: () => ({ reseau: 'pluvial', element: 'Collecteur d’eaux pluviales' }),
+    gestionnaire: () => 'Angers Loire Métropole',
+    details: (p) => [['Forme', texte(p.type)], ['Diamètre', texte(p.diametre)], ['Matériau', texte(p.materiau)], ['Cote amont', texte(p.zamont)], ['Cote aval', texte(p.zaval)]],
+  },
+  {
+    id: 'angers-ep-regards',
+    titre: 'Eaux pluviales — regards',
+    producteur: 'Angers Loire Métropole',
+    territoire: 'Angers Loire Métropole',
+    emprise: [-0.7531, 47.3394, -0.2958, 47.6228],
+    reseaux: ['pluvial'],
+    acces: { type: 'ods', portail: 'https://data.angers.fr', dataset: 'ep-regard-alm', champGeo: 'geo_shape' },
+    fiche: 'https://data.angers.fr/explore/dataset/ep-regard-alm/',
+    licence: ODBL,
+    classer: () => ({ reseau: 'pluvial', element: 'Regard d’eaux pluviales' }),
+    gestionnaire: () => 'Angers Loire Métropole',
+    details: (p) => [['Type', texte(p.type)], ['Tampon', texte(p.type_tampon)], ['Cote', texte(p.zsurf)]],
+  },
+  {
+    id: 'angers-ep-avaloirs',
+    titre: 'Eaux pluviales — avaloirs',
+    producteur: 'Angers Loire Métropole',
+    territoire: 'Angers Loire Métropole',
+    emprise: [-0.7524, 47.3383, -0.3066, 47.6211],
+    reseaux: ['pluvial'],
+    acces: { type: 'ods', portail: 'https://data.angers.fr', dataset: 'ep_avaloir_alm', champGeo: 'geo_shape' },
+    fiche: 'https://data.angers.fr/explore/dataset/ep_avaloir_alm/',
+    licence: ODBL,
+    classer: () => ({ reseau: 'pluvial', element: 'Avaloir' }),
+    gestionnaire: () => 'Angers Loire Métropole',
+    details: (p) => [['Type', texte(p.type)]],
+  },
+  {
+    id: 'mel-gravitaires',
+    titre: 'Collecteurs d’assainissement gravitaires (PLUi)',
+    producteur: 'Métropole européenne de Lille',
+    territoire: 'Métropole européenne de Lille',
+    emprise: [2.7934, 50.5018, 3.2721, 50.7938],
+    reseaux: ['assainissement', 'pluvial'],
+    acces: { type: 'ogcapi', url: 'https://data.lillemetropole.fr/geoserver/ogc/features/v1', collection: 'mel_plu:ass_gravit' },
+    fiche: 'https://www.data.gouv.fr/datasets/plui-assainissement-collecteurs-gravitaires',
+    licence: LICENCE_OUVERTE,
+    note: 'Annexe sanitaire du PLUi : tracé à l’échelle du document d’urbanisme.',
+    classer: (p) => ({
+      reseau: /pluvi/i.test(texte(p.type_text_lvl1) ?? '') ? 'pluvial' : 'assainissement',
+      element: `Collecteur gravitaire ${(texte(p.type_text_lvl1) ?? '').toLowerCase()}`.trim(),
+    }),
+    gestionnaire: () => 'Métropole européenne de Lille',
+    details: (p) => [['Type', texte(p.type_text_lvl1)], ['Commune (INSEE)', texte(p.c_insee)]],
+  },
+  {
+    id: 'mel-refoulement',
+    titre: 'Collecteurs d’assainissement de refoulement (PLUi)',
+    producteur: 'Métropole européenne de Lille',
+    territoire: 'Métropole européenne de Lille',
+    emprise: [2.7958, 50.5051, 3.2612, 50.7903],
+    reseaux: ['assainissement'],
+    acces: { type: 'ogcapi', url: 'https://data.lillemetropole.fr/geoserver/ogc/features/v1', collection: 'mel_plu:ass_refoul' },
+    fiche: 'https://data.lillemetropole.fr/geoserver/ogc/features/v1/collections/mel_plu:ass_refoul',
+    note: 'Annexe sanitaire du PLUi : tracé à l’échelle du document d’urbanisme.',
+    classer: () => ({ reseau: 'assainissement', element: 'Collecteur de refoulement' }),
+    gestionnaire: () => 'Métropole européenne de Lille',
+    details: (p) => [['Type', texte(p.type_text_lvl1)], ['Commune (INSEE)', texte(p.c_insee)]],
+  },
+  {
+    id: 'ccpro-pluvial',
+    titre: 'Collecteurs pluviaux',
+    producteur: 'Communauté de communes Pays Réuni d’Orange',
+    territoire: 'Pays Réuni d’Orange (Vaucluse)',
+    emprise: [4.7093, 44.062, 4.9138, 44.158],
+    reseaux: ['pluvial'],
+    acces: { type: 'wfs', url: DATASUD_WFS, couche: 'communaute-de-communes-du-pays-reuni-dorange:collecteur_pluvial.zip' },
+    fiche: 'https://www.datasud.fr/',
+    classer: () => ({ reseau: 'pluvial', element: 'Collecteur pluvial' }),
+    gestionnaire: (p) => texte(p.competence),
+    details: (p) => [['Commune', texte(p.commune)], ['Nature', texte(p.nature)]],
+  },
+
+  // ——— Local: PCRS (all networks' surface fittings) ———
+  {
+    id: 'bordeaux-pcrs-affleurants',
+    titre: 'Affleurants de réseaux du PCRS (regards, vannes, coffrets…)',
+    producteur: 'Bordeaux Métropole',
+    territoire: 'Bordeaux Métropole',
+    emprise: [-0.8832, 44.7418, -0.4604, 45.036],
+    reseaux: ['assainissement', 'eau', 'electricite', 'eclairage', 'gaz', 'telecom', 'chaleur'],
+    acces: { type: 'ods', portail: 'https://datahub.bordeaux-metropole.fr', dataset: 'cr_objet_reseau_p', champGeo: 'geo_shape' },
+    // Up to some 2 000 fittings within 200 m in the city centre.
+    limite: 8000,
+    fiche: 'https://datahub.bordeaux-metropole.fr/explore/dataset/cr_objet_reseau_p/',
+    licence: LICENCE_OUVERTE,
+    note: 'Plan de corps de rue simplifié (classe de précision A) : chaque tampon ou coffret visible en surface, classé par réseau.',
+    classer: (p) => {
+      const reseau = PCRS_RESEAU[texte(p.sstheme) ?? '']
+      if (!reseau) return null
+      const classe = texte(p.classe) ?? ''
+      const element = PCRS_CLASSE[classe] ?? classe
+      return { reseau, element: `${element} (${texte(p.sstheme)})` }
+    },
+    details: (p) => [['Réseau', texte(p.sstheme)], ['Objet', texte(p.classe)], ['Sous-classe', texte(p.ssclasse)], ['Altitude', texte(p.alt)]],
+  },
+
+  // ——— Local: heating networks ———
+  {
+    id: 'lyon-rcu',
+    titre: 'Canalisations des réseaux de chaleur et de froid',
+    producteur: 'Métropole de Lyon',
+    territoire: 'Métropole de Lyon',
+    emprise: [4.717, 45.5894, 4.9316, 45.8263],
+    reseaux: ['chaleur'],
+    acces: { type: 'wfs', url: 'https://data.grandlyon.com/geoserver/metropole-de-lyon/ows', couche: 'metropole-de-lyon:nrj_energie.rcu_canalisation' },
+    fiche: 'https://data.grandlyon.com/',
+    classer: (p) => ({ reseau: 'chaleur', element: texte(p.type) === 'Froid' ? 'Canalisation de réseau de froid' : 'Canalisation de réseau de chaleur' }),
+    details: (p) => [['Réseau', texte(p.nomreseau)], ['Fluide', texte(p.fluide)], ['Sens', texte(p.sens)], ['Mise à jour', texte(p.datemaj)]],
+  },
+  {
+    id: 'lyon-rcu-sousstations',
+    titre: 'Sous-stations des réseaux de chaleur et de froid',
+    producteur: 'Métropole de Lyon',
+    territoire: 'Métropole de Lyon',
+    emprise: [4.717, 45.5894, 4.9306, 45.8262],
+    reseaux: ['chaleur'],
+    acces: { type: 'wfs', url: 'https://data.grandlyon.com/geoserver/metropole-de-lyon/ows', couche: 'metropole-de-lyon:nrj_energie.rcu_sousstation' },
+    fiche: 'https://data.grandlyon.com/',
+    classer: () => ({ reseau: 'chaleur', element: 'Sous-station' }),
+    details: (p) => [['Réseau', texte(p.nomreseau)], ['Sous-station', texte(p.numsousstation)], ['Commune', texte(p.commune)]],
+  },
+  {
+    id: 'bordeaux-rcu',
+    titre: 'Canalisations des réseaux de chaleur urbains',
+    producteur: 'Bordeaux Métropole',
+    territoire: 'Bordeaux Métropole',
+    emprise: [-0.7501, 44.7685, -0.5048, 44.9188],
+    reseaux: ['chaleur'],
+    acces: { type: 'ods', portail: 'https://datahub.bordeaux-metropole.fr', dataset: 'eg_reseau_chaleur_l', champGeo: 'geo_shape' },
+    fiche: 'https://datahub.bordeaux-metropole.fr/explore/dataset/eg_reseau_chaleur_l/',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'chaleur', element: 'Canalisation de réseau de chaleur' }),
+    details: (p) => [['Concession', texte(p.rs_eg_concession_s)], ['Classe de précision', texte(p.classe_precision)]],
+  },
+  {
+    id: 'rennes-rcu',
+    titre: 'Réseaux de chaleur urbains',
+    producteur: 'Rennes Métropole',
+    territoire: 'Rennes Métropole',
+    emprise: [-1.8064, 48.0282, -1.6215, 48.1377],
+    reseaux: ['chaleur'],
+    acces: { type: 'ods', portail: 'https://data.rennesmetropole.fr', dataset: 'reseau_chaleur_urbain_rennes', champGeo: 'geo_shape' },
+    fiche: 'https://data.rennesmetropole.fr/explore/dataset/reseau_chaleur_urbain_rennes/',
+    licence: ODBL,
+    classer: (p) => ({ reseau: 'chaleur', element: `Canalisation de chaleur${texte(p.type) ? ` (${texte(p.type)})` : ''}` }),
+    details: (p) => [['Réseau', texte(p.nom)], ['État', texte(p.etat)], ['Dimension', texte(p.tube_dimension)], ['Année de pose', texte(p.annee_pose)], ['Précision', texte(p.precision)]],
+  },
+  {
+    id: 'rouen-rcu',
+    titre: 'Canalisations des réseaux de chaleur',
+    producteur: 'Métropole Rouen Normandie',
+    territoire: 'Métropole Rouen Normandie',
+    emprise: [1.014, 49.3034, 1.1513, 49.4869],
+    reseaux: ['chaleur'],
+    acces: { type: 'ods', portail: 'https://data.metropole-rouen-normandie.fr', dataset: 'canalisation-des-reseaux-de-chaleur-metropole-rouen-normandie-2022', champGeo: 'geo_shape' },
+    fiche: 'https://data.metropole-rouen-normandie.fr/explore/dataset/canalisation-des-reseaux-de-chaleur-metropole-rouen-normandie-2022/',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'chaleur', element: 'Canalisation de réseau de chaleur' }),
+    gestionnaire: (p) => texte(p.concessionnaire_du_reseau),
+    details: (p) => [
+      ['Réseau', texte(p.nom_du_reseau)],
+      ['Pose', texte(p.type_de_pose_de_canalisation)],
+      ['Diamètre nominal', texte(p.diametre_nominal)],
+      ['Année de pose', texte(p.annee_de_pose_de_la_canalisation)?.slice(0, 4)],
+      ['Classe de précision', texte(p.classe_de_precision_du_reseau)],
+    ],
+  },
+  {
+    id: 'tours-rcu',
+    titre: 'Réseaux de chaleur',
+    producteur: 'Tours Métropole Val de Loire',
+    territoire: 'Tours Métropole Val de Loire',
+    emprise: [0.651, 47.3422, 0.7375, 47.3967],
+    reseaux: ['chaleur'],
+    acces: { type: 'ods', portail: 'https://data.tours-metropole.fr', dataset: 'reseaux-de-chaleur-tours-metropole-val-de-loire', champGeo: 'geo_shape' },
+    fiche: 'https://data.tours-metropole.fr/explore/dataset/reseaux-de-chaleur-tours-metropole-val-de-loire/',
+    licence: LICENCE_OUVERTE,
+    note: 'Tracé schématique (2023).',
+    classer: () => ({ reseau: 'chaleur', element: 'Réseau de chaleur (tracé schématique)' }),
+    gestionnaire: (p) => texte(p.gestionnai),
+    details: (p) => [['Réseau', texte(p.nom_reseau)], ['Autorité', texte(p.autorite)]],
+  },
+  {
+    id: 'poitiers-rcu',
+    titre: 'Réseau de chauffage urbain',
+    producteur: 'Grand Poitiers',
+    territoire: 'Poitiers',
+    emprise: [0.3383, 46.558, 0.3886, 46.6004],
+    reseaux: ['chaleur'],
+    acces: { type: 'datafair', base: 'https://data.grandpoitiers.fr/data-fair/api/v1', dataset: 'energie-reseau-de-chauffage-urbain-grand-poitiers-donnees-metiers' },
+    fiche: 'https://www.data.gouv.fr/dataservices/6a686db39d683ef5fd7067af',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'chaleur', element: 'Canalisation de chauffage urbain' }),
+    details: (p) => [['Couche', texte(p.layer)]],
+  },
+
+  // ——— Local: street lighting ———
+  {
+    id: 'paris-eclairage',
+    titre: 'Éclairage public',
+    producteur: 'Ville de Paris',
+    territoire: 'Paris',
+    emprise: [2.2227, 48.8156, 2.4696, 48.9091],
+    reseaux: ['eclairage'],
+    acces: { type: 'ods', portail: 'https://opendata.paris.fr', dataset: 'eclairage-public', champGeo: 'geo_point_2d' },
+    fiche: 'https://opendata.paris.fr/explore/dataset/eclairage-public/',
+    licence: ODBL,
+    classer: (p) => ({ reseau: 'eclairage', element: texte(p.lib_ouvrag) ?? 'Point lumineux' }),
+    gestionnaire: () => 'Ville de Paris',
+    details: (p) => [['Ouvrage', texte(p.lib_ouvrag)], ['Régime', texte(p.lib_regime)], ['Voie', texte(p.voie_entiere)]],
+  },
+  {
+    id: 'bordeaux-eclairage',
+    titre: 'Points lumineux (2019)',
+    producteur: 'Ville de Bordeaux',
+    territoire: 'Bordeaux',
+    emprise: [-0.6382, 44.8111, -0.5361, 44.9088],
+    reseaux: ['eclairage'],
+    acces: { type: 'ods', portail: 'https://datahub.bordeaux-metropole.fr', dataset: 'bor_ptlum', champGeo: 'geometrie' },
+    fiche: 'https://datahub.bordeaux-metropole.fr/explore/dataset/bor_ptlum/',
+    licence: LICENCE_OUVERTE,
+    note: 'Inventaire de 2019.',
+    classer: () => ({ reseau: 'eclairage', element: 'Point lumineux' }),
+    gestionnaire: () => 'Ville de Bordeaux',
+    details: (p) => [['Domaine', texte(p.domaine)], ['Catégorie', texte(p.categorie)]],
+  },
+  {
+    id: 'nantes-eclairage',
+    titre: 'Luminaires d’éclairage public',
+    producteur: 'Nantes Métropole',
+    territoire: 'Nantes Métropole',
+    emprise: [-1.8241, 47.1195, -1.3808, 47.34],
+    reseaux: ['eclairage'],
+    acces: { type: 'ods', portail: 'https://data.nantesmetropole.fr', dataset: '244400404_luminaires-eclairage-public-nantes-metropole', champGeo: 'geo_point_2d' },
+    fiche: 'https://data.nantesmetropole.fr/explore/dataset/244400404_luminaires-eclairage-public-nantes-metropole/',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'eclairage', element: 'Luminaire' }),
+    gestionnaire: () => 'Nantes Métropole',
+    details: (p) => [['Voie', texte(p.nom_voie)], ['Armoire', texte(p.id_armoire)], ['Hauteur du support', texte(p.hauteur_support)], ['Lampe', texte(p.type_lampe)]],
+  },
+  {
+    id: 'toulouse-eclairage',
+    titre: 'Points lumineux',
+    producteur: 'Toulouse Métropole',
+    territoire: 'Toulouse',
+    emprise: [1.3457, 43.5329, 1.5153, 43.6677],
+    reseaux: ['eclairage'],
+    acces: { type: 'ods', portail: 'https://data.toulouse-metropole.fr', dataset: 'points-lumineux', champGeo: 'geo_shape' },
+    fiche: 'https://data.toulouse-metropole.fr/explore/dataset/points-lumineux/',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'eclairage', element: 'Point lumineux' }),
+    gestionnaire: () => 'Mairie de Toulouse',
+  },
+  {
+    id: 'tours-eclairage',
+    titre: 'Points lumineux',
+    producteur: 'Tours Métropole Val de Loire',
+    territoire: 'Tours Métropole Val de Loire',
+    emprise: [0.55, 47.28, 0.85, 47.5],
+    reseaux: ['eclairage'],
+    acces: { type: 'ods', portail: 'https://data.tours-metropole.fr', dataset: 'points-lumineux-tmvl', champGeo: 'geo_points' },
+    fiche: 'https://data.tours-metropole.fr/explore/dataset/points-lumineux-tmvl/',
+    licence: LICENCE_OUVERTE,
+    classer: (p) => ({ reseau: 'eclairage', element: texte(p.typologie_luminaire) ? `Luminaire ${texte(p.typologie_luminaire)}` : 'Point lumineux' }),
+    gestionnaire: (p) => texte(p.exploitant),
+    details: (p) => [['Commune', texte(p.commune)], ['Source', texte(p.type_source)], ['Hauteur de feu', texte(p.hateur_de_feu)]],
+  },
+  {
+    id: 'mulhouse-eclairage',
+    titre: 'Points lumineux',
+    producteur: 'Ville de Mulhouse',
+    territoire: 'Mulhouse',
+    emprise: [7.2853, 47.723, 7.3686, 47.7805],
+    reseaux: ['eclairage'],
+    acces: { type: 'ods', portail: 'https://data.mulhouse-alsace.fr', dataset: '68224_points-lumineux_mulhouse', champGeo: 'geo_shape' },
+    fiche: 'https://data.mulhouse-alsace.fr/explore/dataset/68224_points-lumineux_mulhouse/',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'eclairage', element: 'Point lumineux' }),
+    gestionnaire: () => 'Ville de Mulhouse',
+    details: (p) => [['Rue', texte(p.nom_rue)], ['Alimentation', texte(p.alimentati)], ['Support', texte(p.support)], ['Mise en service', texte(p.date_mes)]],
+  },
+  {
+    id: 'issy-eclairage',
+    titre: 'Candélabres (2015)',
+    producteur: 'Ville d’Issy-les-Moulineaux',
+    territoire: 'Issy-les-Moulineaux',
+    emprise: [2.24, 48.8136, 2.2861, 48.8345],
+    reseaux: ['eclairage'],
+    acces: { type: 'ods', portail: 'https://data.issy.com', dataset: 'candelabres_issy', champGeo: 'coordonnees_geo' },
+    fiche: 'https://data.issy.com/explore/dataset/candelabres_issy/',
+    licence: LICENCE_OUVERTE,
+    note: 'Inventaire de 2015.',
+    classer: (p) => ({ reseau: 'eclairage', element: texte(p.type_objet) ?? 'Candélabre' }),
+    gestionnaire: () => 'Ville d’Issy-les-Moulineaux',
+    details: (p) => [['Voie', texte(p.voie)], ['Armoire', texte(p.armoire)]],
+  },
+  {
+    id: 'coeurdefrance-eclairage',
+    titre: 'Éclairage public intercommunal',
+    producteur: 'Communauté de communes Cœur de France',
+    territoire: 'Cœur de France (Cher)',
+    emprise: [2.3269, 46.6668, 2.7666, 46.7908],
+    reseaux: ['eclairage'],
+    acces: { type: 'ods', portail: 'https://opendata.cc-coeurdefrance.fr', dataset: 'candelabres-communautaire', champGeo: 'point_gps' },
+    fiche: 'https://opendata.cc-coeurdefrance.fr/explore/dataset/candelabres-communautaire/',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'eclairage', element: 'Candélabre' }),
+    gestionnaire: () => 'CC Cœur de France',
+    details: (p) => [['Commune', texte(p.commune)], ['Rue', texte(p.rue)], ['Armoire', texte(p.armoire)]],
+  },
+  {
+    id: 'poitiers-eclairage',
+    titre: 'Points lumineux',
+    producteur: 'Grand Poitiers',
+    territoire: 'Grand Poitiers',
+    emprise: [0.2744, 46.5165, 0.465, 46.7208],
+    reseaux: ['eclairage'],
+    acces: { type: 'datafair', base: 'https://data.grandpoitiers.fr/data-fair/api/v1', dataset: 'energie-points-lumineux-geres-par-grand-poitiers' },
+    fiche: 'https://data.grandpoitiers.fr/datasets/energie-points-lumineux-geres-par-grand-poitiers',
+    licence: 'CC BY',
+    classer: () => ({ reseau: 'eclairage', element: 'Point lumineux' }),
+    gestionnaire: () => 'Grand Poitiers',
+    details: (p) => [['Voie', texte(p.libelle_vo)], ['État', texte(p.etat)]],
+  },
+  {
+    id: 'brest-eclairage',
+    titre: 'Points lumineux',
+    producteur: 'Brest métropole',
+    territoire: 'Brest métropole',
+    emprise: [-4.6348, 48.3145, -4.3313, 48.4688],
+    reseaux: ['eclairage'],
+    acces: { type: 'arcgis', url: 'https://geo.brest-metropole.fr/arcgis/rest/services/public/GPB_RES/MapServer/2413002' },
+    fiche: 'https://www.data.gouv.fr/datasets/eclairage-public-points-lumineux',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'eclairage', element: 'Point lumineux' }),
+    gestionnaire: () => 'Brest métropole',
+    details: (p) => [['Armoire', texte(p.ARMOIRE)], ['Rue', texte(p.RUE)], ['Support', texte(p.SUPP_REF)], ['Lampe', texte(p.LAMP_NAT)]],
+  },
+  {
+    id: 'brest-armoires',
+    titre: 'Armoires de commande d’éclairage',
+    producteur: 'Brest métropole',
+    territoire: 'Brest métropole',
+    emprise: [-4.6335, 48.3146, -4.3375, 48.4669],
+    reseaux: ['eclairage'],
+    acces: { type: 'arcgis', url: 'https://geo.brest-metropole.fr/arcgis/rest/services/public/GPB_RES/MapServer/2413001' },
+    fiche: 'https://www.data.gouv.fr/datasets/eclairage-public-armoires-de-commande',
+    licence: LICENCE_OUVERTE,
+    classer: () => ({ reseau: 'eclairage', element: 'Armoire de commande' }),
+    gestionnaire: () => 'Brest métropole',
+    details: (p) => [['Armoire', texte(p.ARMOIRE) ?? texte(p.NOM)], ['Rue', texte(p.RUE)]],
+  },
+  {
+    id: 'ccpro-eclairage-points',
+    titre: 'Candélabres',
+    producteur: 'Communauté de communes Pays Réuni d’Orange',
+    territoire: 'Pays Réuni d’Orange (Vaucluse)',
+    emprise: [4.7269, 44.0463, 4.9359, 44.1664],
+    reseaux: ['eclairage'],
+    acces: { type: 'wfs', url: DATASUD_WFS, couche: 'communaute-de-communes-du-pays-reuni-dorange:ccpro_eclairagepublic_candelabres.zip' },
+    fiche: 'https://www.data.gouv.fr/datasets/reseau-d-eclairage-public-ccpop-2-3',
+    classer: () => ({ reseau: 'eclairage', element: 'Candélabre' }),
+    gestionnaire: () => 'CC Pays Réuni d’Orange',
+    details: (p) => [['Armoire', texte(p.code_arm)], ['Lampe', texte(p.type_amp)], ['Puissance (W)', texte(p.plamp)]],
+  },
+  {
+    id: 'ccpro-eclairage-lignes',
+    titre: 'Lignes électriques d’éclairage public',
+    producteur: 'Communauté de communes Pays Réuni d’Orange',
+    territoire: 'Pays Réuni d’Orange (Vaucluse)',
+    emprise: [4.7268, 44.0404, 4.9359, 44.1669],
+    reseaux: ['eclairage'],
+    acces: { type: 'wfs', url: DATASUD_WFS, couche: 'communaute-de-communes-du-pays-reuni-dorange:ccpop_eclairagepublic_lignes-electriques.zip' },
+    fiche: 'https://www.data.gouv.fr/datasets/reseau-d-eclairage-public-ccpop-1-3',
+    classer: (p) => {
+      const aerien = /a[ée]rien/i.test(texte(p.position) ?? '')
+      return { reseau: 'eclairage', element: `Câble d’éclairage ${aerien ? 'aérien' : 'souterrain'}`, aerien }
+    },
+    gestionnaire: () => 'CC Pays Réuni d’Orange',
+    details: (p) => [['Position', texte(p.position)], ['Source', texte(p.source)], ['Année de la source', texte(p.dat_source)]],
+  },
+  {
+    id: 'ccvba-eclairage',
+    titre: 'Points lumineux',
+    producteur: 'Communauté de communes Vallée des Baux-Alpilles',
+    territoire: 'Vallée des Baux-Alpilles',
+    emprise: [4.6907, 43.6852, 4.9539, 43.8],
+    reseaux: ['eclairage'],
+    acces: { type: 'wfs', url: DATASUD_WFS, couche: 'communaute-de-communes-vallee-des-baux-alpilles:points-lumineux-ep-de-la-ccvba' },
+    fiche: 'https://www.datasud.fr/',
+    classer: () => ({ reseau: 'eclairage', element: 'Point lumineux' }),
+    gestionnaire: () => 'CC Vallée des Baux-Alpilles',
+    details: (p) => [['Commune', texte(p.commune)], ['Hauteur', texte(p.hauteur)], ['Puissance', texte(p.puissance)]],
+  },
+  {
+    id: 'luberon-eclairage',
+    titre: 'Points lumineux',
+    producteur: 'Parc naturel régional du Luberon',
+    territoire: 'Communes du Parc du Luberon',
+    emprise: [5.1663, 43.6967, 5.7326, 44.4728],
+    reseaux: ['eclairage'],
+    acces: { type: 'wfs', url: DATASUD_WFS, couche: 'parcs-naturels-regionaux-de-provence-alpes-cote-dazur:luberon-points-lumineux' },
+    fiche: 'https://www.datasud.fr/',
+    note: 'Relevés de 2011 à 2013 dans les communes adhérentes.',
+    classer: (p) => ({ reseau: 'eclairage', element: 'Point lumineux', aerien: /a[ée]rien/i.test(texte(p.type_resea) ?? '') }),
+    details: (p) => [['Adresse', texte(p.adresse)], ['Armoire', texte(p.code_armoi)], ['Réseau', texte(p.type_resea)], ['Relevé', texte(p.date_relev)]],
+  },
+]
+
+export const SOURCE: Record<string, SourceReseau> = Object.fromEntries(SOURCES.map((s) => [s.id, s]))

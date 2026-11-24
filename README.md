@@ -6,7 +6,7 @@ des investigations, interprétation des résultats d'analyses, contrôle de
 conformité.
 
 Tout tourne dans le navigateur. Les pages interrogent directement les API
-publiques (Géorisques, Hub'Eau, IGN, INPN, GIS Sol, Copernicus…), et les
+publiques (Géorisques, Hub'Eau, IGN, INPN, GIS Sol, Copernicus, Agence ORE…), et les
 fichiers déposés (résultats de laboratoire, fiches de terrain, livrables)
 sont lus sur place, sans être envoyés à un serveur.
 
@@ -18,8 +18,9 @@ dans `docs/`.
 
 | Catégorie | Outil | Description |
 | --- | --- | --- |
-| 1. Contexte du site et plan d'investigation | [Assistant Site Setting](docs/site-setting.md) | Environnement d'une adresse ou de parcelles : eau, air, sols, faune et flore, risques, sur carte |
+| 1. Contexte du site et préparation des investigations | [Assistant Site Setting](docs/site-setting.md) | Environnement d'une adresse ou de parcelles : eau, air, sols, faune et flore, risques, sur carte |
 | | [Données environnementales publiques](docs/pages-autonomes.md#données-environnementales-publiques) | Explorateur cartographique : ICPE, CASIAS, SIS, BSS, captages, photos aériennes historiques… |
+| | [Réseaux et concessionnaires](docs/reseaux.md) | Réseaux électriques, gaz, eau, assainissement, éclairage public, fibre et chaleur autour d'un point : distances, linéaires, exploitants à consulter (ne remplace pas la DT-DICT) |
 | | [Création maillage](docs/pages-autonomes.md#création-maillage) | Maillage d'investigation sur parcelles, exports terrain |
 | 2. Données de terrain | [Logs de forage](docs/pages-autonomes.md#logs-de-forage) | Logs de sondages et piézomètres au format ERM, résultats comparés aux valeurs guides |
 | 3. Résultats d'analyses et interprétation | [Résultats labo](docs/resultats-labo.md) | Lecture visuelle et mise en forme des résultats, fiches de prélèvement, [conditions de la nappe](docs/conditions-nappe.md), campagnes, export expert |

@@ -3839,3 +3839,182 @@ svg .halo {
   font-weight: 700;
   font-size: 0.95rem;
 }
+
+/* ——— Réseaux et concessionnaires ——— */
+
+.reseaux__saisie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 2rem 0 1rem;
+}
+
+.reseaux__entete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.reseaux__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.reseaux__grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .reseaux__grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.reseaux__carte {
+  height: 34rem;
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .reseaux__carte {
+    height: 24rem;
+  }
+}
+
+.reseaux__fonds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+
+.reseaux__pastille {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.reseaux__pastille--active {
+  font-weight: 700;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.reseaux__legende {
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.85rem 0.9rem;
+  background: var(--color-surface);
+  font-size: 0.86rem;
+}
+
+.reseaux__legende ul {
+  list-style: none;
+  margin: 0.4rem 0 0.6rem;
+  padding: 0;
+}
+
+.reseaux__legende li label {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0;
+  cursor: pointer;
+}
+
+.reseaux__legende-titre {
+  margin: 0;
+  font-weight: 700;
+}
+
+.reseaux__legende-libelle {
+  line-height: 1.25;
+}
+
+.reseaux__legende-nombre {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.reseaux__legende--vide {
+  opacity: 0.55;
+}
+
+.reseaux__legende-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.reseaux__trait {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0.3rem;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.reseaux__lien {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reseaux__titre {
+  margin-top: 2.5rem;
+}
+
+.reseaux__tableau td,
+.reseaux__tableau th {
+  vertical-align: top;
+}
+
+.reseaux__texte {
+  white-space: normal !important;
+  min-width: 10rem;
+  max-width: 28rem;
+}
+
+.reseaux__note {
+  margin-top: 0.2rem;
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.reseaux__aide {
+  font-size: 0.86rem;
+  color: var(--color-muted);
+}
+
+.reseaux__liste {
+  margin: 0 0 0.8rem;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.reseaux__source {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}

@@ -1,7 +1,7 @@
 # Assistant Site Setting
 
 Page : `frontend/src/pages/SiteSetting.tsx` — catégorie **1. Contexte du site
-et plan d'investigation**.
+et préparation des investigations**.
 
 ## Ce que fait l'outil
 

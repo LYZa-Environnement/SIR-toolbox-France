@@ -9,7 +9,7 @@ protégées par le même mot de passe que le site.
 ## Données environnementales publiques
 
 `frontend/public/donnees-environnementales.html` — catégorie **1. Contexte
-du site et plan d'investigation**.
+du site et préparation des investigations**.
 
 Explorateur cartographique complet : ICPE, CASIAS, SIS, BSS, carte
 géologique, nappes, eau potable, cours d'eau, Natura 2000, établissements
@@ -18,7 +18,7 @@ sensibles, cadastre, photographies aériennes historiques.
 ## Création maillage
 
 `frontend/public/creation-maillage.html` — catégorie **1. Contexte du site
-et plan d'investigation**.
+et préparation des investigations**.
 
 Maillage d'investigation sur parcelles : taille et orientation de maille,
 zones multiples, exclusions, types de points, exports terrain (GPX,
