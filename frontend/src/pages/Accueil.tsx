@@ -24,9 +24,9 @@ interface Categorie {
 const CATEGORIES: Categorie[] = [
   {
     id: 'contexte',
-    titre: "Contexte du site et plan d'investigation",
+    titre: 'Contexte du site et préparation des investigations',
     etape: 'Préparer',
-    description: 'Lire les données publiques autour du site, puis dessiner le maillage des investigations.',
+    description: 'Lire les données publiques autour du site, repérer les réseaux, puis dessiner le maillage des investigations.',
     outils: [
       {
         titre: 'Assistant Site Setting',
@@ -43,6 +43,14 @@ const CATEGORIES: Categorie[] = [
           'Explorez sur une carte les ouvrages, captages, sites et sols pollués, zones naturelles et photographies aériennes historiques.',
         points: ['BRGM, BNPE, AtlaSanté', 'Remonter le temps (IGN)'],
         page: 'donnees-environnementales.html',
+      },
+      {
+        titre: 'Réseaux et concessionnaires',
+        accroche: 'Avant les sondages',
+        description:
+          'Électricité, gaz, eau, assainissement, éclairage public, fibre, chaleur : les tracés ouverts autour d’un point, la distance de chaque réseau et les exploitants à consulter.',
+        points: ['Agence ORE, IGN, Géoportail de l’Urbanisme, collectivités', 'Ne remplace pas la DT-DICT'],
+        route: '/reseaux',
       },
       {
         titre: 'Création maillage',
