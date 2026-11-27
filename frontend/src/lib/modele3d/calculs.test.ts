@@ -69,6 +69,31 @@ describe('systèmes de coordonnées', () => {
     const p = m.points.find((x) => x.nom === 'PZ1')!
     expect([p.xa, p.ya, p.zSol, p.origineZ, p.saisi]).toEqual([652310, 6862420, 60, 'saisie', true])
   })
+
+  it('points d’investigation du dossier : coordonnées, cotes et repères que les fichiers ne donnent pas', () => {
+    const ref = construireModele(assembler([exemple()]))
+    const src = exemple()
+    const nu = {
+      ...src,
+      forages: src.forages.map((f) => ({ ...f, x: null, y: null, z: null })),
+      eaux: src.eaux && { ...src.eaux, ouvrages: src.eaux.ouvrages.map((o) => ({ ...o, x: null, y: null, repere: null })) },
+    }
+    // Names written otherwise in the points file ("PZ01" for "PZ1").
+    const points = ref.points.map((p) => ({ nom: p.nom.replace(/(\D)(\d)$/, '$10$2'), x93: p.xa!, y93: p.ya!, altitude: p.zSol, repere: p.ouvrage?.repere ?? undefined }))
+    expect(construireModele(assembler([nu])).points.some((p) => p.place)).toBe(false)
+    expect(points.filter((p) => p.repere !== undefined).length).toBeGreaterThan(2)
+    const avec = construireModele(assembler([nu], points))
+    expect(avec.systeme).toBe('l93')
+    for (const p of avec.points) {
+      const r = ref.points.find((q) => q.cle === p.cle)!
+      expect([p.place, p.xa, p.ya, p.zSol, p.origineZ]).toEqual([true, r.xa, r.ya, r.zSol, 'dossier'])
+      // Measuring points reach the monitoring, as in Suivi temporel.
+      expect(p.ouvrage?.repere ?? null).toBe(r.ouvrage?.repere ?? null)
+    }
+    // A coordinate or an elevation of the files still wins.
+    const pz1 = construireModele(assembler([exemple()], points.map((p) => ({ ...p, x93: p.x93 + 100, altitude: 99 })))).points.find((p) => p.nom === 'PZ1')!
+    expect([pz1.xa, pz1.zSol, pz1.origineZ]).toEqual([652300, 53.6, 'forage'])
+  })
 })
 
 describe('krigeage', () => {

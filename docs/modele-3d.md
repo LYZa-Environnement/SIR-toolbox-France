@@ -30,6 +30,11 @@ onglet) :
   le nom des échantillons), eaux souterraines avec les campagnes comparées
   et les fiches de Conditions de la nappe, gaz du sol (concentrations
   calculées avec le volume prélevé saisi là-bas, zone de mesure) ;
+- `points.json` (Points d'investigation) : coordonnées en Lambert 93, cote
+  du terrain et cote du repère des points, rapprochés par le nom (« PZ01 »
+  = « Pz1 »), là où les logs et le suivi n'en donnent pas ; les repères
+  passent par le code de Suivi temporel (niveaux d'eau en profondeur
+  convertis en cotes), comme dans Suivi temporel ;
 - `dossier.json` : les **parcelles du site** (Assistant Site Setting).
 
 **Fichiers déposés** : classeur de saisie des logs (`logs.ts`, Comments
@@ -51,8 +56,11 @@ ordres de grandeur, ou choisis, et convertis en Lambert 93 (projections
 coniques conformes de Lambert sur RGF93, notes IGN NT/G 71). Tableau
 « Points, coordonnées et cotes » : chaque coordonnée et chaque cote du sol
 peut être saisie dans l'outil (enregistrée dans le dossier, le classeur des
-logs n'est pas modifié). Cote du sol : saisie, sinon celle du log, sinon le
-MNT IGN (RGE ALTI®) recalé sur les forages, sinon la cote du repère.
+logs n'est pas modifié). Coordonnées : saisies, sinon celles des fichiers,
+sinon celles des points d'investigation du dossier (pas avec des fichiers
+en repère local, sans lien avec le Lambert 93). Cote du sol : saisie,
+sinon celle du log, sinon celle des points d'investigation, sinon le MNT
+IGN (RGE ALTI®) recalé sur les forages, sinon la cote du repère.
 
 ## Géologie
 
@@ -164,7 +172,7 @@ les réglages de la vue.
 ## Tests
 
 `modele.test.ts`, `calculs.test.ts` (projections et reconnaissance des
-systèmes, saisies, krigeage, formations et contacts, filières, isopièzes,
+systèmes, saisies, points d'investigation du dossier, krigeage, formations et contacts, filières, isopièzes,
 évolution du panache, schéma conceptuel), `dossier.test.ts` (fichiers des
 outils relus après un aller-retour par l'encodage du dossier, fiches de
 prélèvement, tournées sans analyses, emprise des interpolations).

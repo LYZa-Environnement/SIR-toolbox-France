@@ -54,10 +54,11 @@ import { completerConfig, construireFormations, proposerFormations, type ConfigF
 import { interpoler, validationCroisee, type Methode, type Validation, type Variogramme } from './krigeage.ts'
 import type { Forage, Intervalle } from './types.ts'
 
-export type OrigineZ = 'forage' | 'mnt' | 'repere' | 'interpole' | 'relatif' | 'saisie'
+export type OrigineZ = 'forage' | 'dossier' | 'mnt' | 'repere' | 'interpole' | 'relatif' | 'saisie'
 
 export const LIBELLES_ORIGINE_Z: Record<OrigineZ, string> = {
   forage: 'cote du log, onglet Collars',
+  dossier: 'points d’investigation du dossier',
   mnt: 'MNT IGN (RGE ALTI)',
   repere: 'cote du repère de l’ouvrage (approchée)',
   interpole: 'interpolée entre les forages voisins',
@@ -222,18 +223,30 @@ export function construireModele(d: Donnees, o: OptionsModele = {}): Modele {
   // ---- Points: boreholes and wells matched by name --------------------------------------------
   const ouvrages = (d.base?.ouvrages ?? []).filter((w) => !w.exclu)
   const cles = new Set([...d.forages.map((f) => f.cle), ...ouvrages.map((w) => w.cle)])
+  // Investigation points of the dossier (Lambert 93): what the logs and the monitoring do not give.
+  const duDossier = new Map((d.pointsDossier ?? []).map((p) => [p.cle, p]))
   const initiaux = [...cles].map((cle) => {
     const forage = d.forages.find((f) => f.cle === cle) ?? null
     const ouvrage = ouvrages.find((w) => w.cle === cle) ?? null
-    const x = forage?.x ?? ouvrage?.x ?? null
-    const y = forage?.y ?? ouvrage?.y ?? null
-    return { cle, nom: forage?.nom ?? ouvrage?.nom ?? cle, forage, ouvrage, source: x !== null && y !== null ? { x, y } : null }
+    const dossier = duDossier.get(cle) ?? null
+    // Suivi temporel gives the wells the dossier's coordinates when none has its own: Lambert 93, not the files' system.
+    const ouvrageDuDossier = !!dossier && ouvrage?.x === dossier.x93 && ouvrage?.y === dossier.y93
+    const x = forage?.x ?? (ouvrageDuDossier ? null : ouvrage?.x) ?? null
+    const y = forage?.y ?? (ouvrageDuDossier ? null : ouvrage?.y) ?? null
+    return { cle, nom: forage?.nom ?? ouvrage?.nom ?? cle, forage, ouvrage, dossier, source: x !== null && y !== null ? { x, y } : null }
   })
 
   // ---- Coordinate system: everything to Lambert 93 when it can be -----------------------------
   const detecte = detecterSysteme(initiaux.flatMap((p) => (p.source ? [p.source] : [])))
-  const systeme: Systeme = o.systeme && o.systeme !== 'auto' ? o.systeme : detecte.systeme
-  const inverse = (!o.systeme || o.systeme === 'auto') && detecte.inverse
+  const choisi = o.systeme && o.systeme !== 'auto' ? o.systeme : null
+  const auto = choisi === null
+  // No coordinates in the files: the dossier's points place the model in Lambert 93.
+  const systeme: Systeme = choisi ? choisi : !initiaux.some((p) => p.source) && initiaux.some((p) => p.dossier) ? 'l93' : detecte.systeme
+  const inverse = auto && detecte.inverse
+  // The dossier's points complete georeferenced coordinates only: a local grid has no link to Lambert 93.
+  const avecDossier = systeme !== 'local'
+  if (!avecDossier && initiaux.some((p) => !p.source && p.dossier))
+    avertissements.push('Coordonnées des fichiers en repère local : celles des points d’investigation du dossier (Lambert 93) ne sont pas reprises.')
   if (systeme !== 'l93' && systeme !== 'local')
     avertissements.push(`Coordonnées en ${LIBELLES_SYSTEME[systeme]}${inverse ? ' (latitude et longitude inversées)' : ''} converties en Lambert 93.`)
   const convertir = (c: { x: number; y: number }): [number, number] | null => {
@@ -243,11 +256,14 @@ export function construireModele(d: Donnees, o: OptionsModele = {}): Modele {
   const bruts = initiaux.map((p) => {
     const c = p.source ? convertir(p.source) : null
     const s = o.saisies?.[p.cle]
-    const xa = s?.x ?? c?.[0] ?? null
-    const ya = s?.y ?? c?.[1] ?? null
+    const pd = avecDossier ? p.dossier : null
+    const xa = s?.x ?? c?.[0] ?? pd?.x93 ?? null
+    const ya = s?.y ?? c?.[1] ?? pd?.y93 ?? null
     const zSaisi = s?.z ?? null
-    return { ...p, xa, ya, zSaisi, saisi: !!s && (s.x != null || s.y != null || s.z != null) }
+    return { ...p, xa, ya, zSaisi, zDossier: p.dossier?.altitude ?? null, xyDossier: !c && !!pd && (s?.x == null || s?.y == null), saisi: !!s && (s.x != null || s.y != null || s.z != null) }
   })
+  const reprises = bruts.filter((p) => p.xyDossier).length
+  if (reprises) avertissements.push(`Coordonnées de ${reprises} point${reprises > 1 ? 's' : ''} reprises des points d’investigation du dossier (Lambert 93).`)
   const georef = systeme !== 'local' && bruts.some((p) => p.xa !== null)
 
   const places = bruts.filter((p) => p.xa !== null && p.ya !== null)
@@ -275,7 +291,7 @@ export function construireModele(d: Donnees, o: OptionsModele = {}): Modele {
   const sansPlace = bruts.filter((p) => p.xa === null || p.ya === null)
   if (sansPlace.length)
     avertissements.push(
-      `Sans coordonnées, placé${sansPlace.length > 1 ? 's' : ''} hors modèle, au sud : ${sansPlace.map((p) => p.nom).join(', ')}. Saisissez-les dans le tableau des points, ou renseignez l’onglet Collars des logs ou l’onglet Ouvrages du suivi.`,
+      `Sans coordonnées, placé${sansPlace.length > 1 ? 's' : ''} hors modèle, au sud : ${sansPlace.map((p) => p.nom).join(', ')}. Saisissez-les dans le tableau des points, chargez-les dans Points d’investigation, ou renseignez l’onglet Collars des logs ou l’onglet Ouvrages du suivi.`,
     )
   // Wells without coordinates lined up south of the extent, out of the interpolations.
   const pasRangee = Math.max(4, (xmax - xmin) / Math.max(sansPlace.length + 1, 6))
@@ -283,7 +299,7 @@ export function construireModele(d: Donnees, o: OptionsModele = {}): Modele {
   // ---- Ground elevation ------------------------------------------------------------------------
   const mnt = georef ? (o.mnt ?? null) : null
   const zMnt = (x: number, y: number) => (mnt ? valeurEn(mnt.grille, x + ox, y + oy) : Number.NaN)
-  const zDonne = (p: (typeof bruts)[number]) => p.zSaisi ?? p.forage?.z ?? null
+  const zDonne = (p: (typeof bruts)[number]) => p.zSaisi ?? p.forage?.z ?? p.zDossier
   const cotes: (PointValeur & { cle: string })[] = []
   for (const p of bruts) {
     if (p.xa === null || p.ya === null) continue
@@ -329,6 +345,7 @@ export function construireModele(d: Donnees, o: OptionsModele = {}): Modele {
     let origineZ: OrigineZ
     if (p.zSaisi !== null) [zSol, origineZ] = [p.zSaisi, 'saisie']
     else if (p.forage?.z != null) [zSol, origineZ] = [p.forage.z, 'forage']
+    else if (p.zDossier !== null) [zSol, origineZ] = [p.zDossier, 'dossier']
     else if (relatif) [zSol, origineZ] = [0, 'relatif']
     else if (place && mnt && Number.isFinite(zMnt(x, y))) [zSol, origineZ] = [surface(x, y), 'mnt']
     else if (p.ouvrage?.repere != null) [zSol, origineZ] = [p.ouvrage.repere, 'repere']

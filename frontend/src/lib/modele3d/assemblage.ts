@@ -23,6 +23,17 @@ export interface MesureGaz {
   resultats: Record<string, ValeurSol>
 }
 
+/** An investigation point of the dossier (Points d'investigation): Lambert 93, ground and measuring point elevations. */
+export interface PointRepere {
+  nom: string
+  x93: number
+  y93: number
+  /** Ground level, m NGF. */
+  altitude?: number
+  /** Top of casing or measuring point, m NGF. */
+  repere?: number
+}
+
 export interface Donnees {
   forages: Forage[]
   parametresSol: ParametreSol[]
@@ -31,6 +42,8 @@ export interface Donnees {
   gaz: MesureGaz[]
   /** Outline of the site's parcels (Lambert 93 rings), when a source gives it. */
   parcelles: [number, number][][] | null
+  /** Investigation points of the dossier, by key: coordinates and elevations the files do not give. */
+  pointsDossier: (PointRepere & { cle: string })[]
   base: Base | null
   corrections: Corrections
   avertissements: string[]
@@ -148,7 +161,13 @@ function rattacherSols(forages: Map<string, Forage>, parametres: Map<string, Par
   return nonRattaches
 }
 
-export function assembler(sources: Source[]): Donnees {
+/**
+ * The sources put together. `pointsDossier`: the dossier's investigation
+ * points, read by the monitoring as Suivi temporel reads them (measuring
+ * point elevations, coordinates when no well has its own) and by the model
+ * (coordinates and ground elevations the files do not give).
+ */
+export function assembler(sources: Source[], pointsDossier: PointRepere[] = []): Donnees {
   const avertissements: string[] = []
   const forages = new Map<string, Forage>()
   const parametres = new Map<string, ParametreSol>()
@@ -185,7 +204,7 @@ export function assembler(sources: Source[]): Donnees {
   let base: Base | null = null
   if (lots.length || releves.length) {
     try {
-      base = construireBase({ lots, campagnes, releves, ouvragesDecrits, corrections })
+      base = construireBase({ lots, campagnes, releves, ouvragesDecrits, corrections, pointsDossier })
       if (base.sansDate.length) avertissements.push(`${base.sansDate.length} campagne(s) d'eaux souterraines sans date, laissée(s) de côté : datez-les dans Suivi temporel.`)
     } catch (e) {
       avertissements.push(`Eaux souterraines : les données n'ont pas pu être réunies (${(e as Error).message}).`)
@@ -218,6 +237,7 @@ export function assembler(sources: Source[]): Donnees {
     parametresGaz: [...parametresGaz.values()],
     gaz: gaz.filter((g) => forages.has(g.cle)),
     parcelles: sources.find((s) => s.parcelles?.length)?.parcelles ?? null,
+    pointsDossier: pointsDossier.map((p) => ({ cle: cleOuvrage(p.nom), nom: p.nom, x93: p.x93, y93: p.y93, altitude: p.altitude, repere: p.repere })),
     base,
     corrections,
     avertissements: [...avertissements, ...sources.flatMap((s) => s.avertissements.map((a) => `${s.nom} : ${a}`))],

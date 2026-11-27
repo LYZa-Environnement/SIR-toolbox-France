@@ -10,7 +10,8 @@ import Vue3D from '../components/modele3d/Vue3D'
 import type { Colonne, Couches, Coupe, MarqueurEaux, MarqueurGaz, MarqueurSol, Mesure, NomCouche, Outil, Rendu3D, Vue } from '../components/modele3d/rendu'
 import { useCalcul } from '../components/modele3d/useCalcul'
 import type { Repertoire } from '../lib/dossier/acces'
-import { useDossier, useSynchroDossier } from '../lib/dossier/useSynchroDossier'
+import type { PointDossier } from '../lib/dossier/points'
+import { useDossier, usePointsDossier, useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import { lireFeuilles, telechargerBlob } from '../lib/fichiers'
 import { jourIso } from '../lib/format'
 import { ringsOfGeometry, toLambert93 } from '../lib/geo'
@@ -222,6 +223,8 @@ const lireNombre = (s: string) => {
   return s.trim() && Number.isFinite(n) && n > 0 ? n : null
 }
 
+/** No dossier points: one empty list, so that the data are not put together again for nothing. */
+const AUCUN_POINT: PointDossier[] = []
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
 // Single-hue ramps (light to dark) and diverging pairs around a grey midpoint.
@@ -281,6 +284,9 @@ export default function Modele3D() {
   const dossier = useDossier()
   const repertoire = dossier.etat === 'ouvert' ? dossier.dossier.repertoire : null
   const siteDossier = dossier.etat === 'ouvert' ? dossier.dossier.fiche.site : null
+  // The dossier's investigation points: coordinates and elevations the files do not give.
+  const etatPoints = usePointsDossier()
+  const pointsDossier = etatPoints.etat === 'pret' ? etatPoints.points : AUCUN_POINT
   // What the dossier's tools hold, read again on demand and when coming back to the tab
   // (the logs or the monitoring may have changed in another tab); kept when nothing changed on disk.
   const [demande, setDemande] = useState(0)
@@ -332,7 +338,7 @@ export default function Modele3D() {
     () => [...sourcesDossier.filter((s) => !exclues.includes(s.id)), ...(sourceExemple ? [sourceExemple] : []), ...fichiers],
     [sourcesDossier, exclues, sourceExemple, fichiers],
   )
-  const donnees = useMemo(() => (sources.length ? assembler(sources) : null), [sources])
+  const donnees = useMemo(() => (sources.length ? assembler(sources, pointsDossier) : null), [sources, pointsDossier])
   // The parcels of the dossier's site (Lambert 93); else those of a source (the example's).
   const parcellesSite = useMemo(
     () => (siteDossier?.emprise ? ringsOfGeometry(siteDossier.emprise).map((a) => a.map(([lon, lat]) => toLambert93(lat, lon) as [number, number])) : undefined),
@@ -888,7 +894,7 @@ export default function Modele3D() {
               <p className="st-note">
                 Ouvrez un dossier d’étude (bandeau « Dossier » en haut de page) : le modèle reprend directement le travail des autres outils — Logs de forage (lithologie,
                 équipement, PID, observations, résultats rattachés aux échantillons), Suivi temporel (toutes les campagnes, telles que regroupées et corrigées), Résultats labo
-                (sols, eaux et leurs fiches de prélèvement, gaz du sol) — et les parcelles du site.
+                (sols, eaux et leurs fiches de prélèvement, gaz du sol) — les points d’investigation (coordonnées et cotes) et les parcelles du site.
               </p>
             ) : sourcesDossier.length === 0 && !lectureDossier ? (
               <p className="st-note">Aucune donnée exploitable dans ce dossier pour l’instant : utilisez Logs de forage, Suivi temporel ou Résultats labo, ou déposez les fichiers ci-dessous.</p>
@@ -903,6 +909,14 @@ export default function Modele3D() {
                     <span className="st-note">{s.resume}</span>
                   </li>
                 ))}
+                {pointsDossier.length > 0 && (
+                  <li>
+                    <strong>Points d’investigation</strong>{' '}
+                    <span className="st-note">
+                      {pointsDossier.length} point(s) : coordonnées (Lambert 93) et cotes là où les logs et le suivi n’en donnent pas
+                    </span>
+                  </li>
+                )}
                 {siteDossier?.emprise && (
                   <li>
                     <strong>Parcelles du site</strong> <span className="st-note">{siteDossier.parcelles?.length ?? 1} parcelle(s) : la géologie et les volumes de terres y sont limités</span>
