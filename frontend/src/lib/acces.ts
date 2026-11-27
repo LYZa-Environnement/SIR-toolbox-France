@@ -11,7 +11,7 @@
  * check inline, with the same key and fingerprint.
  */
 
-export const EMPREINTE = '3f2e41698faf89521ef696f7084d49903c9a58fbed85a7816e3545d955e58811'
+export const EMPREINTE = '1bc3201a9f24a2fe48f634f90d406aaf6cbf5e36e292870ecba98d74b065ee1b'
 export const CLE_ACCES = 'sir-toolbox.acces'
 
 export function estDeverrouille(): boolean {
