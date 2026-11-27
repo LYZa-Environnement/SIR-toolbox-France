@@ -5,7 +5,7 @@
 <script>
 /* Mot de passe à l'entrée (voir src/lib/acces.ts) : sans accès, retour à l'accueil. */
 try {
-  if (localStorage.getItem('sir-toolbox.acces') !== '3f2e41698faf89521ef696f7084d49903c9a58fbed85a7816e3545d955e58811') throw 0
+  if (localStorage.getItem('sir-toolbox.acces') !== '1bc3201a9f24a2fe48f634f90d406aaf6cbf5e36e292870ecba98d74b065ee1b') throw 0
 } catch (e) {
   location.replace('./#/?retour=' + encodeURIComponent(location.pathname.split('/').pop()))
 }
