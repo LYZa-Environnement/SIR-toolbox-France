@@ -34,6 +34,16 @@ Level, Comments, Samples ; modèle vierge téléchargeable), avec en option les
 résultats d'analyses rattachés aux échantillons, contrôles de cohérence,
 impression PDF et export SVG.
 
+- Plusieurs classeurs de saisie (un par campagne, par équipe…) se
+  choisissent ou se déposent ensemble : leurs forages sont réunis. Un forage
+  présent dans plusieurs classeurs est complété onglet par onglet, chacun
+  repris du premier classeur (par nom de fichier) qui le renseigne ; un
+  onglet renseigné autrement dans un autre classeur est signalé dans les
+  contrôles de cohérence.
+- De même pour les résultats d'analyses (un rapport par envoi…) : les
+  paramètres sont réunis par nom et unité ; un échantillon présent dans
+  plusieurs fichiers garde les résultats de chacun, le premier fichier
+  primant pour un même paramètre (signalé si les valeurs diffèrent).
 - Chaque log tient sur une page, quelle que soit la profondeur (échelle
   verticale adaptée, colonne de résultats resserrée puis en tableau).
 - Les noms d'échantillons du laboratoire sont rapprochés de l'onglet
