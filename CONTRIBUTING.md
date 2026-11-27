@@ -6,11 +6,11 @@
 frontend/
   src/
     pages/         une page par outil React (chargée à la demande, voir App.tsx)
-    components/    composants partagés ; sous-dossiers par outil (nappe/, pfas/)
+    components/    composants partagés ; sous-dossiers par outil (nappe/, pfas/, modele3d/)
     lib/           calculs et lecture des données, sans React
       dossier/     dossiers d'étude : format, accès au disque, enregistrement des outils
       resultats/   lecture des fichiers du laboratoire, exports (Résultats labo)
-      nappe/ pfas/ rejets/ livrables/ suivi/   un dossier par outil
+      nappe/ pfas/ rejets/ livrables/ suivi/ modele3d/   un dossier par outil
       *.ts         clients des API publiques (Site Setting) et utilitaires communs
     themes/        rubriques du Site Setting (eau, air, sols, nature, risques)
     data/          référentiels livrés avec le site (valeurs guides, NF X31-620)

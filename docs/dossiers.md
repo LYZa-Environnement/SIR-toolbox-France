@@ -48,6 +48,7 @@ n'est envoyé à un serveur : le partage passe par la synchronisation OneDrive.
   suivi-temporel.json
   interpretation-pfas.json
   chromatogrammes.json
+  modele-3d.json          fichiers déposés dans Modèle 3D, coordonnées saisies, formations, schéma conceptuel, réglages
   conformite-rejets.json
   verification-livrables.json
   sources/                fichiers déposés dans les outils, copiés tels quels
@@ -56,6 +57,10 @@ n'est envoyé à un serveur : le partage passe par la synchronisation OneDrive.
 
 - **Un fichier par outil** : deux personnes sur deux outils différents ne se
   gênent jamais.
+- **Modèle 3D du site** relit les fichiers de Logs de forage, Suivi temporel
+  et Résultats labo (sans les modifier), les points d'investigation et les
+  parcelles du site pour les réunir dans une même vue ; il n'enregistre que
+  ce qui lui est propre.
 - **Le site** est saisi une fois, dans l'Assistant Site Setting, et repris
   par Réseaux (point de recherche), Création maillage (parcelles, quand le
   maillage est vide) et Données environnementales (carte centrée, emprise

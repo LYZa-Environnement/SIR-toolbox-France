@@ -1741,12 +1741,22 @@ function renderAll(){
     if (!state.include.has(k)) continue;
     const h = state.holes.get(k); const { land, pages } = buildPages(h);
     pages.forEach((svg, i) => {
-      const d = document.createElement('div'); d.className = 'page' + (land ? ' land' : ''); d.innerHTML = svg; box.appendChild(d);
+      const d = document.createElement('div'); d.className = 'page' + (land ? ' land' : ''); d.innerHTML = svg; if (i === 0) d.dataset.forage = k; box.appendChild(d);
       const cap = document.createElement('p'); cap.className = 'page-cap'; cap.textContent = `${k}${pages.length > 1 ? ` – page ${i+1}/${pages.length}` : ''}`; box.appendChild(cap);
       rendered.push({ name: `Log_${k}${pages.length > 1 ? '_p' + (i+1) : ''}.svg`, svg }); n++;
     });
   }
   $('#pageCount').textContent = `${n} page${n > 1 ? 's' : ''}`;
+  allerAuForage();
+}
+// « logs-forage.html#forage=PZ1 » (lien du Modèle 3D) : le log de ce forage, une fois affiché.
+let forageDemande = new URLSearchParams(location.hash.slice(1)).get('forage');
+function allerAuForage(){
+  if (!forageDemande) return;
+  const cible = [...document.querySelectorAll('#pages .page')].find(p => norm(p.dataset.forage) === norm(forageDemande));
+  if (!cible) return;
+  forageDemande = null;
+  setTimeout(() => cible.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
 }
 
 /* ============================================================

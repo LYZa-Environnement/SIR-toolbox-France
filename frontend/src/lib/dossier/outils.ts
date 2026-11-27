@@ -21,6 +21,7 @@ export const OUTILS_DOSSIER: Record<string, OutilDossier> = {
   'suivi-temporel': { titre: 'Suivi temporel', route: '/suivi-temporel' },
   'interpretation-pfas': { titre: 'Interprétation PFAS', route: '/interpretation-pfas' },
   chromatogrammes: { titre: 'Chromatogrammes hydrocarbures', route: '/chromatogrammes' },
+  'modele-3d': { titre: 'Modèle 3D du site', route: '/modele-3d' },
   'conformite-rejets': { titre: 'Conformité des rejets', route: '/conformite-rejets' },
   'verification-livrables': { titre: 'Vérification de livrables SSP', route: '/verification-livrables' },
 }
