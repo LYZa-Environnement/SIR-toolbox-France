@@ -26,7 +26,19 @@ onglet) :
   coordonnées et cotes des ouvrages, valeurs de comparaison saisies) ;
 - `resultats-labo.json` (Résultats labo) : une campagne sur sols (rattachée
   aux forages par le nom des échantillons) ou d'eaux souterraines, avec les
-  campagnes comparées.
+  campagnes comparées, et les fiches de prélèvement chargées dans
+  Conditions de la nappe.
+
+**Niveaux d'eau des fiches de prélèvement** : d'où qu'elles viennent
+(déposées ici, chargées dans Suivi temporel ou dans Conditions de la nappe),
+les fiches sont lues comme le fait Suivi temporel (`lib/nappe/fiches.ts`) :
+niveau statique initial sous le repère, cote du repère, cote du niveau d'eau
+si la fiche la donne, paramètres de fin de purge. Cote piézométrique = cote
+du repère − niveau statique ; sans cote du repère, cote du sol − niveau
+(approchée, signalée). Une fiche sans date lisible prend la date de la
+campagne de Résultats labo. Une fiche à moins d'un mois d'une campagne
+d'analyses s'y rattache ; les autres (fiches seules, tournée de niveaux)
+forment leurs propres étapes dans la frise, regroupées à 20 jours près.
 
 Chaque source se décoche. **Fichiers déposés** : le classeur de saisie des
 logs (lu comme le fait Logs de forage, `logs.ts`), les rapports du
@@ -108,7 +120,8 @@ aussi écrites sur les étiquettes, dans la fiche et dans les tableaux.
   ouvrages (niveau et concentration), noms, cadre et cotes ;
 - choix du composé (eaux) et du paramètre (sols), proposés d'après le
   nombre de dépassements ;
-- dates : une étape par campagne (et la foration), curseur, précédente /
+- dates : une étape par campagne, par tournée de niveaux sans analyses et
+  pour la foration, curseur, précédente /
   suivante, lecture automatique ; option pour ne montrer que les sols
   prélevés à la date affichée ou avant ;
 - coupes ouest–est, nord–sud et horizontale, exagération verticale
@@ -128,4 +141,5 @@ des autres outils restent dans leurs propres fichiers.
 `modele.test.ts` (interpolation, lithologie, lecture des logs, assemblage,
 modèle de l'exemple : géologie, nappe et écoulement, panache, enveloppe des
 sols), `dossier.test.ts` (fichiers des outils relus après un aller-retour
-par l'encodage du dossier, emprise des interpolations).
+par l'encodage du dossier, niveaux des fiches de prélèvement et tournées
+sans analyses, emprise des interpolations).

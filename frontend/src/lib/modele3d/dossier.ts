@@ -12,8 +12,10 @@ import { lireTexte } from '../dossier/acces.ts'
 import { lireEnveloppe, nomFichierOutil } from '../dossier/format.ts'
 import type { Lecture } from '../resultats/parse.ts'
 import type { Regime } from '../resultats/campagnes.ts'
+import type { FicheTerrain, ParamTerrain } from '../nappe/fiches.ts'
+import { lireDate } from '../suivi/dates.ts'
 import type { FichierLu } from '../suivi/import.ts'
-import { nouvelId, type CampagneSaisie, type Corrections, type Lot } from '../suivi/modele.ts'
+import { nouvelId, type CampagneSaisie, type Corrections, type Lot, type Releve } from '../suivi/modele.ts'
 import { depuisLogsForage } from './logs.ts'
 import type { Source } from './types.ts'
 
@@ -47,14 +49,35 @@ interface EtatResultats {
   fichier?: string
   infoPrincipale?: { date?: string; regime?: Regime }
   autres?: { lecture: Lecture; fichier: string; date: string; regime: Regime }[]
+  /** Conditions de la nappe: the groundwater sampling sheets read there. */
+  etatNappe?: { fiches?: FicheTerrain[]; fichiersFiches?: string[] } | null
+}
+
+/**
+ * Water levels of the groundwater sampling sheets, as Suivi temporel reads
+ * them (suivi/import.ts): static level below the measuring point, its
+ * elevation, the head when the sheet gives it, end-of-purge readings. A
+ * sheet without a readable date takes the campaign's date.
+ */
+export function relevesDesFiches(fiches: FicheTerrain[], dateCampagne: string, source: string): Releve[] {
+  const releves: Releve[] = []
+  for (const x of fiches) {
+    if (x.vide) continue
+    const date = lireDate(x.date) ?? dateCampagne
+    if (!date) continue
+    const terrain: Partial<Record<ParamTerrain, number>> = {}
+    for (const [k, v] of Object.entries(x.finale ?? {}) as [ParamTerrain, { valeur: number } | undefined][]) if (v) terrain[k] = v.valeur
+    releves.push({ ouvrage: x.ouvrage || x.onglet, date, profondeur: x.niveauStatique, charge: x.charge, terrain, repere: x.altitudeRepere, source })
+  }
+  return releves
 }
 
 /** Résultats labo's state (resultats-labo.json): soil results, or groundwater campaigns. */
 export function depuisResultatsLabo(donnees: unknown): Source | null {
   const d = donnees as EtatResultats | null
-  if (!d?.lecture || !d.matrice) return null
+  if (!d?.matrice || (!d.lecture && !d.etatNappe?.fiches?.length)) return null
   const nom = d.fichier || 'Résultats labo'
-  if (d.matrice === 'sol')
+  if (d.matrice === 'sol' && d.lecture)
     return {
       id: 'dossier:resultats-labo',
       origine: 'dossier',
@@ -68,20 +91,32 @@ export function depuisResultatsLabo(donnees: unknown): Source | null {
       avertissements: [],
     }
   if (d.matrice !== 'eau') return null
-  const campagnes = [{ lecture: d.lecture, fichier: nom, date: d.infoPrincipale?.date ?? '', regime: d.infoPrincipale?.regime ?? null }, ...(d.autres ?? [])]
+  const campagnes = d.lecture ? [{ lecture: d.lecture, fichier: nom, date: d.infoPrincipale?.date ?? '', regime: d.infoPrincipale?.regime ?? null }, ...(d.autres ?? [])] : []
   const lots: Lot[] = campagnes.map((c) => ({ id: nouvelId('l'), fichier: c.fichier, lecture: c.lecture, date: c.date, origineDate: c.date ? 'saisie' : '', libelle: '', regime: c.regime }))
   const sansDate = lots.filter((l) => !l.date).length
+  const fiches = d.etatNappe?.fiches ?? []
+  const releves = relevesDesFiches(fiches, d.infoPrincipale?.date ?? '', 'Fiches de prélèvement (Résultats labo)')
+  const fichesSansDate = fiches.filter((f) => !f.vide).length - releves.length
   return {
     id: 'dossier:resultats-labo',
     origine: 'dossier',
     outil: 'resultats-labo',
     nom: 'Résultats labo (eaux souterraines)',
-    resume: `${pluriel(lots.length, 'campagne')} · ${pluriel(d.lecture.points.length, 'échantillon')}`,
+    resume: [
+      lots.length ? pluriel(lots.length, 'campagne') : null,
+      d.lecture ? pluriel(d.lecture.points.length, 'échantillon') : null,
+      releves.length ? `${pluriel(releves.length, 'fiche')} de prélèvement (${releves.filter((r) => r.profondeur !== null || r.charge !== null).length} niveau(x) d’eau)` : null,
+    ]
+      .filter(Boolean)
+      .join(' · '),
     forages: [],
     parametresSol: [],
     sols: [],
-    eaux: { lots, campagnes: [], releves: [], ouvrages: [], corrections: null },
-    avertissements: sansDate ? ['date de campagne à saisir dans Résultats labo (une campagne sans date ne peut pas être placée dans le temps).'] : [],
+    eaux: { lots, campagnes: [], releves, ouvrages: [], corrections: null },
+    avertissements: [
+      ...(sansDate ? ['date de campagne à saisir dans Résultats labo (une campagne sans date ne peut pas être placée dans le temps).'] : []),
+      ...(fichesSansDate > 0 ? [`${pluriel(fichesSansDate, 'fiche')} de prélèvement sans date lisible ni date de campagne : niveaux non placés dans le temps.`] : []),
+    ],
   }
 }
 

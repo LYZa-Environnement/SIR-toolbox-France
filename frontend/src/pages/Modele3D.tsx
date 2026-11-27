@@ -17,14 +17,14 @@ import { chargerMnt, FONDS, urlFond, type FondSol } from '../lib/modele3d/ign'
 import type { Grille } from '../lib/modele3d/interpolation'
 import { CLASSES_LITHO } from '../lib/modele3d/lithologie'
 import { lireClasseurLogs } from '../lib/modele3d/logs'
-import { CLASSES_CONCENTRATION, construireModele, enveloppeSols, nappeCampagne, nappeForation, panache, pointsSol, type ClasseConcentration } from '../lib/modele3d/modele'
+import { CLASSES_CONCENTRATION, construireModele, enveloppeSols, nappeCampagne, nappeForation, nappeNiveaux, panache, pointsSol, relevesSansCampagne, type ClasseConcentration } from '../lib/modele3d/modele'
 import type { Source } from '../lib/modele3d/types'
 import { valeurGuideEn } from '../lib/resultats/guides'
 import { LectureImpossible } from '../lib/resultats/parse'
 import { reference } from '../lib/suivi/analyse'
 import { formatDate } from '../lib/suivi/dates'
 import { lireFichier } from '../lib/suivi/import'
-import type { Compose } from '../lib/suivi/modele'
+import type { Compose, Niveau } from '../lib/suivi/modele'
 
 interface Reglages {
   couches: Couches
@@ -213,7 +213,7 @@ export default function Modele3D() {
 
   // ---- Dates -------------------------------------------------------------------------------
   const etapes = useMemo(() => {
-    const liste: (Etape & { campagne: string | null; date: string })[] = []
+    const liste: (Etape & { campagne: string | null; date: string; niveaux?: Niveau[] })[] = []
     const forages = modele?.points.filter((p) => p.forage?.niveauEau != null) ?? []
     if (forages.length) {
       const dates = forages.map((p) => p.forage!.date).filter(Boolean).sort()
@@ -225,9 +225,20 @@ export default function Modele3D() {
         date: dates[dates.length - 1] ?? '',
       })
     }
+    const dates: (Etape & { campagne: string | null; date: string; niveaux?: Niveau[] })[] = []
     for (const c of base?.campagnes ?? [])
-      liste.push({ id: c.id, libelle: formatDate(c.date), detail: c.regime === 'HE' ? 'hautes eaux' : c.regime === 'BE' ? 'basses eaux' : '', campagne: c.id, date: c.date })
-    return liste
+      dates.push({ id: c.id, libelle: formatDate(c.date), detail: c.regime === 'HE' ? 'hautes eaux' : c.regime === 'BE' ? 'basses eaux' : '', campagne: c.id, date: c.date })
+    // Water levels of sampling sheets with no lab campaign within a month: rounds of their own.
+    for (const t of base ? relevesSansCampagne(base) : [])
+      dates.push({
+        id: t.id,
+        libelle: t.fin !== t.debut ? `${formatDate(t.debut)} – ${formatDate(t.fin)}` : formatDate(t.debut),
+        detail: `niveaux d’eau seuls (${pluriel(new Set(t.niveaux.map((n) => n.ouvrage)).size, 'ouvrage')}, sans analyses)`,
+        campagne: null,
+        date: t.debut,
+        niveaux: t.niveaux,
+      })
+    return [...liste, ...dates.sort((a, b) => a.date.localeCompare(b.date))]
   }, [modele, base])
   const indexEtape = reglages.etape === null ? etapes.length - 1 : Math.min(Math.max(0, reglages.etape), etapes.length - 1)
   const etape = etapes[indexEtape] ?? null
@@ -261,6 +272,7 @@ export default function Modele3D() {
   const nappe = useMemo(() => {
     if (!modele || !etape) return null
     if (etape.campagne && base) return nappeCampagne(modele, base, etape.campagne)
+    if (etape.niveaux) return nappeNiveaux(modele, etape.niveaux)
     return etape.id === 'foration' ? nappeForation(modele) : null
   }, [modele, base, etape])
   const pan = useMemo(() => (modele && base && compose && campagne ? panache(modele, base, compose.cle, campagne, !!compose.terrain) : null), [modele, base, compose, campagne])

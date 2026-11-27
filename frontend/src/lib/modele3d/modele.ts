@@ -27,7 +27,8 @@
  * Pure: the elevation model is fetched beforehand (ign.ts) and handed in.
  */
 
-import type { Base, Ouvrage, Resultat } from '../suivi/modele.ts'
+import { ECART_CAMPAGNE, type Base, type Niveau, type Ouvrage, type Resultat } from '../suivi/modele.ts'
+import { ecartJours } from '../suivi/dates.ts'
 import type { Donnees } from './assemblage.ts'
 import {
   distancePlusProche,
@@ -402,16 +403,53 @@ function chargeDe(m: Modele, p: PointModele, charge: number | null, profondeur: 
   return { charge: p.zSol - profondeur, origine: 'sol' }
 }
 
-/** The water table at a campaign of the monitoring. */
-export function nappeCampagne(m: Modele, base: Base, campagne: string): Nappe {
+/** The water table from levels (one per well: the first met). */
+export function nappeNiveaux(m: Modele, niveaux: Niveau[]): Nappe {
   const charges: Charge[] = []
   for (const p of m.points) {
-    const n = base.niveaux.find((x) => x.ouvrage === p.cle && x.campagne === campagne)
+    const n = niveaux.find((x) => x.ouvrage === p.cle && (x.charge !== null || x.profondeur !== null))
     if (!n) continue
     const c = chargeDe(m, p, n.charge, n.profondeur)
     if (c) charges.push({ cle: p.cle, nom: p.nom, x: p.x, y: p.y, ...c, profondeur: n.profondeur, date: n.date })
   }
   return nappeDe(m, charges)
+}
+
+/** The water table at a campaign of the monitoring. */
+export function nappeCampagne(m: Modele, base: Base, campagne: string): Nappe {
+  return nappeNiveaux(
+    m,
+    base.niveaux.filter((x) => x.campagne === campagne),
+  )
+}
+
+export interface Tournee {
+  id: string
+  debut: string
+  fin: string
+  niveaux: Niveau[]
+}
+
+/**
+ * Water levels attached to no campaign of analyses (sampling sheets alone,
+ * a gauging round, a sheet more than a month from any lab report), grouped
+ * as campaigns are: levels within 20 days of one another make one round.
+ * The latest level of each well in a round is kept.
+ */
+export function relevesSansCampagne(base: Base): Tournee[] {
+  const libres = base.niveaux.filter((n) => !n.campagne && n.date && (n.charge !== null || n.profondeur !== null)).sort((a, b) => a.date.localeCompare(b.date))
+  const tournees: Niveau[][] = []
+  for (const n of libres) {
+    const t = tournees[tournees.length - 1]
+    if (t && ecartJours(t[0].date, n.date) <= ECART_CAMPAGNE) t.push(n)
+    else tournees.push([n])
+  }
+  return tournees.map((t) => ({
+    id: `releve:${t[0].date}`,
+    debut: t[0].date,
+    fin: t[t.length - 1].date,
+    niveaux: [...t].reverse(),
+  }))
 }
 
 /** The water table from the levels met while drilling (Water Level sheet of the logs). */
