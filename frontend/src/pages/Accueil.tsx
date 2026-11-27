@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import ResumeDossier from '../components/dossier/ResumeDossier'
+import { quand, type Trace } from '../lib/dossier/format'
+import { OUTILS_DOSSIER } from '../lib/dossier/outils'
+import { useDossier } from '../lib/dossier/useSynchroDossier'
 
 interface Outil {
   titre: string
@@ -156,9 +160,17 @@ const CATEGORIES: Categorie[] = [
 const EN_LETTRES = ['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six', 'Sept', 'Huit', 'Neuf', 'Dix', 'Onze', 'Douze', 'Treize', 'Quatorze', 'Quinze', 'Seize']
 const enLettres = (n: number) => EN_LETTRES[n] ?? String(n)
 
-function Carte({ outil, numero }: { outil: Outil; numero: number }) {
+/** The tool's identifier in a dossier, found from its route or page. */
+const idDossier = (o: Outil) => Object.entries(OUTILS_DOSSIER).find(([, d]) => (o.route ? d.route === o.route : d.page === o.page))?.[0]
+
+function Carte({ outil, numero, trace }: { outil: Outil; numero: number; trace?: Trace }) {
   const contenu = (
     <>
+      {trace && (
+        <span className="outil__dossier" title={`Enregistré dans le dossier ouvert, ${quand(trace.le)} par ${trace.par}`}>
+          Dans le dossier · {quand(trace.le)}
+        </span>
+      )}
       <span className="outil__numero">{String(numero).padStart(2, '0')}</span>
       <span className="eyebrow" style={{ marginBottom: '0.4rem' }}>
         {outil.accroche}
@@ -200,6 +212,8 @@ function lireRepliees(): Set<string> {
 
 export default function Accueil() {
   const [repliees, setRepliees] = useState<Set<string>>(lireRepliees)
+  const dossier = useDossier()
+  const traces = dossier.etat === 'ouvert' ? dossier.dossier.fiche.outils : {}
   function changer(suite: Set<string>) {
     setRepliees(suite)
     try {
@@ -237,6 +251,8 @@ export default function Accueil() {
           {enLettres(total)} outils pour mener une étude de site, de la lecture des données publiques au terrain, à
           l'interprétation des résultats d'analyses et au contrôle de conformité.
         </p>
+
+        <ResumeDossier />
 
         <nav className="categories" aria-label="Catégories d'outils">
           {CATEGORIES.map((c, i) => (
@@ -300,7 +316,7 @@ export default function Accueil() {
               </header>
               <div id={`outils-${c.id}`} className="grid grid--2" style={{ gap: '1.25rem' }} hidden={!ouverte}>
                 {c.outils.map((outil, j) => (
-                  <Carte key={outil.titre} outil={outil} numero={debuts[i] + j + 1} />
+                  <Carte key={outil.titre} outil={outil} numero={debuts[i] + j + 1} trace={traces[idDossier(outil) ?? '']} />
                 ))}
               </div>
             </section>

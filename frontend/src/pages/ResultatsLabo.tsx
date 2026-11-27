@@ -25,7 +25,8 @@ import { acronyme } from '../lib/resultats/acronymes'
 import { resumer } from '../lib/resultats/resume'
 import { controleBlancs, controleDoublons, controlePercee } from '../lib/resultats/qualite'
 import { LIBELLES_ETAT } from '../lib/nappe/synthese'
-import { ConditionsNappe } from '../components/nappe/ConditionsNappe'
+import { ConditionsNappe, type EtatNappe } from '../components/nappe/ConditionsNappe'
+import { useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import type { Rapport as RapportNappe } from '../lib/nappe/export'
 import { ficheDe, libelleDates, retenir, type FicheGaz, type SourceDebit, type SourceDuree } from '../lib/resultats/fichesGaz'
 import { evaluerQualite, REFERENCES_QUALITE, syntheseQualite } from '../lib/resultats/qualiteGaz'
@@ -210,6 +211,8 @@ export default function ResultatsLabo() {
   function choisirMatrice(m: Matrice) {
     if (m === matrice) return
     setMatrice(m)
+    setEtatNappe(null)
+    setRestaurationNappe(null)
     setLecture(null)
     setFichier('')
     setFichiers([])
@@ -662,6 +665,95 @@ export default function ResultatsLabo() {
   const [fichesNappeACharger, setFichesNappeACharger] = useState<File[] | null>(null)
   const [fichiersNappe, setFichiersNappe] = useState<string[]>([])
   const [retraitNappe, setRetraitNappe] = useState(0)
+  /** What Conditions de la nappe holds (sheets read, entries), for the dossier. */
+  const [etatNappe, setEtatNappe] = useState<EtatNappe | null>(null)
+  const [restaurationNappe, setRestaurationNappe] = useState<{ n: number; etat: EtatNappe } | null>(null)
+
+  // ---- Kept in the open dossier: the files read and every entry made on them ----
+  const sauve = useMemo(
+    () => ({
+      matrice,
+      milieu,
+      lecture,
+      fichier,
+      fichiers,
+      notesFusion,
+      saisies,
+      exclus,
+      unite,
+      metaux,
+      repere,
+      sansReference,
+      surcharges,
+      parFamille,
+      qualifications,
+      seuilDoublon,
+      positions,
+      positionsDetectees,
+      facteurAmontAval,
+      infoPrincipale,
+      autres,
+      ouvragesManuels,
+      facteurEvolution,
+      titre,
+      sousTitre,
+      fichesGaz,
+      assocManuelle,
+      sourceDuree,
+      sourceDebit,
+      coucheApercu,
+      fichiersNappe,
+      etatNappe,
+    }),
+    [matrice, milieu, lecture, fichier, fichiers, notesFusion, saisies, exclus, unite, metaux, repere, sansReference, surcharges, parFamille, qualifications, seuilDoublon, positions, positionsDetectees, facteurAmontAval, infoPrincipale, autres, ouvragesManuels, facteurEvolution, titre, sousTitre, fichesGaz, assocManuelle, sourceDuree, sourceDebit, coucheApercu, fichiersNappe, etatNappe],
+  )
+  useSynchroDossier({
+    outil: 'resultats-labo',
+    version: 1,
+    etat: sauve,
+    estVide: matrice === null,
+    appliquer: (d) => {
+      setMatrice(d.matrice)
+      setMilieu(d.milieu)
+      setLecture(d.lecture)
+      setFichier(d.fichier)
+      setFichiers(d.fichiers)
+      setNotesFusion(d.notesFusion)
+      setSaisies(d.saisies)
+      setExclus(d.exclus)
+      setUnite(d.unite)
+      setMetaux(d.metaux)
+      setRepere(d.repere)
+      setSansReference(d.sansReference)
+      setSurcharges(d.surcharges)
+      setParFamille(d.parFamille)
+      setQualifications(d.qualifications)
+      setSeuilDoublon(d.seuilDoublon)
+      setPositions(d.positions)
+      setPositionsDetectees(d.positionsDetectees)
+      setFacteurAmontAval(d.facteurAmontAval)
+      setInfoPrincipale(d.infoPrincipale)
+      setAutres(d.autres)
+      setOuvragesManuels(d.ouvragesManuels)
+      setFacteurEvolution(d.facteurEvolution)
+      setTitre(d.titre)
+      setSousTitre(d.sousTitre)
+      setFichesGaz(d.fichesGaz)
+      setAssocManuelle(d.assocManuelle)
+      setSourceDuree(d.sourceDuree)
+      setSourceDebit(d.sourceDebit)
+      setCoucheApercu(d.coucheApercu)
+      setFichiersNappe(d.fichiersNappe)
+      setEtatNappe(d.etatNappe)
+      const nappe = d.etatNappe
+      setRestaurationNappe((r) => (nappe ? { n: (r?.n ?? 0) + 1, etat: nappe } : null))
+      setFichesNappeACharger(null)
+      setSelection({})
+      setAAppliquer(vide)
+      setErreur(null)
+      setErreurFiches(null)
+    },
+  })
 
   async function chargerFichesPrelevement(fs: File[]) {
     if (!fs.length || !matrice) return
@@ -1193,7 +1285,14 @@ export default function ResultatsLabo() {
                 onBasculer={() => basculer('nappe')}
                 badges={rapportNappe ? <span className="badge badge--faible">{rapportNappe.synthese.classement.length} ouvrages</span> : undefined}
               >
-                <ConditionsNappe labo={laboNappe} aCharger={fichesNappeACharger} retrait={retraitNappe} onRapport={setRapportNappe} />
+                <ConditionsNappe
+                  labo={laboNappe}
+                  aCharger={fichesNappeACharger}
+                  retrait={retraitNappe}
+                  onRapport={setRapportNappe}
+                  restauration={restaurationNappe}
+                  onEtat={setEtatNappe}
+                />
               </Volet>
             )}
 

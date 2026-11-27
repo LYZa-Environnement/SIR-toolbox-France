@@ -3135,6 +3135,7 @@ try {
 
   function sauvegarde(){
     if (enRestauration) return;
+    if (synchroDossier) synchroDossier.signaler();
     etatPrecedent = instantane();
     clearTimeout(minuteurSauve);
     minuteurSauve = setTimeout(function(){
@@ -3151,6 +3152,9 @@ try {
 
   function reprendSession(){
     var brut;
+    // Un dossier d'étude ouvert dans cet onglet fait foi : le maillage vient
+    // de lui (voir « Dossier d'étude » plus bas), pas de la session du navigateur.
+    try { if (sessionStorage.getItem('sir-toolbox.dossier')) return; } catch (err){ /* pas de dossier */ }
     try { brut = localStorage.getItem(CLE_SESSION); } catch (err){ return; }
     if (!brut) return;
     var etat;
@@ -3171,6 +3175,73 @@ try {
     restaure(etat, true);
   }
 
+  // ======================== Dossier d'étude ================================
+  // Avec un dossier ouvert (encart en bas à droite), le maillage y est
+  // enregistré à chaque modification et repris à l'ouverture ; un maillage
+  // vide part des parcelles du site du dossier. Voir src/dossier-autonome.ts.
+  var synchroDossier = null, siteRepris = null;
+
+  /** L'état enregistré dans le dossier : sans la vue de la carte, pour qu'un
+   *  simple déplacement n'écrive rien. */
+  function etatDossier(){
+    var e = etatBrut();
+    delete e.vue;
+    return e;
+  }
+  function maillageVide(){ return zones.length === 0 && parcelles.length === 0 && exclusions.length === 0; }
+
+  function cadreSurEtude(){
+    var couches = L.featureGroup();
+    parcelles.forEach(function(p){ L.geoJSON(p.geometry).addTo(couches); });
+    zones.forEach(function(z){ L.geoJSON(z.feature).addTo(couches); });
+    if (couches.getLayers().length) map.fitBounds(couches.getBounds(), { padding:[30,30] });
+  }
+
+  /** Les parcelles du site saisi dans l'Assistant Site Setting. */
+  function partirDuSite(){
+    var D = window.SirDossier;
+    if (!D || !synchroDossier || synchroDossier.etat() !== 'a-jour' || !maillageVide()) return;
+    var site = D.site(), id = D.idDossier();
+    if (!site || siteRepris === id) return;
+    siteRepris = id;
+    adresseRetenue = site.label || '';
+    champAdresse.value = adresseRetenue;
+    parcelles = (site.parcelles || []).map(function(p){
+      return { idu:p.idu, props:{ idu:p.idu, section:p.section, numero:p.numero, contenance:p.contenanceM2, code_insee:p.codeInsee, nom_com:p.commune }, geometry:p.geometry };
+    });
+    dessineParcelles();
+    if (parcelles.length) cadreSurEtude();
+    else map.setView([site.lat, site.lon], 18);
+    etatPrecedent = instantane();
+    // Repris du dossier, pas encore un travail : rien n'est écrit avant la première action.
+    synchroDossier.referencer();
+    statut(parcelles.length ? 'Parcelles du site du dossier reprises : ajoutez les zones à mailler.' : 'Adresse du site du dossier reprise.');
+  }
+
+  function brancherDossier(){
+    var D = window.SirDossier;
+    if (!D || synchroDossier) return;
+    D.bandeau();
+    synchroDossier = D.synchroniser({
+      outil: 'maillage',
+      version: 1,
+      lire: etatDossier,
+      estVide: maillageVide,
+      appliquer: function(d){
+        restaure(d, false);
+        cadreSurEtude();
+        pile = []; pileRefaire = [];
+        etatPrecedent = instantane();
+        majHistorique();
+        document.getElementById('rappel-session').style.display = 'none';
+      }
+    });
+    synchroDossier.surEtat(partirDuSite);
+    D.surChangement(partirDuSite);
+  }
+  if (window.SirDossier) brancherDossier();
+  else window.addEventListener('sir-dossier:pret', brancherDossier);
+
   // ======================== Divers ========================================
   document.getElementById('mobile-toggle').addEventListener('click', function(){
     var s = document.getElementById('sidebar');
@@ -3185,5 +3256,6 @@ try {
   etatPrecedent = instantane();
 })();
 </script>
+<script type="module" src="dossier.js"></script>
 </body>
 </html>

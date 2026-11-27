@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
+import BandeauDossier from './dossier/BandeauDossier'
 import Footer from './Footer'
 import Nav from './Nav'
 
@@ -20,6 +21,7 @@ export default function Layout() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Nav />
+      <BandeauDossier />
       <main style={{ flex: 1 }}>
         <Suspense fallback={<Chargement />}>
           <Outlet />

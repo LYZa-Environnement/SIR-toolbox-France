@@ -4,6 +4,7 @@ import L from 'leaflet'
 import '../leaflet-icon-fix'
 import AddressSearch from '../components/AddressSearch'
 import { BASE_LAYERS } from '../lib/basemap'
+import { useDossier, useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import { telechargerBlob } from '../lib/fichiers'
 import { jourIso } from '../lib/format'
 import {
@@ -213,7 +214,8 @@ function libelleEtat(e: EtatSource | undefined, limite: number): string {
 }
 
 export default function Reseaux() {
-  const [point, setPoint] = useState<Point | null>(null)
+  /** The point searched here; without one, the dossier's site (below). */
+  const [pointChoisi, setPoint] = useState<Point | null>(null)
   const [rayonM, setRayonM] = useState(RAYON_DEFAUT)
   // Answers are tagged with the search they belong to: an answer to a previous
   // search is never read as current, and a new search starts with nothing
@@ -224,6 +226,29 @@ export default function Reseaux() {
   const [deplacement, setDeplacement] = useState(false)
   const [essai, setEssai] = useState(0)
   const pointAbort = useRef<AbortController | null>(null)
+
+  // Kept in the open dossier: the point searched, the radius and the networks shown.
+  const sauve = useMemo(() => ({ point: pointChoisi, rayonM, visibles }), [pointChoisi, rayonM, visibles])
+  const synchro = useSynchroDossier({
+    outil: 'reseaux',
+    version: 1,
+    etat: sauve,
+    estVide: pointChoisi === null,
+    appliquer: (d) => {
+      setPoint(d.point)
+      setRayonM(d.rayonM)
+      setVisibles(new Set(d.visibles))
+    },
+  })
+  // With no point searched here, the dossier's site: nothing to save until the user acts.
+  const dossier = useDossier()
+  // Once the tool's file is read: the map is not drawn for the site, then redrawn for a saved point.
+  const fichierLu = synchro.statut.etat !== 'inactif' && synchro.statut.etat !== 'chargement'
+  const siteDossier = dossier.etat === 'ouvert' && fichierLu ? dossier.dossier.fiche.site : null
+  const point: Point | null = useMemo(
+    () => pointChoisi ?? (siteDossier ? { lat: siteDossier.lat, lon: siteDossier.lon, label: siteDossier.label, citycode: siteDossier.citycode, city: siteDossier.city } : null),
+    [pointChoisi, siteDossier],
+  )
 
   const emprise = useMemo(() => (point ? empriseAutour(point.lat, point.lon, rayonM) : null), [point, rayonM])
   const concernees = useMemo(() => (emprise ? sourcesConcernees(SOURCES, emprise) : []), [emprise])
@@ -290,7 +315,7 @@ export default function Reseaux() {
 
   async function deplacer(lat: number, lon: number) {
     setDeplacement(false)
-    setPoint((p) => ({ lat, lon, label: 'Point choisi sur la carte', citycode: p?.citycode ?? '', city: p?.city ?? '' }))
+    setPoint({ lat, lon, label: 'Point choisi sur la carte', citycode: point?.citycode ?? '', city: point?.city ?? '' })
     pointAbort.current?.abort()
     const controleur = new AbortController()
     pointAbort.current = controleur
