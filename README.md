@@ -22,7 +22,8 @@ dans `docs/`.
 | | [Données environnementales publiques](docs/pages-autonomes.md#données-environnementales-publiques) | Explorateur cartographique : ICPE, CASIAS, SIS, BSS, captages, photos aériennes historiques… |
 | | [Réseaux et concessionnaires](docs/reseaux.md) | Réseaux électriques, gaz, eau, assainissement, éclairage public, fibre et chaleur autour d'un point : distances, linéaires, exploitants à consulter (ne remplace pas la DT-DICT) |
 | | [Création maillage](docs/pages-autonomes.md#création-maillage) | Maillage d'investigation sur parcelles, exports terrain |
-| 2. Données de terrain | [Logs de forage](docs/pages-autonomes.md#logs-de-forage) | Logs de sondages et piézomètres au format ERM, résultats comparés aux valeurs guides |
+| 2. Données de terrain | [Localisation des points](docs/localisations.md) | Fichiers de localisation tels qu'ils arrivent (EQuIS, Field Maps, géomètre, GPS, SIG) : conversion Lambert 93 / CC / WGS 84, carte, doublons entre fichiers, exports GeoJSON, KML, GPX, Excel, EDD EQuIS |
+| | [Logs de forage](docs/pages-autonomes.md#logs-de-forage) | Logs de sondages et piézomètres au format ERM, résultats comparés aux valeurs guides |
 | 3. Résultats d'analyses et interprétation | [Résultats labo](docs/resultats-labo.md) | Lecture visuelle et mise en forme des résultats, fiches de prélèvement, [conditions de la nappe](docs/conditions-nappe.md), campagnes, export expert |
 | | [Suivi temporel](docs/suivi-temporel.md) | Chroniques de surveillance des eaux souterraines pour le bilan quadriennal : tendances, piézométrie, déchloration, pistes et grille du guide BRGM/INERIS 2022 |
 | | [Interprétation PFAS](docs/interpretation-pfas.md) | Somme des 20, profils, indicateurs, pistes de sources, références |
