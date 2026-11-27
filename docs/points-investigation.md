@@ -1,13 +1,31 @@
-# Localisation des points
+# Points d'investigation
 
-Page : `frontend/src/pages/Localisations.tsx` (route `/localisations`) —
-catégorie **2. Données de terrain**. Calculs : `frontend/src/lib/localisations/`.
+Page : `frontend/src/pages/Localisations.tsx` (route `/points`). Calculs :
+`frontend/src/lib/localisations/` ; points partagés avec les outils :
+`frontend/src/lib/dossier/points.ts`.
 
-Les fichiers de localisation des points d'investigation (sondages,
-piézomètres, piézairs, vapor pins, prélèvements d'air, ouvrages de
-traitement) sont déposés tels qu'ils arrivent ; les points sont convertis en
-Lambert 93 et en WGS 84, réunis sur une carte, les doublons entre fichiers
-repérés, puis exportés.
+Comme le site, les points d'investigation (sondages, piézomètres, piézairs,
+vapor pins, prélèvements d'air, ouvrages de traitement) appartiennent au
+**dossier d'étude** : ils se chargent une fois et les outils les reprennent
+par leur nom. On y accède depuis le résumé du dossier sur l'accueil (ligne
+« Points d'investigation », sous le site) ou depuis le bandeau Dossier.
+
+Les fichiers de localisation sont déposés tels qu'ils arrivent ; les points
+sont convertis en Lambert 93 et en WGS 84, réunis sur une carte, les doublons
+entre fichiers repérés, puis exportés. Sans dossier ouvert, la page reste
+utilisable (carte, conversions, exports), sans enregistrement.
+
+## Repris par les outils
+
+| Outil | Ce qui est repris |
+| --- | --- |
+| Réseaux et concessionnaires | Points sur la carte ; distance de chaque point au tracé le plus proche de chaque réseau, du plus exposé au moins exposé (« > 40 m » quand un objet plus proche peut se trouver hors de la zone chargée), export CSV ; centre des points comme point de recherche quand le dossier n'a pas de site. |
+| Suivi temporel | Coordonnées en Lambert 93 des ouvrages (plan des ouvrages, sens d'écoulement), seulement si aucun ouvrage n'a de coordonnées dans les fichiers (jamais deux systèmes mêlés) ; cote du repère en dernier recours (après la saisie, le tableau historique et les fiches de prélèvement). |
+| Logs de forage | Coordonnées (Lambert 93) et cote du terrain naturel des forages que l'onglet Collars ne donne pas, dans l'en-tête quand « Ajouter coordonnées » est coché ; lues à l'affichage, jamais recopiées dans les logs. |
+
+Les noms sont rapprochés comme dans Résultats labo : casse, accents,
+espaces, « _ », « - », « . » et zéros en tête ne comptent pas (« PZ01 » =
+« Pz1 », « HPC_S2 » = « HPC S2 »).
 
 ## Formats lus
 
@@ -74,10 +92,11 @@ blancs, prélèvements sur une unité de traitement).
 Avec un [dossier d'étude](dossiers.md) ouvert :
 
 - les fichiers déposés sont copiés dans `sources/` ;
-- `localisations.json` garde chaque fichier lu (coordonnées telles que dans
-  le fichier, système détecté ou choisi, fichier masqué ou non) et les
-  versions retenues entre fichiers ; les points en Lambert 93 et WGS 84 se
-  recalculent à l'ouverture ;
+- `points.json` garde chaque fichier lu (coordonnées telles que dans le
+  fichier, système détecté ou choisi, fichier masqué ou non), les versions
+  retenues entre fichiers et, sous `points`, la liste résolue lue par les
+  autres outils (un point par nom, longitude, latitude, Lambert 93, altitude,
+  cote du repère, profondeur) ;
 - le site du dossier (Site Setting) départage les systèmes ambigus du
   premier fichier déposé et son emprise est dessinée sur la carte ;
 - les exports sont copiés dans `exports/` — le GeoJSON s'ouvre directement

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { classeurEquis, codeEquis, modeleSimple, systemeLocal, versCsv, versGeoJson, versGpx, versKml } from './export'
 import { lireFichiers, lireKml } from './lecture'
 import { LAMBERT93, WGS84 } from './systemes'
-import { synthese } from './synthese'
+import { pointsPourDossier, synthese } from './synthese'
 import type { Couche, PointLu } from './types'
 
 const point = (nom: string, x: number | null, y: number | null, extra: Partial<PointLu> = {}): PointLu => ({ nom, typeOrigine: '', famille: 'autre', description: '', x, y, attributs: {}, ...extra })
@@ -140,5 +140,18 @@ describe('exports', () => {
     expect(t.horsFrance).toEqual([])
     expect(t.points[2]).toMatchObject({ lon: 2.345678, lat: 48.856789 })
     expect(couches[0].remarques.join(' ')).toMatch(/Plusieurs systèmes/)
+  })
+})
+
+describe('points shared with the dossier', () => {
+  it('keeps the placed points, rounded, with what the tools need', () => {
+    const s = synthese([
+      couche('edd', [point('Pz15', 1657921.2584, 8190994.5554, { famille: 'piezometre', typeOrigine: 'Monitoring well', repere: 44.65, profondeur: 12 }), point('AP68', null, null)]),
+      couche('faux', [point('LOIN', 100, 100)], { systeme: LAMBERT93 }),
+    ])
+    const p = pointsPourDossier(s)
+    expect(p.map((x) => x.nom)).toEqual(['Pz15'])
+    expect(p[0]).toMatchObject({ famille: 'piezometre', type: 'Monitoring well', repere: 44.65, profondeur: 12, source: 'edd.xlsx' })
+    expect(p[0].x93).toBe(Math.round(s.points[0].x93! * 1000) / 1000)
   })
 })

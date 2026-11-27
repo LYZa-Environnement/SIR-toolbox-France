@@ -4299,8 +4299,27 @@ svg .halo {
 }
 
 .loc__dossier {
-  max-width: 40rem;
-  margin: 0.8rem 0 0;
-  font-size: 0.86rem;
-  color: var(--color-muted);
+  max-width: 44rem;
+  margin: 1rem 0 0;
+  padding: 0.8rem 1rem;
+  border-left: 3px solid var(--color-mint);
+  background: var(--color-section);
+  font-size: 0.88rem;
+}
+
+.loc__dossier p {
+  margin: 0 0 0.4rem;
+}
+
+.loc__dossier ul {
+  margin: 0 0 0.5rem;
+  padding-left: 1.2rem;
+}
+
+.loc__dossier .btn {
+  margin-top: 0.2rem;
+}
+
+.dossier-resume__erreur {
+  color: var(--level-elevee);
 }

@@ -70,16 +70,8 @@ const CATEGORIES: Categorie[] = [
     id: 'terrain',
     titre: 'Données de terrain',
     etape: 'Investiguer',
-    description: 'Placer les points d’investigation et mettre en forme les observations des sondages et des piézomètres.',
+    description: 'Mettre en forme les observations des sondages et des piézomètres.',
     outils: [
-      {
-        titre: 'Localisation des points',
-        accroche: 'Sondages, piézomètres, gaz du sol',
-        description:
-          'Déposez les fichiers de localisation tels qu’ils arrivent (EQuIS, Field Maps, géomètre, GPS, SIG) : les points sont convertis, réunis sur une carte, les doublons entre fichiers repérés, puis exportés.',
-        points: ['Lambert 93, CC42 à CC50, WGS 84, UTM, Lambert II étendu', 'GeoJSON, KML, GPX, Excel, EDD EQuIS'],
-        route: '/localisations',
-      },
       {
         titre: 'Logs de forage',
         accroche: 'Sondages et piézomètres',

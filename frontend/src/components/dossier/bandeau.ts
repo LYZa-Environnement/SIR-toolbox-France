@@ -231,6 +231,7 @@ export function monterBandeau(conteneur: HTMLElement, options: { flottant?: bool
             'p',
             { class: 'sird-actions' },
             h('a', { class: 'sird-btn', href: `${import.meta.env.BASE_URL}#/` }, 'Voir le dossier (accueil)'),
+            h('a', { class: 'sird-btn', href: `${import.meta.env.BASE_URL}#/points` }, "Points d'investigation"),
             h(
               'button',
               {

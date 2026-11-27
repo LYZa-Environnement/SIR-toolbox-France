@@ -4,13 +4,15 @@ import L from 'leaflet'
 import '../leaflet-icon-fix'
 import ZoneDepot from '../components/ZoneDepot'
 import { BASE_LAYERS } from '../lib/basemap'
+import { ouvrirMenuDossier } from '../components/dossier/bandeau'
+import { FICHIER_POINTS, OUTIL_POINTS, publierPoints, type PointDossier } from '../lib/dossier/points'
 import { useDossier, useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import { telechargerBlob, telechargerClasseurExcel } from '../lib/fichiers'
 import { jourIso } from '../lib/format'
 import { classeurEquis, classeurExcel, modeleSimple, systemeLocal, versCsv, versGeoJson, versGpx, versKml } from '../lib/localisations/export'
 import { FAMILLE, FAMILLES, type DefFamille } from '../lib/localisations/familles'
 import { FORMATS_GEO, lireFichiers } from '../lib/localisations/lecture'
-import { centre, cleNom, synthese, systemeDe, type Conflit, type FormeSituee, type PointSitue, type Synthese } from '../lib/localisations/synthese'
+import { centre, cleNom, pointsPourDossier, synthese, systemeDe, type Conflit, type FormeSituee, type PointSitue, type Synthese } from '../lib/localisations/synthese'
 import { courtSysteme, LAMBERT93, nomSysteme, PAR_CODE, SYSTEMES, WGS84 } from '../lib/localisations/systemes'
 import type { Couche, Famille, Format } from '../lib/localisations/types'
 import type { Site } from '../types/site'
@@ -339,12 +341,17 @@ export default function Localisations() {
   const [etiquettes, setEtiquettes] = useState<boolean | null>(null)
   const [systemeEdd, setSystemeEdd] = useState<string | null>(null)
 
-  // Kept in the open dossier: the files as read (coordinates as in each file,
-  // systems chosen by the reader) and the versions chosen between files.
-  // The points are recomputed from them; display choices are not saved.
-  const sauve = useMemo(() => ({ couches, choix }), [couches, choix])
-  useSynchroDossier({
-    outil: 'localisations',
+  const s = useMemo(() => synthese(couches, choix), [couches, choix])
+  // The dossier's points, for the other tools: every point of the files shown, whatever kinds are hidden here.
+  const partages = useMemo(() => pointsPourDossier(s), [s])
+
+  // Kept in the open dossier (points.json): the files as read (coordinates as
+  // in each file, systems chosen by the reader), the versions chosen between
+  // files, and the resulting points that the other tools read. Display
+  // choices are not saved.
+  const sauve = useMemo(() => ({ couches, choix, points: partages }), [couches, choix, partages])
+  const synchro = useSynchroDossier<{ couches: Couche[]; choix: Record<string, string>; points: PointDossier[] }>({
+    outil: OUTIL_POINTS,
     version: 1,
     etat: sauve,
     estVide: couches.length === 0,
@@ -355,8 +362,12 @@ export default function Localisations() {
   })
   const dossier = useDossier()
   const site = dossier.etat === 'ouvert' ? dossier.dossier.fiche.site : null
+  // Once the screen shows the dossier's work (not while loading or asking which to keep), the other tools see it at once.
+  const statut = synchro.statut.etat
+  useEffect(() => {
+    if (dossier.etat === 'ouvert' && statut !== 'inactif' && statut !== 'chargement' && statut !== 'choix') publierPoints(partages)
+  }, [partages, dossier.etat, statut])
 
-  const s = useMemo(() => synthese(couches, choix), [couches, choix])
   // What is shown is what is exported: the kinds switched off are left out of both.
   const vue = useMemo<Synthese>(
     () => (masquees.size ? { ...s, points: s.points.filter((p) => !masquees.has(p.famille)), sansCoordonnees: s.sansCoordonnees.filter((p) => !masquees.has(p.famille)) } : s),
@@ -388,7 +399,7 @@ export default function Localisations() {
       else suite.add(f)
       return suite
     })
-  const nomFichier = (ext: string) => `localisations-${jourIso()}.${ext}`
+  const nomFichier = (ext: string) => `points-investigation-${jourIso()}.${ext}`
   const texte = (contenu: string, type: string, ext: string) => telechargerBlob(new Blob([contenu], { type }), nomFichier(ext))
   const rien = vue.points.length === 0
 
@@ -396,12 +407,12 @@ export default function Localisations() {
     <>
       <section className="section">
         <div className="container">
-          <p className="eyebrow">Localisation des points</p>
-          <h1 style={{ maxWidth: '24ch' }}>Les points d’investigation sur une carte</h1>
+          <p className="eyebrow">Dossier d’étude</p>
+          <h1 style={{ maxWidth: '24ch' }}>Les points d’investigation</h1>
           <p className="lede">
-            Déposez les fichiers de localisation tels qu’ils arrivent — classeur EQuIS, export ArcGIS Field Maps, tableau du géomètre, relevé GPS, couche SIG : les
-            points sont convertis en Lambert 93 et en WGS 84, réunis sur une carte, les doublons entre fichiers repérés, puis exportés pour le SIG, Google Earth, le
-            GPS de terrain ou EQuIS.
+            Comme le site, les points de l’étude — sondages, piézomètres, piézairs, vapor pins, prélèvements d’air — se chargent une fois pour le dossier : les outils
+            les reprennent ensuite par leur nom. Déposez les fichiers tels qu’ils arrivent (classeur EQuIS, export ArcGIS Field Maps, tableau du géomètre, relevé
+            GPS, couche SIG) : les points sont convertis en Lambert 93 et en WGS 84, réunis sur une carte et les doublons entre fichiers repérés.
           </p>
           <ZoneDepot
             titre="Déposez ici un ou plusieurs fichiers de localisation"
@@ -428,11 +439,39 @@ export default function Localisations() {
               </div>
             )}
           />
-          {dossier.etat === 'ouvert' && (
-            <p className="loc__dossier">
-              Dossier « {dossier.dossier.fiche.nom} » ouvert : les fichiers déposés sont copiés dans <code>sources/</code>, les points et les systèmes choisis
-              enregistrés dans <code>localisations.json</code>, les exports copiés dans <code>exports/</code>.
-            </p>
+          {dossier.etat === 'ouvert' ? (
+            <div className="loc__dossier">
+              <p>
+                <strong>Points du dossier « {dossier.dossier.fiche.nom} »</strong>, repris par :
+              </p>
+              <ul>
+                <li>
+                  <strong>Réseaux et concessionnaires</strong> : points sur la carte, réseau le plus proche de chacun ;
+                </li>
+                <li>
+                  <strong>Suivi temporel</strong> : coordonnées et cote du repère des ouvrages (plan des ouvrages, piézométrie) ;
+                </li>
+                <li>
+                  <strong>Logs de forage</strong> : coordonnées et cote du terrain naturel des sondages.
+                </li>
+              </ul>
+              <p>
+                Enregistrés dans <code>{FICHIER_POINTS}</code> ; les fichiers déposés sont copiés dans <code>sources/</code>, les exports dans <code>exports/</code>.
+              </p>
+            </div>
+          ) : (
+            dossier.etat !== 'demarrage' && (
+              <div className="loc__dossier">
+                <p>
+                  Sans dossier ouvert, les points restent sur cette page (carte, conversions, exports) mais ne sont ni enregistrés, ni repris par les autres outils.
+                </p>
+                {dossier.etat !== 'indisponible' && (
+                  <button type="button" className="btn btn--petit btn--ghost" onClick={ouvrirMenuDossier}>
+                    {dossier.etat === 'a-autoriser' ? `Reprendre « ${dossier.nom} »` : 'Ouvrir ou créer un dossier'}
+                  </button>
+                )}
+              </div>
+            )
           )}
           {erreurs.length > 0 && (
             <div className="alerte" role="alert" style={{ marginTop: '1rem', maxWidth: '40rem' }}>
@@ -465,7 +504,7 @@ export default function Localisations() {
                 <button type="button" className="btn btn--petit btn--ghost" disabled={rien} onClick={() => texte(versGeoJson(vue), 'application/geo+json', 'geojson')} title="QGIS, ArcGIS : longitude, latitude en WGS 84">
                   GeoJSON
                 </button>
-                <button type="button" className="btn btn--petit btn--ghost" disabled={rien} onClick={() => texte(versKml(vue, 'Localisation des points'), 'application/vnd.google-earth.kml+xml', 'kml')} title="Google Earth, Google My Maps">
+                <button type="button" className="btn btn--petit btn--ghost" disabled={rien} onClick={() => texte(versKml(vue, 'Points d’investigation'), 'application/vnd.google-earth.kml+xml', 'kml')} title="Google Earth, Google My Maps">
                   KML
                 </button>
                 <button type="button" className="btn btn--petit btn--ghost" disabled={rien} onClick={() => texte(versGpx(vue), 'application/gpx+xml', 'gpx')} title="GPS ou téléphone de terrain">

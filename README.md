@@ -22,8 +22,7 @@ dans `docs/`.
 | | [Données environnementales publiques](docs/pages-autonomes.md#données-environnementales-publiques) | Explorateur cartographique : ICPE, CASIAS, SIS, BSS, captages, photos aériennes historiques… |
 | | [Réseaux et concessionnaires](docs/reseaux.md) | Réseaux électriques, gaz, eau, assainissement, éclairage public, fibre et chaleur autour d'un point : distances, linéaires, exploitants à consulter (ne remplace pas la DT-DICT) |
 | | [Création maillage](docs/pages-autonomes.md#création-maillage) | Maillage d'investigation sur parcelles, exports terrain |
-| 2. Données de terrain | [Localisation des points](docs/localisations.md) | Fichiers de localisation tels qu'ils arrivent (EQuIS, Field Maps, géomètre, GPS, SIG) : conversion Lambert 93 / CC / WGS 84, carte, doublons entre fichiers, exports GeoJSON, KML, GPX, Excel, EDD EQuIS |
-| | [Logs de forage](docs/pages-autonomes.md#logs-de-forage) | Logs de sondages et piézomètres au format ERM, résultats comparés aux valeurs guides |
+| 2. Données de terrain | [Logs de forage](docs/pages-autonomes.md#logs-de-forage) | Logs de sondages et piézomètres au format ERM, résultats comparés aux valeurs guides |
 | 3. Résultats d'analyses et interprétation | [Résultats labo](docs/resultats-labo.md) | Lecture visuelle et mise en forme des résultats, fiches de prélèvement, [conditions de la nappe](docs/conditions-nappe.md), campagnes, export expert |
 | | [Suivi temporel](docs/suivi-temporel.md) | Chroniques de surveillance des eaux souterraines pour le bilan quadriennal : tendances, piézométrie, déchloration, pistes et grille du guide BRGM/INERIS 2022 |
 | | [Interprétation PFAS](docs/interpretation-pfas.md) | Somme des 20, profils, indicateurs, pistes de sources, références |
@@ -41,6 +40,13 @@ par outil), avec les fichiers déposés (`sources/`) et les exports
 dossier se rouvre plus tard, sur le même poste ou sur celui d'un collègue ;
 une version enregistrée entre-temps par quelqu'un d'autre n'est jamais
 écrasée sans le demander. Voir [docs/dossiers.md](docs/dossiers.md).
+
+Le **site** et les **[points d'investigation](docs/points-investigation.md)**
+(sondages, piézomètres, piézairs, vapor pins…) se saisissent une fois par
+[dossier d'étude](docs/dossiers.md) et sont repris par les outils. Les points
+se chargent depuis le résumé du dossier sur l'accueil ou le bandeau Dossier :
+EQuIS, Field Maps, tableau du géomètre, GPS, SIG, convertis en Lambert 93 et
+WGS 84.
 
 L'accès au site et aux pages autonomes est protégé par un mot de passe
 (`frontend/src/lib/acces.ts`, empreinte SHA-256) : une simple barrière, le

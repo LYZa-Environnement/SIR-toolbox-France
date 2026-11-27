@@ -15,7 +15,7 @@ export const OUTILS_DOSSIER: Record<string, OutilDossier> = {
   'donnees-environnementales': { titre: 'Données environnementales publiques', page: 'donnees-environnementales.html' },
   reseaux: { titre: 'Réseaux et concessionnaires', route: '/reseaux' },
   maillage: { titre: 'Création maillage', page: 'creation-maillage.html' },
-  localisations: { titre: 'Localisation des points', route: '/localisations' },
+  points: { titre: "Points d'investigation", route: '/points' },
   'logs-forage': { titre: 'Logs de forage', page: 'logs-forage.html' },
   'resultats-labo': { titre: 'Résultats labo', route: '/resultats-labo' },
   'suivi-temporel': { titre: 'Suivi temporel', route: '/suivi-temporel' },

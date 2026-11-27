@@ -27,7 +27,7 @@ export default function App() {
         <Route path="/interpretation-pfas" element={<InterpretationPfas />} />
         <Route path="/chromatogrammes" element={<Chromatogrammes />} />
         <Route path="/reseaux" element={<Reseaux />} />
-        <Route path="/localisations" element={<Localisations />} />
+        <Route path="/points" element={<Localisations />} />
         {/* Conditions de la nappe now lives in Résultats labo (groundwater). */}
         <Route path="/conditions-nappe" element={<Navigate to="/resultats-labo" replace />} />
         <Route path="/declaration-iota" element={<Navigate to="/verification-livrables" replace />} />

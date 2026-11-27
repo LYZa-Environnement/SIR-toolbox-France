@@ -10,10 +10,13 @@
  *                                             returns { signaler() } to call on each change,
  *                                             etat() and surEtat(f) to follow the loading
  *   SirDossier.site()                         the dossier's site, or null
+ *   SirDossier.points()                       the dossier's investigation points (promise, [] if none)
+ *   SirDossier.indexerPoints(points)          nom → point, names matched loosely ("PZ01" = "Pz1")
  *   SirDossier.surChangement(f)               f() when a dossier is opened, closed or changed
  */
 
 import { monterBandeau } from './components/dossier/bandeau'
+import { indexer, lireEtatPoints, rafraichirPoints, type PointDossier } from './lib/dossier/points'
 import { abonner, demarrer, dossierOuvert, siteDuDossier } from './lib/dossier/session'
 import { SynchroOutil, type OptionsSynchro } from './lib/dossier/synchro'
 import type { Site } from './types/site'
@@ -33,6 +36,8 @@ interface SirDossier {
   bandeau(): void
   synchroniser<T>(options: OptionsSynchro<T>): Synchro
   site(): Site | null
+  points(): Promise<PointDossier[]>
+  indexerPoints(points: PointDossier[]): (nom: string) => PointDossier | null
   /** Identifier of the open dossier, or null. */
   idDossier(): string | null
   surChangement(f: () => void): () => void
@@ -61,6 +66,13 @@ window.SirDossier = {
     return { signaler: () => s.signaler(), etat: () => s.lireEtat().statut.etat, surEtat: s.abonner, referencer: () => s.referencer() }
   },
   site: siteDuDossier,
+  async points() {
+    await demarrer()
+    await rafraichirPoints()
+    const e = lireEtatPoints()
+    return e.etat === 'pret' ? e.points : []
+  },
+  indexerPoints: indexer,
   idDossier: () => dossierOuvert()?.fiche.id ?? null,
   surChangement: abonner,
   demarrer,

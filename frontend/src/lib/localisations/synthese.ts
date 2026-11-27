@@ -5,6 +5,7 @@
  * points whose positions disagree between files set apart for the reader.
  */
 
+import type { PointDossier } from '../dossier/points'
 import { depuisWgs84, enFrance, LAMBERT93, versWgs84, WGS84 } from './systemes'
 import type { Couche, Famille, FormeLue, PointLu } from './types'
 
@@ -230,4 +231,30 @@ export function centre(s: Synthese): [number, number] | null {
   if (!s.emprise) return null
   const [[sud, ouest], [nord, est]] = s.emprise
   return [(ouest + est) / 2, (sud + nord) / 2]
+}
+
+/**
+ * The points shared with the other tools of the dossier: one per name,
+ * placed in France, with what they need to match and place them.
+ */
+export function pointsPourDossier(s: Synthese): PointDossier[] {
+  return s.points
+    .filter((p) => !p.horsFrance && p.lon !== null && p.x93 !== null)
+    .map((p) => {
+      const q: PointDossier = {
+        nom: p.nom,
+        famille: p.famille,
+        type: p.typeOrigine,
+        description: p.description,
+        lon: Math.round(p.lon! * 1e8) / 1e8,
+        lat: Math.round(p.lat! * 1e8) / 1e8,
+        x93: Math.round(p.x93! * 1000) / 1000,
+        y93: Math.round(p.y93! * 1000) / 1000,
+        source: [p.source, ...p.autresSources].join(' ; '),
+      }
+      if (p.altitude !== undefined) q.altitude = p.altitude
+      if (p.repere !== undefined) q.repere = p.repere
+      if (p.profondeur !== undefined) q.profondeur = p.profondeur
+      return q
+    })
 }

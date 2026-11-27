@@ -292,6 +292,8 @@ export interface Entrees {
   releves: Releve[]
   /** Wells described in a history table (position, coordinates). */
   ouvragesDecrits: { nom: string; position: Position | null; x: number | null; y: number | null; repere: number | null }[]
+  /** Investigation points of the open dossier: Lambert 93 and measuring point, matched by name. */
+  pointsDossier?: { nom: string; x93: number; y93: number; repere?: number }[]
   corrections: Corrections
 }
 
@@ -442,12 +444,13 @@ export function construireBase(e: Entrees): Base {
 
   // Elevation of each well's measuring point: entered, from a history table, else from the sampling sheets.
   const decrits = new Map(e.ouvragesDecrits.map((o) => [cleDe(o.nom), o]))
+  const duDossier = new Map((e.pointsDossier ?? []).map((p) => [cleDe(p.nom), p]))
   const reperesFiches = new Map<string, number>()
   for (const r of [...e.releves].sort((a, b) => a.date.localeCompare(b.date))) if (r.repere !== null && r.repere !== undefined) reperesFiches.set(cleDe(r.ouvrage), r.repere)
   const repereDe = (cle: string): number | null => {
     const info = e.corrections.ouvrages[cle]
     if (info?.repere !== undefined && info.repere !== null) return info.repere
-    return decrits.get(cle)?.repere ?? reperesFiches.get(cle) ?? null
+    return decrits.get(cle)?.repere ?? reperesFiches.get(cle) ?? duDossier.get(cle)?.repere ?? null
   }
 
   // Water levels and field readings. A depth to water becomes a head when the measuring point elevation is known.
@@ -512,6 +515,18 @@ export function construireBase(e: Entrees): Base {
       exclu: !!info.exclu,
     }
   })
+  // Coordinates of the dossier's points (Lambert 93) only when no well has its own: one system for all the wells.
+  if (duDossier.size && listeOuvrages.every((o) => o.x === null && o.y === null)) {
+    let reprises = 0
+    for (const o of listeOuvrages) {
+      const p = duDossier.get(o.cle)
+      if (!p || e.corrections.ouvrages[o.cle]?.x !== undefined) continue
+      o.x = p.x93
+      o.y = p.y93
+      reprises++
+    }
+    if (reprises) notes.push(`Coordonnées de ${reprises} ouvrage${reprises > 1 ? 's' : ''} reprises des points d'investigation du dossier (Lambert 93).`)
+  }
   listeOuvrages.sort((a, b) => ORDRE_POSITION[a.position] - ORDRE_POSITION[b.position] || a.nom.localeCompare(b.nom, 'fr', { numeric: true }))
 
   // Compounds: lab order (by family as first met), then the computed sums, then field readings.
