@@ -240,3 +240,76 @@ export function versCsv(lignes: LigneSynthese[], titreSource: (id: string) => st
   ])
   return [entete, ...corps].map((l) => l.map(cellule).join(';')).join('\r\n')
 }
+
+// ---- Investigation points of the dossier -------------------------------------------------------
+
+export interface DistancesPoint {
+  nom: string
+  /** Metres to the nearest loaded object of each network. */
+  parReseau: Partial<Record<Reseau, number>>
+  plusProche: { reseau: Reseau; element: string; distanceM: number } | null
+  /**
+   * Networks are fetched on the square around the search point: up to this
+   * distance from the investigation point everything is loaded; a network
+   * further away may have a nearer object outside the square.
+   */
+  fiableM: number
+}
+
+/**
+ * Distance from each investigation point to the networks loaded, nearest
+ * first. Points outside the search square are left out (`horsZone` counts
+ * them): the networks around them were not fetched.
+ */
+export function distancesAuxPoints(
+  points: { nom: string; lat: number; lon: number }[],
+  objets: ObjetReseau[],
+  centre: { lat: number; lon: number },
+  rayonM: number,
+): { lignes: DistancesPoint[]; horsZone: number } {
+  const versCentre = projecteur(centre.lat, centre.lon)
+  const uniques = [...new Map(objets.map((o) => [o.id, o])).values()]
+  const lignes: DistancesPoint[] = []
+  let horsZone = 0
+  for (const p of points) {
+    const [dx, dy] = versCentre([p.lon, p.lat])
+    const fiableM = rayonM - Math.max(Math.abs(dx), Math.abs(dy))
+    if (fiableM <= 0) {
+      horsZone++
+      continue
+    }
+    const proj = projecteur(p.lat, p.lon)
+    const parReseau: Partial<Record<Reseau, number>> = {}
+    let plusProche: DistancesPoint['plusProche'] = null
+    for (const o of uniques) {
+      const d = distanceAuSite(o.geometrie, proj)
+      if (!Number.isFinite(d)) continue
+      if (parReseau[o.reseau] === undefined || d < parReseau[o.reseau]!) parReseau[o.reseau] = d
+      if (!plusProche || d < plusProche.distanceM) plusProche = { reseau: o.reseau, element: o.element, distanceM: d }
+    }
+    lignes.push({ nom: p.nom, parReseau, plusProche, fiableM })
+  }
+  const cle = (l: DistancesPoint) => (l.plusProche && l.plusProche.distanceM <= l.fiableM ? l.plusProche.distanceM : Infinity)
+  lignes.sort((a, b) => cle(a) - cle(b) || a.nom.localeCompare(b.nom, 'fr', { numeric: true }))
+  return { lignes, horsZone }
+}
+
+/** "3 m", or "> 40 m" when a nearer object could lie outside the search square. */
+export function distanceFiable(d: number | undefined, fiableM: number): string {
+  if (d !== undefined && d <= fiableM) return d < 10 ? `${(Math.round(d * 10) / 10).toLocaleString('fr-FR')} m` : `${Math.round(d)} m`
+  return `> ${Math.floor(fiableM)} m`
+}
+
+export function versCsvPoints(lignes: DistancesPoint[], reseaux: Reseau[]): string {
+  const entete = ['Point', 'Réseau le plus proche', 'Élément', 'Distance (m)', ...reseaux.map((r) => `${CATEGORIE[r].libelle} (m)`), 'Distances sûres jusqu’à (m)']
+  const m = (d: number | undefined, l: DistancesPoint) => (d !== undefined && d <= l.fiableM ? (Math.round(d * 10) / 10).toString().replace('.', ',') : `> ${Math.floor(l.fiableM)}`)
+  const corps = lignes.map((l) => [
+    l.nom,
+    l.plusProche && l.plusProche.distanceM <= l.fiableM ? CATEGORIE[l.plusProche.reseau].libelle : '',
+    l.plusProche && l.plusProche.distanceM <= l.fiableM ? l.plusProche.element : '',
+    m(l.plusProche?.distanceM, l),
+    ...reseaux.map((r) => m(l.parReseau[r], l)),
+    Math.floor(l.fiableM),
+  ])
+  return [entete, ...corps].map((l) => l.map(cellule).join(';')).join('\r\n')
+}

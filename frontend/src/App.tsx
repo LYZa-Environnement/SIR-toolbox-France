@@ -13,6 +13,7 @@ const InterpretationPfas = lazy(() => import('./pages/InterpretationPfas'))
 const Chromatogrammes = lazy(() => import('./pages/Chromatogrammes'))
 const Reseaux = lazy(() => import('./pages/Reseaux'))
 const Modele3D = lazy(() => import('./pages/Modele3D'))
+const Localisations = lazy(() => import('./pages/Localisations'))
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/chromatogrammes" element={<Chromatogrammes />} />
         <Route path="/reseaux" element={<Reseaux />} />
         <Route path="/modele-3d" element={<Modele3D />} />
+        <Route path="/points" element={<Localisations />} />
         {/* Conditions de la nappe now lives in Résultats labo (groundwater). */}
         <Route path="/conditions-nappe" element={<Navigate to="/resultats-labo" replace />} />
         <Route path="/declaration-iota" element={<Navigate to="/verification-livrables" replace />} />

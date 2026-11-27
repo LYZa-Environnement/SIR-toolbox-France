@@ -4,7 +4,8 @@ import L from 'leaflet'
 import '../leaflet-icon-fix'
 import AddressSearch from '../components/AddressSearch'
 import { BASE_LAYERS } from '../lib/basemap'
-import { useDossier, useSynchroDossier } from '../lib/dossier/useSynchroDossier'
+import { centrePoints, type PointDossier } from '../lib/dossier/points'
+import { useDossier, usePointsDossier, useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import { telechargerBlob } from '../lib/fichiers'
 import { jourIso } from '../lib/format'
 import {
@@ -23,7 +24,20 @@ import {
   type ReseauChaleurProche,
 } from '../lib/reseaux/requetes'
 import { SOURCE, SOURCES } from '../lib/reseaux/sources'
-import { formatDistance, formatLongueur, gestionnaires, situer, synthese, versCsv, versGeoJson, type ObjetSitue } from '../lib/reseaux/synthese'
+import {
+  distanceFiable,
+  distancesAuxPoints,
+  formatDistance,
+  formatLongueur,
+  gestionnaires,
+  situer,
+  synthese,
+  versCsv,
+  versCsvPoints,
+  versGeoJson,
+  type DistancesPoint,
+  type ObjetSitue,
+} from '../lib/reseaux/synthese'
 import { CATEGORIE, CATEGORIES, type Reseau, type ResultatSource, type SourceReseau } from '../lib/reseaux/types'
 import type { Site } from '../types/site'
 
@@ -31,6 +45,27 @@ const RAYONS = [50, 100, 200, 300, 500]
 const RAYON_DEFAUT = 200
 
 const GUICHET_UNIQUE = 'https://www.reseaux-et-canalisations.ineris.fr/'
+
+/** No dossier points: one empty list, so that nothing is recomputed for nothing. */
+const AUCUN_POINT: PointDossier[] = []
+
+/** The dossier's investigation points, drawn under the search point (canvas: hundreds of points stay fluid). */
+function PointsInvestigation({ points }: { points: PointDossier[] }) {
+  const map = useMap()
+  useEffect(() => {
+    const groupe = L.layerGroup()
+    for (const p of points) {
+      const m = L.circleMarker([p.lat, p.lon], { radius: 4, color: '#ffffff', weight: 1.5, fillColor: '#0d2421', fillOpacity: 0.9 })
+      m.bindTooltip(p.nom.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!), { direction: 'top', offset: [0, -4] })
+      groupe.addLayer(m)
+    }
+    groupe.addTo(map)
+    return () => {
+      groupe.remove()
+    }
+  }, [map, points])
+  return null
+}
 
 /** Answer of one source; a source with no answer yet for the current search is loading. */
 type EtatSource = { etat: 'ok'; resultat: ResultatSource } | { etat: 'erreur'; message: string }
@@ -150,6 +185,7 @@ function Carte({
   visibles,
   deplacement,
   onPoint,
+  investigation,
 }: {
   point: Point
   rayonM: number
@@ -157,6 +193,7 @@ function Carte({
   visibles: Set<Reseau>
   deplacement: boolean
   onPoint: (lat: number, lon: number) => void
+  investigation: PointDossier[]
 }) {
   const [baseId, setBaseId] = useState(BASE_LAYERS[0].id)
   const base = BASE_LAYERS.find((b) => b.id === baseId) ?? BASE_LAYERS[0]
@@ -171,6 +208,7 @@ function Carte({
           {parReseau.map(({ id, objets: liste }) =>
             visibles.has(id) && liste.length > 0 ? <CoucheReseau key={`${id}-${liste.length}-${liste[0]?.id}`} objets={liste} /> : null,
           )}
+          {investigation.length > 0 && <PointsInvestigation points={investigation} />}
           <CircleMarker center={[point.lat, point.lon]} radius={7} pathOptions={{ color: '#ffffff', weight: 3, fillColor: '#0d2421', fillOpacity: 1 }}>
             <Tooltip direction="top" offset={[0, -6]}>
               {point.label}
@@ -188,6 +226,72 @@ function Carte({
         ))}
       </div>
     </div>
+  )
+}
+
+const LIMITE_LIGNES = 60
+
+/** Nearest network of each investigation point of the dossier. */
+function DistancesPoints({ distances, total, enCours, onCsv }: { distances: { lignes: DistancesPoint[]; horsZone: number }; total: number; enCours: number; onCsv: (csv: string) => void }) {
+  const [tout, setTout] = useState(false)
+  const { lignes, horsZone } = distances
+  const reseaux = CATEGORIES.map((c) => c.id).filter((r) => lignes.some((l) => l.parReseau[r] !== undefined))
+  const affichees = tout ? lignes : lignes.slice(0, LIMITE_LIGNES)
+  return (
+    <>
+      <h2 className="reseaux__titre">Points d’investigation du dossier</h2>
+      <p className="reseaux__aide" style={{ maxWidth: '52rem' }}>
+        Distance de chaque point au tracé le plus proche de chaque réseau publié, du point le plus exposé au moins exposé. Les réseaux sont chargés sur le carré
+        qui contient le cercle : « &gt; 40 m » signifie que rien n’est publié à moins de 40 m dans ce carré, un objet plus proche pouvant se trouver au-delà.
+        {horsZone > 0 && ` ${horsZone} point${horsZone > 1 ? 's' : ''} sur ${total} hors de la zone chargée : élargir le rayon ou déplacer le point de recherche.`}
+        {enCours > 0 && ' Les sources répondent encore : les distances s’affinent.'}
+      </p>
+      {lignes.length > 0 && (
+        <>
+          <div className="tableau-defile">
+            <table className="tableau reseaux__tableau">
+              <thead>
+                <tr>
+                  <th>Point</th>
+                  <th>Réseau le plus proche</th>
+                  {reseaux.map((r) => (
+                    <th key={r}>
+                      <span className="reseaux__trait" style={{ background: CATEGORIE[r].couleur }} aria-hidden="true" /> {CATEGORIE[r].libelle}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {affichees.map((l) => {
+                  const proche = l.plusProche && l.plusProche.distanceM <= l.fiableM ? l.plusProche : null
+                  return (
+                    <tr key={l.nom}>
+                      <th>{l.nom}</th>
+                      <td className="reseaux__texte">{proche ? `${CATEGORIE[proche.reseau].libelle} (${proche.element}) à ${distanceFiable(proche.distanceM, l.fiableM)}` : `rien à moins de ${Math.floor(l.fiableM)} m`}</td>
+                      {reseaux.map((r) => (
+                        <td key={r} style={{ whiteSpace: 'nowrap', fontWeight: proche?.reseau === r ? 700 : undefined }}>
+                          {distanceFiable(l.parReseau[r], l.fiableM)}
+                        </td>
+                      ))}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="reseaux__actions" style={{ marginTop: '0.6rem' }}>
+            {lignes.length > affichees.length && (
+              <button type="button" className="btn btn--petit btn--ghost" onClick={() => setTout(true)}>
+                Afficher les {lignes.length} points
+              </button>
+            )}
+            <button type="button" className="btn btn--petit btn--ghost" onClick={() => onCsv(versCsvPoints(lignes, reseaux))}>
+              Distances des points (CSV)
+            </button>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -245,9 +349,19 @@ export default function Reseaux() {
   // Once the tool's file is read: the map is not drawn for the site, then redrawn for a saved point.
   const fichierLu = synchro.statut.etat !== 'inactif' && synchro.statut.etat !== 'chargement'
   const siteDossier = dossier.etat === 'ouvert' && fichierLu ? dossier.dossier.fiche.site : null
+  // The dossier's investigation points: on the map, with their nearest network; their centre when the dossier has no site.
+  const etatPoints = usePointsDossier()
+  const pointsDossier = dossier.etat === 'ouvert' && etatPoints.etat === 'pret' ? etatPoints.points : AUCUN_POINT
+  const centreDesPoints = useMemo(() => (fichierLu ? centrePoints(pointsDossier) : null), [fichierLu, pointsDossier])
   const point: Point | null = useMemo(
-    () => pointChoisi ?? (siteDossier ? { lat: siteDossier.lat, lon: siteDossier.lon, label: siteDossier.label, citycode: siteDossier.citycode, city: siteDossier.city } : null),
-    [pointChoisi, siteDossier],
+    () =>
+      pointChoisi ??
+      (siteDossier
+        ? { lat: siteDossier.lat, lon: siteDossier.lon, label: siteDossier.label, citycode: siteDossier.citycode, city: siteDossier.city }
+        : centreDesPoints
+          ? { ...centreDesPoints, label: 'Centre des points d’investigation du dossier', citycode: '', city: '' }
+          : null),
+    [pointChoisi, siteDossier, centreDesPoints],
   )
 
   const emprise = useMemo(() => (point ? empriseAutour(point.lat, point.lon, rayonM) : null), [point, rayonM])
@@ -298,11 +412,9 @@ export default function Reseaux() {
   const fibre = commune ? (ctx.fibre ?? CHARGEMENT) : sansCommune
   const chaleur = ctx.chaleur ?? CHARGEMENT
 
-  const objets = useMemo(() => {
-    if (!point) return []
-    const tous = Object.values(etats).flatMap((e) => (e.etat === 'ok' ? e.resultat.objets : []))
-    return situer(tous, point.lat, point.lon, rayonM)
-  }, [etats, point, rayonM])
+  const tousObjets = useMemo(() => Object.values(etats).flatMap((e) => (e.etat === 'ok' ? e.resultat.objets : [])), [etats])
+  const objets = useMemo(() => (point ? situer(tousObjets, point.lat, point.lon, rayonM) : []), [tousObjets, point, rayonM])
+  const distances = useMemo(() => (point && pointsDossier.length ? distancesAuxPoints(pointsDossier, tousObjets, point, rayonM) : null), [point, pointsDossier, tousObjets, rayonM])
   const lignes = useMemo(() => synthese(objets), [objets])
   const listeGestionnaires = useMemo(() => gestionnaires(objets), [objets])
   const enCours = concernees.filter((s) => !etats[s.id]).length
@@ -410,7 +522,7 @@ export default function Reseaux() {
             </div>
 
             <div className="reseaux__grille">
-              <Carte point={point} rayonM={rayonM} objets={objets} visibles={visibles} deplacement={deplacement} onPoint={deplacer} />
+              <Carte point={point} rayonM={rayonM} objets={objets} visibles={visibles} deplacement={deplacement} onPoint={deplacer} investigation={pointsDossier} />
 
               <aside className="reseaux__legende" aria-label="Réseaux affichés">
                 <p className="reseaux__legende-titre">
@@ -479,6 +591,15 @@ export default function Reseaux() {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {distances && (
+              <DistancesPoints
+                distances={distances}
+                total={pointsDossier.length}
+                enCours={enCours}
+                onCsv={(csv) => telechargerBlob(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }), nomFichier('points.csv'))}
+              />
             )}
 
             <div className="grid grid--2" style={{ gap: '1.25rem', marginTop: '2rem' }}>

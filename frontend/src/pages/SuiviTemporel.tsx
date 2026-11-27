@@ -14,7 +14,11 @@ import { Explorateur } from '../components/suivi/Explorateur'
 import { OPTIONS_VUE, type OptionsVue, type Selection } from '../lib/suivi/ui'
 import { AmontAval, Degradation, Faits, GrilleGuide, Indicateurs, Methode, Piezometrie, Pistes, Plan, Qualite } from '../components/suivi/Panneaux'
 import { FichesOuvrages, LegendeClasses, MatriceTendances, TableauTendances } from '../components/suivi/Tendances'
-import { useSynchroDossier } from '../lib/dossier/useSynchroDossier'
+import type { PointDossier } from '../lib/dossier/points'
+import { usePointsDossier, useSynchroDossier } from '../lib/dossier/useSynchroDossier'
+
+/** No dossier points: one empty list, so that the base is not rebuilt for nothing. */
+const AUCUN_POINT: PointDossier[] = []
 
 const LIBELLES_TYPE: Record<FichierLu['type'], string> = { labo: 'Rapport de laboratoire', historique: 'Tableau historique', fiches: 'Fiches de prélèvement' }
 
@@ -77,9 +81,12 @@ export default function SuiviTemporel() {
   const fichesChargees = fichiers.some((f) => f.type === 'fiches')
   const releves = useMemo(() => fichiers.flatMap((f) => f.releves), [fichiers])
   const ouvragesDecrits = useMemo(() => fichiers.flatMap((f) => f.ouvrages), [fichiers])
+  // The open dossier's investigation points: coordinates and measuring points the files do not give.
+  const etatPoints = usePointsDossier()
+  const pointsDossier = etatPoints.etat === 'pret' ? etatPoints.points : AUCUN_POINT
   const base = useMemo(
-    () => (lots.length ? construireBase({ lots, campagnes, releves, ouvragesDecrits, corrections }) : null),
-    [lots, campagnes, releves, ouvragesDecrits, corrections],
+    () => (lots.length ? construireBase({ lots, campagnes, releves, ouvragesDecrits, corrections, pointsDossier }) : null),
+    [lots, campagnes, releves, ouvragesDecrits, corrections, pointsDossier],
   )
 
   /** Regimes as the base reads them (from the water levels when they were not given). */
