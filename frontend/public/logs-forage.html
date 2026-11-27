@@ -385,6 +385,8 @@ const state = {
   include: new Set(),
   opt: { orient:'auto', depth:'auto', coords:false, company:'', logo:null }
 };
+/** Enregistrement dans le dossier d'étude ouvert (voir « Dossier d'étude » en fin de script). */
+let synchroDossier = null;
 
 function loadSheets(sheets, fileName){
   const holes = new Map();
@@ -1593,6 +1595,8 @@ let renderTimer = null;
 function renderAllSoon(){ clearTimeout(renderTimer); renderTimer = setTimeout(renderAll, 250); }
 const rendered = [];
 function renderAll(){
+  // Each change ends here: the open dossier is saved a moment later.
+  if (synchroDossier) synchroDossier.signaler();
   const has = state.holes.size > 0;
   ['#step2','#step3','#step4','#step5'].forEach(s => $(s).classList.toggle('off', !has));
   $('#toolbar').hidden = !has; $('#welcome').hidden = has;
@@ -1718,9 +1722,43 @@ $('#btnTemplate').addEventListener('click', () => {
   S('Lists', [['LITHOLOGY','WELL CONSTRUCTION'], ...Array.from({length:Math.max(keys.length, items.length)}, (_,i) => [keys[i] ?? null, items[i] ?? null])]);
   XLSX.writeFile(wb, 'Modele_saisie_logs.xlsx');
 });
+/* ============================================================
+   Dossier d'étude
+   ============================================================ */
+// Avec un dossier ouvert (encart en bas à droite), le classeur lu, les
+// résultats rattachés et les options y sont enregistrés à chaque
+// modification, et repris à l'ouverture. Voir src/dossier-autonome.ts.
+const etatDossier = () => ({
+  holes: state.holes, listLitho: state.listLitho, fileName: state.fileName, lab: state.lab, sel: state.sel,
+  hideLQ: state.hideLQ, thrSource: state.thrSource, labMap: state.labMap, vgOn: state.vgOn, vgMetaux: state.vgMetaux,
+  include: state.include, opt: state.opt
+});
+function appliquerDossier(d){
+  Object.assign(state, {
+    holes: d.holes, listLitho: d.listLitho, fileName: d.fileName, lab: d.lab, sel: d.sel, hideLQ: d.hideLQ, thrSource: d.thrSource,
+    labMap: d.labMap, vgOn: d.vgOn, vgMetaux: d.vgMetaux, include: d.include, opt: { ...state.opt, ...d.opt }
+  });
+  $('#hideLQ').checked = state.hideLQ; $('#thrSource').value = state.thrSource;
+  $('#vgOn').checked = state.vgOn; $('#vgOpts').hidden = !state.vgOn; $('#vgMetaux').value = state.vgMetaux;
+  $('#optOrient').value = state.opt.orient; $('#optDepth').value = state.opt.depth;
+  $('#optCoords').checked = state.opt.coords; $('#optCompany').value = state.opt.company;
+  $('#logsOk').hidden = !state.holes.size;
+  $('#logsOk').textContent = state.holes.size ? `${state.fileName} : ${state.holes.size} forage(s), repris du dossier.` : '';
+  renderLabPanel(); validate(); renderAll();
+}
+function brancherDossier(){
+  const D = window.SirDossier;
+  if (!D || synchroDossier) return;
+  D.bandeau();
+  synchroDossier = D.synchroniser({ outil:'logs-forage', version:1, lire:etatDossier, appliquer:appliquerDossier, estVide:() => !state.holes.size && !state.lab });
+}
+if (window.SirDossier) brancherDossier();
+else window.addEventListener('sir-dossier:pret', brancherDossier);
+
 // Point d'entrée pour tests ou intégration (sheets = {nom: tableau de lignes})
 window.LogTool = { loadSheets, loadLab, state, renderAll, tokens, attachLab, selParams };
 renderAll();
 </script>
+<script type="module" src="dossier.js"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@ import { Explorateur } from '../components/suivi/Explorateur'
 import { OPTIONS_VUE, type OptionsVue, type Selection } from '../lib/suivi/ui'
 import { AmontAval, Degradation, Faits, GrilleGuide, Indicateurs, Methode, Piezometrie, Pistes, Plan, Qualite } from '../components/suivi/Panneaux'
 import { FichesOuvrages, LegendeClasses, MatriceTendances, TableauTendances } from '../components/suivi/Tendances'
+import { useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 
 const LIBELLES_TYPE: Record<FichierLu['type'], string> = { labo: 'Rapport de laboratoire', historique: 'Tableau historique', fiches: 'Fiches de prélèvement' }
 
@@ -45,6 +46,32 @@ export default function SuiviTemporel() {
   const [titre, setTitre] = useState('')
   const [export_, setExport] = useState<string | null>(null)
   const [erreurExport, setErreurExport] = useState<string | null>(null)
+
+  // Kept in the open dossier: the files read and every choice made on them.
+  const sauve = useMemo(
+    () => ({ fichiers, campagnes, corrections, reglages, periode, titre, selection, options, filtreFamille, voirSommes, voirNonQuantifies }),
+    [fichiers, campagnes, corrections, reglages, periode, titre, selection, options, filtreFamille, voirSommes, voirNonQuantifies],
+  )
+  useSynchroDossier({
+    outil: 'suivi-temporel',
+    version: 1,
+    etat: sauve,
+    estVide: fichiers.length === 0,
+    appliquer: (d) => {
+      setFichiers(d.fichiers)
+      setCampagnes(d.campagnes)
+      setCorrections(d.corrections)
+      setReglages({ ...REGLAGES_DEFAUT, ...d.reglages })
+      setPeriode(d.periode)
+      setTitre(d.titre)
+      setSelection(d.selection)
+      setOptions({ ...OPTIONS_VUE, ...d.options })
+      setFiltreFamille(d.filtreFamille)
+      setVoirSommes(d.voirSommes)
+      setVoirNonQuantifies(d.voirNonQuantifies)
+      setErreurs([])
+    },
+  })
 
   const lots = useMemo(() => fichiers.flatMap((f) => f.lots), [fichiers])
   const fichesChargees = fichiers.some((f) => f.type === 'fiches')

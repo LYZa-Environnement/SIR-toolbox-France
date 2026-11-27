@@ -5,6 +5,8 @@ import RoseDesVents from '../components/RoseDesVents'
 import SelecteurParcelles from '../components/SelecteurParcelles'
 import ThemeSection from '../components/ThemeSection'
 import { formatSurface, libelleParcelle } from '../lib/cadastre'
+import { enregistrerSite, tracerOutil } from '../lib/dossier/session'
+import { useDossier } from '../lib/dossier/useSynchroDossier'
 import { RUBRIQUES } from '../themes'
 import type { Site } from '../types/site'
 
@@ -51,15 +53,52 @@ export default function SiteSetting() {
     }
   }, [site])
 
-  const handleSelect = useCallback((selected: Site) => {
-    setSite({ ...selected, adresseLat: selected.lat, adresseLon: selected.lon })
-    setEtape('parcelles')
+  // The site of the open dossier is the one shown: on opening the dossier,
+  // and when a colleague changes it. Adjusted during render, once per change.
+  const dossier = useDossier()
+  const siteDossier = dossier.etat === 'ouvert' ? dossier.dossier.fiche.site : null
+  const cleDossier = dossier.etat === 'ouvert' ? `${dossier.dossier.fiche.id}:${JSON.stringify(siteDossier)}` : null
+  const [cleSuivie, setCleSuivie] = useState<string | null>(null)
+  if (cleDossier !== cleSuivie) {
+    setCleSuivie(cleDossier)
+    if (siteDossier && JSON.stringify(siteDossier) !== JSON.stringify(site)) {
+      setSite(siteDossier)
+      setEtape('lecture')
+    }
+  }
+
+  // A site chosen here becomes the dossier's site, taken up by the other tools.
+  const garderDansLeDossier = useCallback((s: Site) => {
+    void enregistrerSite(s)
+      .then((f) => f && tracerOutil('site-setting'))
+      .catch(() => undefined)
   }, [])
 
-  const handleValider = useCallback((valide: Site) => {
-    setSite(valide)
-    setEtape('lecture')
-  }, [])
+  // A dossier opened with no site yet takes the one already on screen.
+  useEffect(() => {
+    if (cleDossier && !siteDossier && site && etape === 'lecture') garderDansLeDossier(site)
+    // Only when another dossier is opened or its site changes, not on each change of the screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleDossier])
+
+  const handleSelect = useCallback(
+    (selected: Site) => {
+      const s = { ...selected, adresseLat: selected.lat, adresseLon: selected.lon }
+      setSite(s)
+      setEtape('parcelles')
+      garderDansLeDossier(s)
+    },
+    [garderDansLeDossier],
+  )
+
+  const handleValider = useCallback(
+    (valide: Site) => {
+      setSite(valide)
+      setEtape('lecture')
+      garderDansLeDossier(valide)
+    },
+    [garderDansLeDossier],
+  )
 
   const handleAnnuler = useCallback(() => {
     setSite(null)

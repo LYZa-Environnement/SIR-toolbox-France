@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import { fusionnerLectures } from '../lib/resultats/fusion'
 import { LectureImpossible, lireClasseur, lireGrille, type Lecture } from '../lib/resultats/parse'
 import { LIBELLES_TYPE } from '../lib/resultats/qualite'
@@ -66,6 +67,21 @@ export default function InterpretationPfas({ exemple: auDemarrage = false, impre
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
   const ajout = useRef<HTMLInputElement>(null)
+
+  // Kept in the open dossier: the results read, the matrix and the sample shown.
+  const sauve = useMemo(() => ({ fichiers, matrice, choisi }), [fichiers, matrice, choisi])
+  useSynchroDossier({
+    outil: 'interpretation-pfas',
+    version: 1,
+    etat: sauve,
+    estVide: fichiers.every((f) => f.nom === 'Exemple fictif'),
+    appliquer: (d) => {
+      setFichiers(d.fichiers)
+      setMatrice(d.matrice)
+      setChoisi(d.choisi)
+      setErreur(null)
+    },
+  })
 
   const fusion = useMemo(() => {
     if (!fichiers.length) return null

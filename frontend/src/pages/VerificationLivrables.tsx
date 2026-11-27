@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import { GROUPE_MARQUE, nonConforme, portee, preparer, verifier, type Decision, type Portee, type Resultat, type Statut } from '../lib/livrables/controles'
 import { lireDocument, type Document } from '../lib/livrables/extraction'
 import { lireFaits } from '../lib/livrables/faits'
@@ -93,6 +94,27 @@ export default function VerificationLivrables() {
   const referentiel = (typeId && PAR_ID.get(typeId)) || null
   /** General requirements of the standard added to the checklist. */
   const [avecComplements, setAvecComplements] = useState(true)
+
+  // Kept in the open dossier: the deliverable's text, the checklist and the reviewer's decisions.
+  const sauve = useMemo(
+    () => ({ typeId, docs, texteColle, decisions, commentaires, avecComplements }),
+    [typeId, docs, texteColle, decisions, commentaires, avecComplements],
+  )
+  useSynchroDossier({
+    outil: 'verification-livrables',
+    version: 1,
+    etat: sauve,
+    estVide: typeId === null && docs.length === 0 && !texteColle.trim(),
+    appliquer: (d) => {
+      setTypeId(d.typeId)
+      setDocs(d.docs)
+      setTexteColle(d.texteColle)
+      setDecisions(d.decisions)
+      setCommentaires(d.commentaires)
+      setAvecComplements(d.avecComplements)
+      setErreur(null)
+    },
+  })
   const complements = useMemo(() => (referentiel?.complements ?? []).map((id) => PAR_ID.get(id)).filter((r) => !!r), [referentiel])
   const points: Point[] = useMemo(() => {
     if (!referentiel) return []

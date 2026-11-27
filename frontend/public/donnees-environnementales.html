@@ -2676,10 +2676,39 @@ try {
     });
   });
 
+  // ---- Dossier d'étude ----
+  // Avec un dossier ouvert (encart en bas à droite), la carte part du site du
+  // dossier, dont l'emprise est dessinée. Rien n'est enregistré : la page
+  // explore des données publiques. Voir src/dossier-autonome.ts.
+  var siteAffiche = null, empriseSite = null;
+  function afficherSiteDuDossier(){
+    var D = window.SirDossier, site = D && D.site();
+    var cle = site ? D.idDossier() + JSON.stringify([site.lat, site.lon]) : null;
+    if (!site || cle === siteAffiche) return;
+    siteAffiche = cle;
+    if (empriseSite){ map.removeLayer(empriseSite); empriseSite = null; }
+    if (site.emprise){
+      empriseSite = L.geoJSON(site.emprise, { style:{ color:'#c34a35', weight:2.5, dashArray:'6,4', fillOpacity:0.05 }, interactive:false }).addTo(map);
+      map.fitBounds(empriseSite.getBounds(), { padding:[40,40], maxZoom:17 });
+    } else map.setView([site.lat, site.lon], 16);
+    addrInput.value = site.label || '';
+    if (site.citycode) loadEauPotable(site.citycode, site.city);
+  }
+  function brancherDossier(){
+    var D = window.SirDossier;
+    if (!D) return;
+    D.bandeau();
+    D.surChangement(afficherSiteDuDossier);
+    D.demarrer().then(afficherSiteDuDossier);
+  }
+  if (window.SirDossier) brancherDossier();
+  else window.addEventListener('sir-dossier:pret', brancherDossier);
+
   // Initial scan on load
   renderLayerOrderPanel();
   setTimeout(runScan, 400);
 })();
 </script>
+<script type="module" src="dossier.js"></script>
 </body>
 </html>
