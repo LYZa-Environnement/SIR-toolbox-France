@@ -17,7 +17,7 @@ interface Outil {
 
 /** Tools grouped by stage of a site study; each group has its own colour (`.categorie--<id>`). */
 interface Categorie {
-  id: 'contexte' | 'terrain' | 'labo' | 'conformite'
+  id: 'contexte' | 'terrain' | 'labo' | 'synthese' | 'conformite'
   titre: string
   /** Stage of the study, shown as a short label. */
   etape: string
@@ -119,6 +119,22 @@ const CATEGORIES: Categorie[] = [
           'Déposez le rapport du laboratoire ou une capture du chromatogramme C10–C40 : le tracé est numérisé et lu — produit probable, origine pétrolière ou végétale, stade de biodégradation, âge approché du déversement, comparaison entre échantillons.',
         points: ['Démarche du rapport BRGM RP-64174-FR', 'HAP et BTEX du laboratoire, étalons C10/C40, n-C17/pristane'],
         route: '/chromatogrammes',
+      },
+    ],
+  },
+  {
+    id: 'synthese',
+    titre: 'Synthèse et modèle conceptuel',
+    etape: 'Synthétiser',
+    description: 'Réunir les logs, la géologie, les eaux souterraines et les résultats du dossier dans une même vue, pour lire le site comme un tout.',
+    outils: [
+      {
+        titre: 'Modèle 3D du site',
+        accroche: 'Vue d’ensemble en 3D',
+        description:
+          'Forages et piézomètres à leur place, modèle géologique interpolé entre les logs, nappe et sens d’écoulement à chaque campagne, panache d’un composé, sols au-dessus d’un seuil : on choisit ce qu’on affiche, on coupe et on parcourt les dates.',
+        points: ['Reprend Logs de forage, Suivi temporel et Résultats labo du dossier', 'Relief IGN, photo aérienne, carte géologique BRGM'],
+        route: '/modele-3d',
       },
     ],
   },
