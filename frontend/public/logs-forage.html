@@ -48,6 +48,8 @@ section.step.off{opacity:.5;pointer-events:none}
 .drop strong{color:var(--accent)}
 .drop input{display:none}
 .file-ok{font-size:12.5px;margin-top:8px;color:var(--accent)}
+.file-ok ul,.summary ul{margin:4px 0 0;padding-left:18px}
+.file-ok .bad{color:var(--warn)}
 button,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:7px 12px;border-radius:6px;cursor:pointer}
 button.primary{background:var(--mint);color:var(--mint-ink);border-color:var(--mint);font-weight:700}
 button.primary:hover{background:#00e0a7;border-color:#00e0a7}
@@ -81,6 +83,7 @@ details.match .rows{max-height:320px;overflow:auto;border-top:1px solid var(--li
 .mrow{display:grid;gap:4px;padding:6px 9px;border-bottom:1px solid var(--line);font-size:12px}
 .mrow:last-child{border-bottom:0}
 .mrow .why{color:var(--muted);font-size:11px}
+.mrow .src{color:var(--muted);font-size:11px}
 .mrow .tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .mrow .tag.approx{color:var(--warn)} .mrow .tag.none{color:var(--err)} .mrow .tag.manual{color:var(--accent)}
 .mrow select{font-size:12px;padding:3px 5px}
@@ -123,16 +126,16 @@ details.match .rows{max-height:320px;overflow:auto;border-top:1px solid var(--li
 
   <section class="step" id="step1">
     <h2><span class="n">1</span>Données de forage</h2>
-    <p class="hint">Classeur Excel de saisie (onglets Collars, Log Info, Lithology, Well Construction, PID, Water Level, Comments, Samples).</p>
-    <label class="drop" id="dropLogs"><input type="file" id="fileLogs" accept=".xlsx,.xlsm,.xls"><strong>Choisir le classeur</strong> ou le déposer ici</label>
+    <p class="hint">Classeur Excel de saisie (onglets Collars, Log Info, Lithology, Well Construction, PID, Water Level, Comments, Samples). Plusieurs classeurs (un par campagne, par équipe…) peuvent être choisis ensemble : leurs forages sont réunis.</p>
+    <label class="drop" id="dropLogs"><input type="file" id="fileLogs" accept=".xlsx,.xlsm,.xls" multiple><strong>Choisir un ou plusieurs classeurs</strong> ou les déposer ici</label>
     <div class="file-ok" id="logsOk" hidden></div>
     <p class="hint" style="margin-top:10px"><button class="linkbtn" id="btnTemplate" type="button">Télécharger le modèle de saisie vierge</button></p>
   </section>
 
   <section class="step off" id="step2">
     <h2><span class="n">2</span>Résultats d'analyses <span class="lvl" style="font-weight:400;color:var(--muted);font-size:12px">facultatif</span></h2>
-    <p class="hint">Fichier du laboratoire ou tableau de résultats. Les échantillons sont rattachés aux forages par leur nom, même écrit autrement que dans l'onglet Samples (« API17-1-SO-0.5-1.0 » pour « API17-1-SO-0,5-1 », « PZ01 » pour « PZ1 »), puis par leur profondeur.</p>
-    <label class="drop" id="dropLab"><input type="file" id="fileLab" accept=".xlsx,.xlsm,.xls,.csv"><strong>Joindre les résultats</strong> ou les déposer ici</label>
+    <p class="hint">Fichiers du laboratoire ou tableau de résultats, un ou plusieurs à la fois (un rapport par envoi, par exemple). Les échantillons sont rattachés aux forages par leur nom, même écrit autrement que dans l'onglet Samples (« API17-1-SO-0.5-1.0 » pour « API17-1-SO-0,5-1 », « PZ01 » pour « PZ1 »), puis par leur profondeur.</p>
+    <label class="drop" id="dropLab"><input type="file" id="fileLab" accept=".xlsx,.xlsm,.xls,.csv" multiple><strong>Joindre les résultats</strong> ou les déposer ici</label>
     <div id="labPanel" hidden>
       <div class="summary" id="labSummary"></div>
       <details class="match" id="matchBox" hidden><summary id="matchSum"></summary><div class="rows" id="matchRows"></div></details>
@@ -379,7 +382,7 @@ function itemKey(v){
 }
 
 const state = {
-  holes: new Map(), listLitho: null, fileName:'', warnings:[],
+  holes: new Map(), listLitho: null, fileName:'', logFiles:[], warnings:[],
   lab: null, sel: [], hideLQ:false, thrSource:'',
   labMap: {},            // choix manuels : nom au laboratoire → « forage\u0001échantillon » ou '' (non rattaché)
   vg: null, vgOn:false, vgMetaux:'sur site',   // valeurs guides ERM (public/data/valeurs-guides.json)
@@ -389,7 +392,8 @@ const state = {
 /** Enregistrement dans le dossier d'étude ouvert (voir « Dossier d'étude » en fin de script). */
 let synchroDossier = null;
 
-function loadSheets(sheets, fileName){
+/** The boreholes of one workbook, and the keywords of its Lists tab. */
+function readHoles(sheets){
   const holes = new Map();
   const H = id => { const k = str(id); if (!k) return null;
     if (!holes.has(k)) holes.set(k, {id:k, project:'', client:'', location:'', collar:{}, info:{}, construction:[], pid:[], water:[], litho:[], comments:[], samples:[]});
@@ -438,19 +442,79 @@ function loadSheets(sheets, fileName){
       analysed: yesNo(t.get(r,'analysed')) }); }
 
   const lists = findSheet(sheets, ['Lists','Listes']);
-  state.listLitho = null;
+  let listLitho = null;
   if (lists){ const t2 = table(lists); const i = t2 ? t2.idx('lithology') : -1;
-    const col = i >= 0 ? i : 0; state.listLitho = new Set(t2 ? t2.data.map(r => up(r[col])).filter(Boolean) : []); }
+    const col = i >= 0 ? i : 0; listLitho = new Set(t2 ? t2.data.map(r => up(r[col])).filter(Boolean) : []); }
+  return { holes, listLitho };
+}
 
+/* Several workbooks (one per campaign, per team…) are read side by side. A
+   borehole found in more than one is put together tab by tab, each tab taken
+   from the first workbook (by file name) that fills it in for that borehole;
+   the same tab filled in otherwise in a later workbook is left out, and the
+   checks say so. */
+const RUBRIQUES = [
+  ['projet','Project Settings'], ['collar','Collars'], ['info','Log Info'], ['litho','Lithology'], ['construction','Well Construction'],
+  ['pid','PID'], ['water','Water Level'], ['comments','Comments'], ['samples','Samples']
+];
+const rubrique = (h, k) => k === 'projet' ? { project:h.project, client:h.client, location:h.location } : h[k];
+const renseignee = v => Array.isArray(v) ? v.length > 0 : Object.values(v || {}).some(x => x != null && x !== '');
+function mergeHoles(parts){
+  const holes = new Map(), origin = new Map(); let listLitho = null;
+  for (const { name, holes:hs, listLitho:ll } of parts){
+    if (ll){ listLitho ??= new Set(); for (const k of ll) listLitho.add(k); }
+    for (const [id, b] of hs){
+      const a = holes.get(id);
+      if (!a){ holes.set(id, b); origin.set(b, Object.fromEntries(RUBRIQUES.map(([k]) => [k, name]))); continue; }
+      const from = origin.get(a);
+      for (const [k, tab] of RUBRIQUES){
+        const va = rubrique(a, k), vb = rubrique(b, k);
+        if (!renseignee(vb)) continue;
+        if (!renseignee(va)){ if (k === 'projet') Object.assign(a, vb); else a[k] = vb; from[k] = name; }
+        else if (JSON.stringify(va) !== JSON.stringify(vb)) (a.conflicts ??= []).push({ tab, kept:from[k], left:name });
+      }
+    }
+  }
+  return { holes, listLitho };
+}
+
+/** Loads one or more workbooks, [{ name, sheets }]; `skipped`: files not read
+ *  ({ name, why }), listed beside the others. */
+function loadLogFiles(files, skipped = []){
+  const parts = [], left = [...skipped];
+  for (const f of files){
+    const r = readHoles(f.sheets);
+    if (r.holes.size) parts.push({ name:f.name, ...r });
+    else left.push({ name:f.name, why:'Aucun forage trouvé : vérifiez la colonne Hole ID des onglets.' });
+  }
+  if (!parts.length) throw new Error(motifs(left));
+  const { holes, listLitho } = mergeHoles(parts);
   for (const h of holes.values()){
     for (const k of ['litho','construction','pid','comments','samples']) h[k].sort((a,b) => (a.from ?? 0) - (b.from ?? 0));
     h.depth = h.info.depth ?? h.collar.to ?? Math.max(0, ...h.litho.map(l => l.to ?? 0), ...h.construction.map(c => c.to ?? 0));
   }
-  state.holes = holes; state.fileName = fileName;
+  state.holes = holes; state.listLitho = listLitho;
+  state.logFiles = parts.map(p => ({ name:p.name, n:p.holes.size })); state.fileName = state.logFiles.map(f => f.name).join(', ');
   state.include = new Set(holes.keys());
+  renderLogFiles(left);
   majCoordsDossier();
   if (state.lab){ attachLab(); renderLabPanel(); }
   validate(); renderAll();
+}
+function loadSheets(sheets, fileName){ loadLogFiles([{ name:fileName, sheets }]); }
+/** Why no file was read: the reason itself for one file, one line per file otherwise. */
+function motifs(left){ return left.length === 1 ? left[0].why : left.map(x => `• ${x.name} : ${x.why}`).join('\n'); }
+/** The workbooks read under the drop zone, and those left out. */
+function renderLogFiles(left = [], reprise = false){
+  const el = $('#logsOk'), n = state.holes.size;
+  el.hidden = !n;
+  if (!n){ el.innerHTML = ''; return; }
+  const files = state.logFiles?.length ? state.logFiles : [{ name:state.fileName, n }];
+  const lu = reprise ? 'repris du dossier' : 'lu(s)';
+  el.innerHTML = (files.length > 1
+    ? `${files.length} classeurs : ${n} forage(s) ${lu}.<ul>${files.map(f => `<li>${esc(f.name)} : ${f.n} forage(s)</li>`).join('')}</ul>`
+    : `${esc(files[0].name)} : ${n} forage(s) ${lu}.`)
+    + (left.length ? `<ul>${left.map(x => `<li class="bad">${esc(x.name)} non lu : ${esc(x.why)}</li>`).join('')}</ul>` : '');
 }
 
 /* ============================================================
@@ -461,6 +525,7 @@ function validate(){
   const eps = 0.005;
   for (const h of state.holes.values()){
     if (!h.info || !Object.keys(h.info).length) add(h.id,'info','Absent de l\'onglet Log Info : en-tête du log incomplet.');
+    for (const c of h.conflicts || []) add(h.id,'warn',`Onglet ${c.tab} renseigné différemment dans ${c.kept} et ${c.left} : celui de ${c.kept} est retenu.`);
     if (h.info.depth != null && h.collar.to != null && Math.abs(h.info.depth - h.collar.to) > eps)
       add(h.id,'warn',`Profondeur différente entre Log Info (${fmtM(h.info.depth)} m) et Collars (${fmtM(h.collar.to)} m).`);
     const D = h.depth;
@@ -513,8 +578,8 @@ function validate(){
     for (const s of h.samples) if (D && s.to > D + eps) add(h.id,'warn',`Échantillon ${s.id} sous le fond du forage.`);
     const kept = h.samples.filter(s => sampleStatus(s) === false);
     if (kept.length) add(h.id,'info',`${kept.length} échantillon(s) prélevé(s) non analysé(s) : ${kept.map(s => s.id).join(', ')}.`);
-    for (const s of h.samples) if (s.analysed === true && state.lab && s.labIdx == null) add(h.id,'warn',`Échantillon ${s.id} indiqué analysé, mais absent du fichier de résultats.`);
-    for (const s of h.samples) if (s.analysed === false && s.labIdx != null) add(h.id,'warn',`Échantillon ${s.id} indiqué non analysé, mais présent dans le fichier de résultats.`);
+    for (const s of h.samples) if (s.analysed === true && state.lab && s.labIdx == null) add(h.id,'warn',`Échantillon ${s.id} indiqué analysé, mais absent des résultats d'analyses.`);
+    for (const s of h.samples) if (s.analysed === false && s.labIdx != null) add(h.id,'warn',`Échantillon ${s.id} indiqué non analysé, mais présent dans les résultats d'analyses.`);
   }
   if (state.lab){
     const L = state.lab.samples;
@@ -525,6 +590,12 @@ function validate(){
     for (const s of L.filter(s => s.match?.how === 'lab')){
       const h = state.holes.get(s.hole);
       if (h && h.samples.some(x => x.fromSheet)) W.push({hole:s.hole, lvl:'info', msg:`Échantillon « ${s.rawId} » absent de l'onglet Samples : placé sur le log d'après son nom.`});
+    }
+    for (const s of L.filter(s => s.files?.length > 1)){
+      const dans = `${s.files.slice(0, -1).join(', ')} et ${s.files[s.files.length - 1]}`;
+      W.push({hole:s.hole || 'Analyses', lvl:s.diff ? 'warn' : 'info', msg:s.diff
+        ? `Échantillon « ${s.rawId} » présent dans ${dans}, avec ${s.diff} résultat(s) différent(s) pour un même paramètre : ceux de ${s.files[0]} sont reportés.`
+        : `Échantillon « ${s.rawId} » présent dans ${dans} : résultats regroupés.`});
     }
   }
   state.warnings = W;
@@ -607,7 +678,8 @@ const ELUAT = /[ée]luat|lixiv/i;
 // Header cells beside the samples that are not samples.
 const NOT_SAMPLE = /^(unit|unite|cas|ncas|lq|ld|seuil|valeur|vle|vlc|reference|ref|source|methode|norme|considered|comparison|parametre|parameter)/;
 
-function loadLab(sheets, fileName){
+/** The samples and results of one laboratory file. */
+function readLab(sheets, fileName){
   const known = new Set();
   for (const h of state.holes.values()) for (const s of h.samples) known.add(tkey(s.id));
   const holes = [...state.holes.values()].map(h => ({ h, tok:tokens(h.id) }));
@@ -700,10 +772,53 @@ function loadLab(sheets, fileName){
   params.forEach(p => { p.eluat = ELUAT.test(p.fam) || ELUAT.test(p.name);
     const k = (p.eluat ? 'eluat:' : '') + norm(p.name) + '|' + norm(p.unit); seen[k] = (seen[k] || 0) + 1; p.key = seen[k] > 1 ? `${k}#${seen[k]}` : k; p.computed = false; });
   addFamilySums(params, samples.length);
-  state.lab = { fileName, sheet:best.name, samples, params };
+  return { fileName, sheet:best.name, samples:samples.map(s => ({ rawId:s.rawId })), params };
+}
+
+/** Loads one or more laboratory files, [{ name, sheets }]; `skipped`: files
+ *  not read ({ name, why }), listed in the summary. */
+function loadLabFiles(files, skipped = []){
+  const read = [], left = [...skipped];
+  for (const f of files){ try { read.push(readLab(f.sheets, f.name)); } catch(e){ left.push({ name:f.name, why:e.message }); } }
+  if (!read.length) throw new Error(motifs(left));
+  const { samples, params } = mergeLab(read);
+  state.lab = { fileName:read.map(r => r.fileName).join(', '), sheet:read[0].sheet,
+    files:read.map(r => ({ name:r.fileName, sheet:r.sheet, n:r.samples.length })), skipped:left, samples, params };
   state.labMap = {};
   state.sel = defaultSelection(params);
   attachLab(); validate(); renderLabPanel(); renderAll();
+}
+function loadLab(sheets, fileName){ loadLabFiles([{ name:fileName, sheets }]); }
+
+/* Several laboratory files (one report per shipment…): their samples side by
+   side, parameters put together by name and unit (family sums computed in
+   each file first). A sample found in more than one file is kept once, with
+   the results of all; for a parameter reported in two of them, the first file
+   (by name) gives the value, as for a sample on two columns of one file. */
+function mergeLab(read){
+  if (read.length === 1) return read[0];
+  const samples = [], at = new Map();
+  const where = read.map(r => r.samples.map(s => {
+    const k = tkey(s.rawId);
+    if (!at.has(k)){ at.set(k, samples.length); samples.push({ rawId:s.rawId, files:[], diff:0 }); }
+    const i = at.get(k); if (!samples[i].files.includes(r.fileName)) samples[i].files.push(r.fileName);
+    return i;
+  }));
+  const params = [], byKey = new Map();
+  const real = v => v && (v.num != null || v.lt);
+  read.forEach((r, f) => r.params.forEach(p => {
+    let q = byKey.get(p.key);
+    if (!q){ q = { ...p, vals:samples.map(() => null) }; byKey.set(p.key, q); params.push(q); }
+    else { q.cas ||= p.cas; if (p.computed) q.members = Math.max(q.members, p.members); }
+    p.vals.forEach((v, i) => {
+      const k = where[f][i], c = q.vals[k];
+      if (v && !real(c)) q.vals[k] = v;
+      else if (real(v) && real(c) && (v.num !== c.num || !!v.lt !== !!c.lt)) samples[k].diff++;
+    });
+  }));
+  // The computed sums first, as in one file.
+  params.sort((a, b) => b.computed - a.computed);
+  return { samples, params };
 }
 
 const FAMILIES = [
@@ -921,7 +1036,12 @@ function renderLabPanel(){
   const lab = state.lab; $('#labPanel').hidden = !lab;
   if (!lab) return;
   const ok = lab.samples.filter(s => s.hole).length, ko = lab.samples.length - ok;
-  $('#labSummary').innerHTML = `<b>${esc(lab.fileName)}</b> (onglet ${esc(lab.sheet)}) : ${lab.samples.length} échantillons, ${lab.params.filter(p=>!p.computed).length} paramètres. ${ok} rattachés à un forage` + (ko ? `, <span class="bad">${ko} non rattachés</span>` : '') + '.';
+  const files = lab.files || [{ name:lab.fileName, sheet:lab.sheet, n:lab.samples.length }], left = lab.skipped || [];
+  $('#labSummary').innerHTML = (files.length > 1 ? `<b>${files.length} fichiers</b> : ` : `<b>${esc(files[0].name)}</b> (onglet ${esc(files[0].sheet)}) : `)
+    + `${lab.samples.length} échantillons, ${lab.params.filter(p=>!p.computed).length} paramètres. ${ok} rattachés à un forage` + (ko ? `, <span class="bad">${ko} non rattachés</span>` : '') + '.'
+    + (files.length > 1 || left.length ? '<ul>'
+      + (files.length > 1 ? files.map(f => `<li>${esc(f.name)} (onglet ${esc(f.sheet)}) : ${f.n} échantillon(s)</li>`).join('') : '')
+      + left.map(x => `<li class="bad">${esc(x.name)} non lu : ${esc(x.why)}</li>`).join('') + '</ul>' : '');
   renderMatch();
   renderVgInfo();
   drawParamList();
@@ -960,7 +1080,8 @@ function renderMatch(){
       : k === 'manual' ? `→ ${esc(s.match.target)}`
       : k === 'ignore' ? 'Résultats non reportés sur les logs.'
       : s.read?.guess ? `Aucun forage du classeur ne porte ce nom (le plus proche : ${esc(s.read.guess.id)}).` : 'Aucun forage du classeur ne correspond à ce nom.';
-    return `<div class="mrow"><div>${tag[k]} <b>${esc(s.rawId)}</b></div><div class="why">${why}</div><select data-i="${i}" aria-label="Échantillon du classeur pour ${esc(s.rawId)}">${opts}</select></div>`;
+    const src = s.files?.length ? ` <span class="src">· ${esc(s.files.join(', '))}</span>` : '';
+    return `<div class="mrow"><div>${tag[k]} <b>${esc(s.rawId)}</b>${src}</div><div class="why">${why}</div><select data-i="${i}" aria-label="Échantillon du classeur pour ${esc(s.rawId)}">${opts}</select></div>`;
   }).join('') : '<div class="mrow">Tous les échantillons sont rattachés par leur nom ou leur profondeur.</div>')
     + (Object.keys(state.labMap).length ? '<div class="mrow"><button class="linkbtn" type="button" id="btnMatchReset">Rétablir le rapprochement automatique</button></div>' : '');
   box2.querySelectorAll('select').forEach(sel => {
@@ -1647,24 +1768,34 @@ function readWorkbook(file){
     /\.csv$/i.test(file.name) ? r.readAsText(file) : r.readAsArrayBuffer(file);
   });
 }
+/** Reads the files chosen or dropped together, in file-name order: [{ name,
+ *  sheets }], and those left out ({ name, why }): unreadable, or not of a
+ *  type the input accepts (a drop is not filtered by the browser). */
+async function readWorkbooks(files, accept){
+  const ext = accept.split(',').map(x => x.trim().toLowerCase()).filter(x => x.startsWith('.'));
+  const read = [], left = [];
+  for (const f of [...files].sort((a, b) => natSort(a.name, b.name))){
+    if (ext.length && !ext.some(x => f.name.toLowerCase().endsWith(x))){ left.push({ name:f.name, why:`Format non lu (${ext.join(', ')} attendu).` }); continue; }
+    try { read.push({ name:f.name, sheets:await readWorkbook(f) }); }
+    catch(e){ left.push({ name:f.name, why:e.message }); }
+  }
+  return { read, left };
+}
+/** A drop zone and its file input; `handler` gets the files read together. */
 function wireDrop(labelSel, inputSel, handler){
   const lab = $(labelSel), inp = $(inputSel);
-  inp.addEventListener('change', () => inp.files[0] && handler(inp.files[0]));
+  const take = async list => {
+    if (!list?.length) return;
+    try { const { read, left } = await readWorkbooks(list, inp.accept); if (!read.length) throw new Error(motifs(left)); handler(read, left); }
+    catch(e){ alert(e.message); }
+  };
+  inp.addEventListener('change', () => take(inp.files));
   lab.addEventListener('dragover', e => { e.preventDefault(); lab.classList.add('over'); });
   lab.addEventListener('dragleave', () => lab.classList.remove('over'));
-  lab.addEventListener('drop', e => { e.preventDefault(); lab.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) handler(f); });
+  lab.addEventListener('drop', e => { e.preventDefault(); lab.classList.remove('over'); take(e.dataTransfer.files); });
 }
-wireDrop('#dropLogs', '#fileLogs', async f => {
-  try {
-    const sheets = await readWorkbook(f); loadSheets(sheets, f.name);
-    if (!state.holes.size) throw new Error('Aucun forage trouvé : vérifiez la colonne Hole ID des onglets.');
-    $('#logsOk').hidden = false; $('#logsOk').textContent = `${f.name} : ${state.holes.size} forage(s) lu(s).`;
-  } catch(e){ alert(e.message); }
-});
-wireDrop('#dropLab', '#fileLab', async f => {
-  try { const sheets = await readWorkbook(f); loadLab(sheets, f.name); }
-  catch(e){ alert(e.message); }
-});
+wireDrop('#dropLogs', '#fileLogs', loadLogFiles);
+wireDrop('#dropLab', '#fileLab', loadLabFiles);
 $('#paramSearch').addEventListener('input', drawParamList);
 $('#hideLQ').addEventListener('change', e => { state.hideLQ = e.target.checked; renderAll(); });
 $('#thrSource').addEventListener('input', e => { state.thrSource = e.target.value.trim(); renderAllSoon(); });
@@ -1731,21 +1862,20 @@ $('#btnTemplate').addEventListener('click', () => {
 // résultats rattachés et les options y sont enregistrés à chaque
 // modification, et repris à l'ouverture. Voir src/dossier-autonome.ts.
 const etatDossier = () => ({
-  holes: state.holes, listLitho: state.listLitho, fileName: state.fileName, lab: state.lab, sel: state.sel,
+  holes: state.holes, listLitho: state.listLitho, fileName: state.fileName, logFiles: state.logFiles, lab: state.lab, sel: state.sel,
   hideLQ: state.hideLQ, thrSource: state.thrSource, labMap: state.labMap, vgOn: state.vgOn, vgMetaux: state.vgMetaux,
   include: state.include, opt: state.opt
 });
 function appliquerDossier(d){
   Object.assign(state, {
-    holes: d.holes, listLitho: d.listLitho, fileName: d.fileName, lab: d.lab, sel: d.sel, hideLQ: d.hideLQ, thrSource: d.thrSource,
+    holes: d.holes, listLitho: d.listLitho, fileName: d.fileName, logFiles: d.logFiles || [], lab: d.lab, sel: d.sel, hideLQ: d.hideLQ, thrSource: d.thrSource,
     labMap: d.labMap, vgOn: d.vgOn, vgMetaux: d.vgMetaux, include: d.include, opt: { ...state.opt, ...d.opt }
   });
   $('#hideLQ').checked = state.hideLQ; $('#thrSource').value = state.thrSource;
   $('#vgOn').checked = state.vgOn; $('#vgOpts').hidden = !state.vgOn; $('#vgMetaux').value = state.vgMetaux;
   $('#optOrient').value = state.opt.orient; $('#optDepth').value = state.opt.depth;
   $('#optCoords').checked = state.opt.coords; $('#optCompany').value = state.opt.company;
-  $('#logsOk').hidden = !state.holes.size;
-  $('#logsOk').textContent = state.holes.size ? `${state.fileName} : ${state.holes.size} forage(s), repris du dossier.` : '';
+  renderLogFiles([], true);
   majCoordsDossier(); renderLabPanel(); validate(); renderAll();
 }
 /* Points d'investigation du dossier : coordonnées (Lambert 93) et cote du
@@ -1790,7 +1920,7 @@ if (window.SirDossier) brancherDossier();
 else window.addEventListener('sir-dossier:pret', brancherDossier);
 
 // Point d'entrée pour tests ou intégration (sheets = {nom: tableau de lignes})
-window.LogTool = { loadSheets, loadLab, state, renderAll, tokens, attachLab, selParams };
+window.LogTool = { loadSheets, loadLab, loadLogFiles, loadLabFiles, state, renderAll, tokens, attachLab, selParams };
 renderAll();
 </script>
 <script type="module" src="dossier.js"></script>
