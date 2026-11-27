@@ -15,6 +15,7 @@ import { NOMS_HAP } from '../lib/resultats/expert/diagnostics'
 import { lireClasseur, type Lecture as LectureLabo } from '../lib/resultats/parse'
 import { lireFeuilles, telechargerBlob } from '../lib/fichiers'
 import { jourIso, nombreFr } from '../lib/format'
+import { useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 
 type Source =
   | { type: 'image'; nom: string; image: ImageData; pdf?: { doc: PDFDocumentProxy; page: number; suggerees: number[] } }
@@ -101,6 +102,37 @@ async function imageDepuisFichier(f: Blob): Promise<ImageData> {
   return ctx.getImageData(0, 0, b.width, b.height)
 }
 
+// ---- Kept in a dossier ----
+// An image is saved as PNG: encoded once per image, and the image read back
+// from a dossier keeps its original PNG, so reopening writes nothing.
+
+type SourceSauvee = { type: 'image'; nom: string; png: string } | { type: 'trace'; nom: string; trace: Trace; calage?: PointCalage[] }
+
+const PNG = new WeakMap<ImageData, string>()
+
+function versPng(image: ImageData): string {
+  let url = PNG.get(image)
+  if (!url) {
+    const canvas = document.createElement('canvas')
+    canvas.width = image.width
+    canvas.height = image.height
+    canvas.getContext('2d')!.putImageData(image, 0, 0)
+    url = canvas.toDataURL('image/png')
+    PNG.set(image, url)
+  }
+  return url
+}
+
+async function depuisPng(url: string): Promise<ImageData> {
+  const image = await imageDepuisFichier(await (await fetch(url)).blob())
+  PNG.set(image, url)
+  return image
+}
+
+function sauverSource(s: Source): SourceSauvee {
+  return s.type === 'image' ? { type: 'image', nom: s.nom, png: versPng(s.image) } : s
+}
+
 /** Naphthalene / phenanthrene of a reading, formatted, or null. */
 function napPhe(l: Lecture): string | null {
   const v = l.composes?.indices.find((i) => i.libelle.startsWith('Naphtalène'))?.valeur
@@ -131,6 +163,51 @@ export default function Chromatogrammes() {
   const [labo, setLabo] = useState<{ nom: string; lecture: LectureLabo; echantillons: string[] } | null>(null)
   const [echantillonLabo, setEchantillonLabo] = useState('')
   const [chargement, setChargement] = useState(false)
+  /** Image of a dossier being decoded: saved as it was meanwhile. */
+  const [enAttente, setEnAttente] = useState<SourceSauvee | null>(null)
+
+  const sourceSauvee = useMemo(() => (source ? sauverSource(source) : enAttente), [source, enAttente])
+  const sauve = useMemo(
+    () => ({ source: sourceSauvee, reglages, mode, temps10, temps40, manuels, nom, matrice, saisie, comparaison, etalons, labo, echantillonLabo }),
+    [sourceSauvee, reglages, mode, temps10, temps40, manuels, nom, matrice, saisie, comparaison, etalons, labo, echantillonLabo],
+  )
+  useSynchroDossier({
+    outil: 'chromatogrammes',
+    version: 1,
+    etat: sauve,
+    estVide: !sourceSauvee && comparaison.length === 0 && !labo,
+    appliquer: (d) => {
+      setReglages(d.reglages)
+      setMode(d.mode)
+      setTemps10(d.temps10)
+      setTemps40(d.temps40)
+      setManuels(d.manuels)
+      setCible(null)
+      setNom(d.nom)
+      setMatrice(d.matrice)
+      setSaisie({ ...SAISIE_VIDE, ...d.saisie })
+      setComparaison(d.comparaison)
+      setEtalons(d.etalons)
+      setLabo(d.labo)
+      setEchantillonLabo(d.echantillonLabo)
+      setErreur(null)
+      const s = d.source
+      if (s?.type === 'image') {
+        setSource(null)
+        setEnAttente(s)
+        // Unreadable, the image stays as saved in the dossier (never replaced by nothing).
+        depuisPng(s.png)
+          .then((image) => {
+            setSource({ type: 'image', nom: s.nom, image })
+            setEnAttente(null)
+          })
+          .catch(() => setErreur(`L'image du chromatogramme « ${s.nom} » enregistrée dans le dossier n'a pas pu être relue.`))
+      } else {
+        setEnAttente(null)
+        setSource(s)
+      }
+    },
+  })
 
   function nouvelleSource(s: Source, calage?: PointCalage[], avecEtalons?: boolean) {
     setSource(s)

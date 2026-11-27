@@ -1,10 +1,12 @@
 /**
  * Files in and out of the browser: reading a workbook dropped by the user
  * into sheets of raw cells, and handing a generated file back as a
- * download. Nothing is sent to a server.
+ * download (copied into the open dossier, if any). Nothing is sent to a
+ * server.
  */
 
 import type { Workbook } from 'exceljs'
+import { copierExport } from './dossier/session.ts'
 import type { Cell } from './resultats/parse.ts'
 
 export interface Feuille {
@@ -49,8 +51,12 @@ export async function lireFeuilles(fichier: File, options: { cellDates?: boolean
   }))
 }
 
-/** Saves a blob under the given file name. */
+/**
+ * Saves a blob under the given file name. With a dossier open, a copy also
+ * goes to its exports/ folder.
+ */
 export function telechargerBlob(blob: Blob, nomFichier: string): void {
+  void copierExport(blob, nomFichier).catch(() => undefined)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

@@ -8,11 +8,13 @@ frontend/
     pages/         une page par outil React (chargée à la demande, voir App.tsx)
     components/    composants partagés ; sous-dossiers par outil (nappe/, pfas/)
     lib/           calculs et lecture des données, sans React
+      dossier/     dossiers d'étude : format, accès au disque, enregistrement des outils
       resultats/   lecture des fichiers du laboratoire, exports (Résultats labo)
       nappe/ pfas/ rejets/ livrables/ suivi/   un dossier par outil
       *.ts         clients des API publiques (Site Setting) et utilitaires communs
     themes/        rubriques du Site Setting (eau, air, sols, nature, risques)
     data/          référentiels livrés avec le site (valeurs guides, NF X31-620)
+    dossier-autonome.ts   dossiers d'étude des pages autonomes (construit en dossier.js)
   public/          pages autonomes (HTML), bibliothèques copiées (vendor/), données (data/)
   scripts/         préparation des données (baignade, valeurs guides)
 docs/              une fiche par outil
@@ -28,6 +30,8 @@ Utilitaires communs, à réutiliser plutôt qu'à réécrire :
 - `lib/reseau.ts` : `requete()`, le `fetch` à utiliser pour toute API
   publique (délai maximal, la requête est abandonnée s'il est dépassé) ;
 - `components/ZoneDepot.tsx` : zone « Déposez ici… » ;
+- `lib/dossier/useSynchroDossier.ts` : enregistrer le travail d'un outil
+  dans le dossier d'étude ouvert (voir [docs/dossiers.md](docs/dossiers.md#ajouter-un-outil)) ;
 - `lib/resultats/parse.ts` : lecture de tout fichier de laboratoire.
 
 ## Conventions
@@ -45,7 +49,9 @@ Utilitaires communs, à réutiliser plutôt qu'à réécrire :
 
 1. La page dans `src/pages/`, la route (avec `lazy`) dans `src/App.tsx`.
 2. Les calculs dans `src/lib/<outil>/`, avec leurs tests.
-3. La carte de l'outil dans `CATEGORIES` (`src/pages/Accueil.tsx`).
+3. La carte de l'outil dans `CATEGORIES` (`src/pages/Accueil.tsx`), et son
+   enregistrement dans les dossiers d'étude : `useSynchroDossier` et une
+   entrée dans `OUTILS_DOSSIER` (`src/lib/dossier/outils.ts`).
 4. Une fiche `docs/<outil>.md` et une ligne dans le tableau du README.
 
 ## Tests

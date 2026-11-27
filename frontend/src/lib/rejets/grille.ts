@@ -63,8 +63,11 @@ export interface Ligne {
   valeurs: string[]
 }
 
+// Unique across sessions: lines reopened from a dossier keep their ids, new
+// lines must not take the same ones.
 let compteur = 0
-export const nouvelId = () => `l${++compteur}`
+const session = Date.now().toString(36)
+export const nouvelId = () => `l${session}-${++compteur}`
 
 export function ligneVide(milieu: Milieu, n: number, unite?: string): Ligne {
   return { id: nouvelId(), libelle: '', cas: '', unite: unite || (milieu === 'air' ? 'mg/m³' : 'mg/l'), substance: null, classe: '', fraction: '', valeurs: Array(n).fill('') }

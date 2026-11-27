@@ -1,4 +1,5 @@
 import { useMemo, useState, type ClipboardEvent } from 'react'
+import { useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import { debitMoyen, lireNombre, volumeLitres } from '../lib/resultats/calc'
 import { LectureImpossible, lireMesure, type Lecture } from '../lib/resultats/parse'
 import {
@@ -151,6 +152,62 @@ export default function ConformiteRejets() {
   const [conditions, setConditions] = useState<Conditions>({ temperature: '', pression: '' })
   const [selection, setSelection] = useState<Record<number, boolean>>({})
   const [aAppliquer, setAAppliquer] = useState<Record<Champ, string>>(SAISIE_VIDE)
+
+  // Kept in the open dossier: every entry of the page.
+  const sauve = useMemo(
+    () => ({
+      milieu,
+      air: { debitAir, reel, oxydation, rendement, o2Mesure, o2Reference },
+      eau: { destination, debitEau, d21110, zoneSensible, lagunage, neutralisation, temperature50 },
+      installation,
+      permanente,
+      fluxAutorises,
+      colonnes,
+      lignes,
+      fichier,
+      notesLecture,
+      reconnuesSeules,
+      variantes,
+      variante,
+      conditions,
+    }),
+    [milieu, debitAir, reel, oxydation, rendement, o2Mesure, o2Reference, destination, debitEau, d21110, zoneSensible, lagunage, neutralisation, temperature50, installation, permanente, fluxAutorises, colonnes, lignes, fichier, notesLecture, reconnuesSeules, variantes, variante, conditions],
+  )
+  useSynchroDossier({
+    outil: 'conformite-rejets',
+    version: 1,
+    etat: sauve,
+    estVide: milieu === null,
+    appliquer: (d) => {
+      setMilieu(d.milieu)
+      setDebitAir(d.air.debitAir)
+      setReel(d.air.reel)
+      setOxydation(d.air.oxydation)
+      setRendement(d.air.rendement)
+      setO2Mesure(d.air.o2Mesure)
+      setO2Reference(d.air.o2Reference)
+      setDestination(d.eau.destination)
+      setDebitEau(d.eau.debitEau)
+      setD21110(d.eau.d21110)
+      setZoneSensible(d.eau.zoneSensible)
+      setLagunage(d.eau.lagunage)
+      setNeutralisation(d.eau.neutralisation)
+      setTemperature50(d.eau.temperature50)
+      setInstallation(d.installation)
+      setPermanente(d.permanente)
+      setFluxAutorises(d.fluxAutorises)
+      setColonnes(d.colonnes)
+      setLignes(d.lignes)
+      setFichier(d.fichier)
+      setNotesLecture(d.notesLecture)
+      setReconnuesSeules(d.reconnuesSeules)
+      setVariantes(d.variantes)
+      setVariante(d.variante)
+      setConditions(d.conditions)
+      setSelection({})
+      setErreur(null)
+    },
+  })
 
   function choisir(m: Milieu) {
     if (m === milieu) return

@@ -30,6 +30,17 @@ dans `docs/`.
 | 4. Contrôle de conformité | [Conformité des rejets](docs/conformite-rejets.md) | Rejets air / eau et arrêté du 2 février 1998 |
 | | [Vérification de livrables SSP](docs/verification-livrables.md) | ATTES, IOTA, NF X31-620, référentiel LNE SSP |
 
+## Dossiers d'étude
+
+Dans Edge ou Chrome, le travail se range dans un **dossier d'étude** : un vrai
+dossier sur le disque, typiquement dans OneDrive pour le partager avec les
+collègues. Chaque outil y enregistre son travail au fil de l'eau (un fichier
+par outil), avec les fichiers déposés (`sources/`) et les exports
+(`exports/`) ; le site saisi une fois est repris par les autres outils. Le
+dossier se rouvre plus tard, sur le même poste ou sur celui d'un collègue ;
+une version enregistrée entre-temps par quelqu'un d'autre n'est jamais
+écrasée sans le demander. Voir [docs/dossiers.md](docs/dossiers.md).
+
 L'accès au site et aux pages autonomes est protégé par un mot de passe
 (`frontend/src/lib/acces.ts`, empreinte SHA-256) : une simple barrière, le
 site étant statique.

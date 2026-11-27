@@ -56,6 +56,33 @@ const COULEUR_NIVEAU: Record<Niveau, string> = { alerte: 'var(--level-elevee)', 
 
 const fr = nombreFrOuTiret
 
+/** What the user entered or loaded here: kept in the dossier by Résultats labo. */
+export interface EtatNappe {
+  fiches: FicheTerrain[]
+  fichiersFiches: string[]
+  ignores: string[]
+  association: Record<string, string>
+  saisies: Record<string, string>
+  ajouts: string[]
+  decalage: string
+  fond: string[]
+  statuts: Record<Compose, Statut>
+  projet: string
+}
+
+const ETAT_NAPPE_VIDE: EtatNappe = {
+  fiches: [],
+  fichiersFiches: [],
+  ignores: [],
+  association: {},
+  saisies: {},
+  ajouts: [],
+  decalage: '',
+  fond: [],
+  statuts: STATUTS_DEFAUT,
+  projet: '',
+}
+
 /**
  * Groundwater conditions, within Résultats labo (groundwater): the sampling
  * sheets of the campaign read with the lab file already loaded there —
@@ -69,6 +96,8 @@ export function ConditionsNappe({
   aCharger,
   retrait,
   onRapport,
+  restauration,
+  onEtat,
 }: {
   labo: { lecture: Lecture; nom: string } | null
   /** Sheet workbooks to read, a new array for each choice. */
@@ -76,22 +105,48 @@ export function ConditionsNappe({
   /** Changes when the user removes the sheets from step 2. */
   retrait: number
   onRapport?: (rp: Rapport | null) => void
+  /** State to put back (dossier reopened); a new `n` for each one. */
+  restauration?: { n: number; etat: EtatNappe } | null
+  /** What is entered here, for the page to keep in the dossier. */
+  onEtat?: (e: EtatNappe) => void
 }) {
-  const [fiches, setFiches] = useState<FicheTerrain[]>([])
-  const [fichiersFiches, setFichiersFiches] = useState<string[]>([])
-  const [ignores, setIgnores] = useState<string[]>([])
-  const [association, setAssociation] = useState<Record<string, string>>({})
-  const [saisies, setSaisies] = useState<Record<string, string>>({})
-  const [ajouts, setAjouts] = useState<string[]>([])
+  const init = restauration?.etat ?? ETAT_NAPPE_VIDE
+  const [fiches, setFiches] = useState<FicheTerrain[]>(init.fiches)
+  const [fichiersFiches, setFichiersFiches] = useState<string[]>(init.fichiersFiches)
+  const [ignores, setIgnores] = useState<string[]>(init.ignores)
+  const [association, setAssociation] = useState<Record<string, string>>(init.association)
+  const [saisies, setSaisies] = useState<Record<string, string>>(init.saisies)
+  const [ajouts, setAjouts] = useState<string[]>(init.ajouts)
   const [nouvelOuvrage, setNouvelOuvrage] = useState('')
-  const [decalage, setDecalage] = useState('')
-  const [fond, setFond] = useState<string[]>([])
-  const [statuts, setStatuts] = useState<Record<Compose, Statut>>(STATUTS_DEFAUT)
+  const [decalage, setDecalage] = useState(init.decalage)
+  const [fond, setFond] = useState<string[]>(init.fond)
+  const [statuts, setStatuts] = useState<Record<Compose, Statut>>(init.statuts)
   const [ouvert, setOuvert] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState<'fiches' | null>(null)
-  const [projet, setProjet] = useState('')
+  const [projet, setProjet] = useState(init.projet)
   const [copie, setCopie] = useState(false)
+
+  // A state put back by the page (dossier reopened), applied once.
+  const [restaure, setRestaure] = useState(restauration?.n ?? 0)
+  if (restauration && restauration.n !== restaure) {
+    const e = restauration.etat
+    setRestaure(restauration.n)
+    setFiches(e.fiches)
+    setFichiersFiches(e.fichiersFiches)
+    setIgnores(e.ignores)
+    setAssociation(e.association)
+    setSaisies(e.saisies)
+    setAjouts(e.ajouts)
+    setDecalage(e.decalage)
+    setFond(e.fond)
+    setStatuts({ ...STATUTS_DEFAUT, ...e.statuts })
+    setProjet(e.projet)
+    setErreur(null)
+  }
+  useEffect(() => {
+    onEtat?.({ fiches, fichiersFiches, ignores, association, saisies, ajouts, decalage, fond, statuts, projet })
+  }, [onEtat, fiches, fichiersFiches, ignores, association, saisies, ajouts, decalage, fond, statuts, projet])
 
   async function chargerFiches(fs: File[]) {
     if (!fs.length) return
