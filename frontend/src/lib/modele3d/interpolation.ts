@@ -190,3 +190,15 @@ export function zoneInterpolee(points: { x: number; y: number }[], portee: numbe
   const poly = enveloppeConvexe(points)
   return (x, y) => dansPolygoneConvexe(poly, x, y) || distancePlusProche(points, x, y) <= portee
 }
+
+/** Inside a set of rings (polygons, holes, several parcels): even–odd rule. */
+export function dansAnneaux(anneaux: [number, number][][], x: number, y: number): boolean {
+  let dedans = false
+  for (const a of anneaux)
+    for (let i = 0, j = a.length - 1; i < a.length; j = i++) {
+      const [xi, yi] = a[i]
+      const [xj, yj] = a[j]
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) dedans = !dedans
+    }
+  return dedans
+}

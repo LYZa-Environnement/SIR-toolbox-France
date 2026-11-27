@@ -13,7 +13,7 @@ import { normaliser } from '../resultats/guides.ts'
 import type { Cell } from '../resultats/parse.ts'
 import type { Feuille } from '../fichiers.ts'
 import { classeLitho } from './lithologie.ts'
-import type { EchantillonSol, Equipement, Forage, ParametreSol, Source, ValeurSol } from './types.ts'
+import type { EchantillonSol, Equipement, Forage, Observation, ParametreSol, Source, ValeurSol } from './types.ts'
 
 const norm = (s: unknown) =>
   String(s ?? '')
@@ -75,6 +75,9 @@ const SYN: Record<string, string[]> = {
   desc: ['lithologydescription', 'description', 'descriptionlithologique'],
   sid: ['sampleid', 'samplename', 'samplenumber', 'echantillon', 'sample', 'idechantillon', 'nomechantillon', 'nomdelechantillon', 'referenceechantillon'],
   sdate: ['date', 'datedeprelevement', 'dateprelevement', 'samplingdate'],
+  rem: ['remarks', 'remarques', 'remarque'],
+  org: ['organolepticobservations', 'observationsorganoleptiques', 'organoleptique'],
+  moist: ['moistureindication', 'indicationhumidite', 'humidite', 'moisture'],
 }
 
 function feuille(feuilles: Feuille[], noms: string[]): Cell[][] | null {
@@ -127,7 +130,7 @@ export function elementEquipement(v: string): string {
 }
 
 function nouveau(nom: string): Forage {
-  return { nom, cle: cleOuvrage(nom), x: null, y: null, z: null, profondeur: 0, lithologie: [], equipement: [], pid: [], niveauEau: null, echantillons: [], date: '' }
+  return { nom, cle: cleOuvrage(nom), x: null, y: null, z: null, profondeur: 0, lithologie: [], equipement: [], pid: [], observations: [], niveauEau: null, echantillons: [], date: '' }
 }
 
 const parDe = <T extends { de: number }>(a: T, b: T) => a.de - b.de
@@ -137,6 +140,7 @@ function finir(f: Forage, profondeurDonnee: number | null) {
   f.lithologie.sort(parDe)
   f.equipement.sort(parDe)
   f.pid.sort(parDe)
+  f.observations.sort(parDe)
   f.echantillons.sort(parDe)
   const fond = Math.max(0, ...f.lithologie.map((l) => l.a), ...f.equipement.map((e) => e.a), ...f.echantillons.map((e) => e.a))
   f.profondeur = profondeurDonnee !== null && profondeurDonnee > 0 ? profondeurDonnee : fond
@@ -216,6 +220,15 @@ export function lireClasseurLogs(feuilles: Feuille[], fichier: string): Source |
     const description = texte(lith.lire(r, 'desc'))
     f.lithologie.push({ de, a: a!, cle, description, classe: classeLitho(cle, description) })
   }
+
+  t = table(feuille(feuilles, ['Comments', 'Commentaires', 'Observations']))
+  if (t)
+    for (const r of t.lignes) {
+      const f = F(t.lire(r, 'hole'))
+      const de = nombre(t.lire(r, 'from'))
+      const o = { organoleptique: texte(t.lire(r, 'org')), remarque: texte(t.lire(r, 'rem')), humidite: texte(t.lire(r, 'moist')) }
+      if (f && de !== null && (o.organoleptique || o.remarque || o.humidite)) f.observations.push({ de, a: nombre(t.lire(r, 'to')) ?? de, ...o } satisfies Observation)
+    }
 
   t = table(feuille(feuilles, ['Samples', 'Echantillons', 'Échantillons', 'Sampling']))
   if (t)
@@ -300,6 +313,7 @@ interface ForageLog {
   info?: { start?: string }
   construction?: { from?: number | null; to?: number | null; item?: string }[]
   pid?: { from?: number | null; to?: number | null; value?: unknown }[]
+  comments?: { from?: number | null; to?: number | null; rem?: string; org?: string; moist?: string }[]
   water?: { depth?: number | null }[]
   litho?: { from?: number | null; to?: number | null; key?: string; desc?: string }[]
   samples?: EchantillonLog[]
@@ -351,6 +365,11 @@ export function depuisLogsForage(donnees: unknown, nom = 'Logs de forage'): Sour
       const de = nombre(p.from)
       const v = nombre(p.value)
       if (de !== null && v !== null) f.pid.push({ de, a: nombre(p.to) ?? de, valeur: v })
+    }
+    for (const c of h.comments ?? []) {
+      const de = nombre(c.from)
+      const o = { organoleptique: texte(c.org), remarque: texte(c.rem), humidite: texte(c.moist) }
+      if (de !== null && (o.organoleptique || o.remarque || o.humidite)) f.observations.push({ de, a: nombre(c.to) ?? de, ...o })
     }
     const eau = (h.water ?? []).map((w) => nombre(w.depth)).find((x) => x !== null)
     f.niveauEau = eau ?? null

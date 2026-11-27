@@ -13,11 +13,12 @@ import { lireEnveloppe, nomFichierOutil } from '../dossier/format.ts'
 import type { Lecture } from '../resultats/parse.ts'
 import type { Regime } from '../resultats/campagnes.ts'
 import type { FicheTerrain, ParamTerrain } from '../nappe/fiches.ts'
+import { convertir, lireNombre, volumeLitres } from '../resultats/calc.ts'
 import { lireDate } from '../suivi/dates.ts'
 import type { FichierLu } from '../suivi/import.ts'
 import { nouvelId, type CampagneSaisie, type Corrections, type Lot, type Releve } from '../suivi/modele.ts'
-import { depuisLogsForage } from './logs.ts'
-import type { Source } from './types.ts'
+import { cleSol, depuisLogsForage } from './logs.ts'
+import type { LectureGaz, ParametreSol, Source, ValeurSol } from './types.ts'
 
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
@@ -51,6 +52,51 @@ interface EtatResultats {
   autres?: { lecture: Lecture; fichier: string; date: string; regime: Regime }[]
   /** Conditions de la nappe: the groundwater sampling sheets read there. */
   etatNappe?: { fiches?: FicheTerrain[]; fichiersFiches?: string[] } | null
+  /** Air and soil gas: "gaz du sol", "air intérieur"… */
+  milieu?: string
+  /** Air: sampling duration and flows entered (or read on the sheets), by sample. */
+  saisies?: Record<string, { duree?: string; debitDebut?: string; debitFin?: string }>
+}
+
+/**
+ * Soil gas of Résultats labo as concentrations (µg/m³): masses per support
+ * converted with the sampled volume entered there (flow × duration, calc.ts),
+ * concentrations given by the lab taken as they are. Measurement zone only.
+ */
+export function gazDeResultats(d: EtatResultats, nom: string): { gaz: LectureGaz; sansVolume: string[] } | null {
+  const lecture = d.lecture
+  if (!lecture) return null
+  const concentration = lecture.mode === 'concentration'
+  const parametres: ParametreSol[] = lecture.parametres.CM.map((p) => ({
+    cle: cleSol(p.nom, p.cas, false),
+    nom: p.nom,
+    cas: p.cas,
+    unite: concentration ? p.unite : 'µg/m³',
+    famille: p.famille,
+    eluat: false,
+  }))
+  const points: Record<string, Record<string, ValeurSol>> = {}
+  const sansVolume: string[] = []
+  for (const pt of lecture.points) {
+    const s = d.saisies?.[pt.nom]
+    const volume = concentration ? null : volumeLitres({ duree: lireNombre(s?.duree ?? ''), debitDebut: lireNombre(s?.debitDebut ?? ''), debitFin: lireNombre(s?.debitFin ?? '') })
+    if (!concentration && !volume) {
+      sansVolume.push(pt.nom)
+      continue
+    }
+    const r: Record<string, ValeurSol> = {}
+    lecture.parametres.CM.forEach((p, i) => {
+      const m = lecture.valeurs.CM[pt.nom]?.[p.cle]
+      if (!m || m.valeur === null) return
+      if (concentration) r[parametres[i].cle] = { valeur: m.valeur, inferieur: m.inferieur, brut: m.brut }
+      else {
+        const c = convertir(m, p, volume, 'µg/m³')
+        if (c) r[parametres[i].cle] = { valeur: c.valeur, inferieur: c.inferieur, brut: `${c.inferieur ? '<' : ''}${String(Number(c.valeur.toPrecision(3))).replace('.', ',')}` }
+      }
+    })
+    points[pt.nom] = r
+  }
+  return { gaz: { fichier: nom, date: d.infoPrincipale?.date ?? '', parametres, points }, sansVolume }
 }
 
 /**
@@ -90,6 +136,24 @@ export function depuisResultatsLabo(donnees: unknown): Source | null {
       eaux: null,
       avertissements: [],
     }
+  if (d.matrice === 'air') {
+    if (!/gaz/i.test(d.milieu ?? 'gaz du sol')) return null
+    const g = gazDeResultats(d, nom)
+    if (!g || !Object.keys(g.gaz.points).length) return null
+    return {
+      id: 'dossier:resultats-labo',
+      origine: 'dossier',
+      outil: 'resultats-labo',
+      nom: 'Résultats labo (gaz du sol)',
+      resume: `${pluriel(Object.keys(g.gaz.points).length, 'prélèvement')} de gaz du sol · ${nom}`,
+      forages: [],
+      parametresSol: [],
+      sols: [],
+      eaux: null,
+      gaz: [g.gaz],
+      avertissements: g.sansVolume.length ? [`volume prélevé inconnu (durée ou débit à saisir dans Résultats labo) : ${g.sansVolume.join(', ')}.`] : [],
+    }
+  }
   if (d.matrice !== 'eau') return null
   const campagnes = d.lecture ? [{ lecture: d.lecture, fichier: nom, date: d.infoPrincipale?.date ?? '', regime: d.infoPrincipale?.regime ?? null }, ...(d.autres ?? [])] : []
   const lots: Lot[] = campagnes.map((c) => ({ id: nouvelId('l'), fichier: c.fichier, lecture: c.lecture, date: c.date, origineDate: c.date ? 'saisie' : '', libelle: '', regime: c.regime }))

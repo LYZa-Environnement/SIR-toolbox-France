@@ -128,13 +128,13 @@ describe('assemblage', () => {
       ...vide,
       id: 'a',
       nom: 'a',
-      forages: [{ nom: 'S 01', cle: 'S1', x: 1, y: 2, z: 50, profondeur: 4, lithologie: [{ de: 0, a: 4, cle: 'SABLE', description: '', classe: 'sable' }], equipement: [], pid: [], niveauEau: null, echantillons: [], date: '' }],
+      forages: [{ nom: 'S 01', cle: 'S1', x: 1, y: 2, z: 50, profondeur: 4, lithologie: [{ de: 0, a: 4, cle: 'SABLE', description: '', classe: 'sable' }], equipement: [], pid: [], observations: [], niveauEau: null, echantillons: [], date: '' }],
     }
     const b: Source = {
       ...vide,
       id: 'b',
       nom: 'b',
-      forages: [{ nom: 'S1', cle: 'S1', x: null, y: null, z: null, profondeur: 0, lithologie: [], equipement: [], pid: [], niveauEau: 1.2, echantillons: [], date: '' }],
+      forages: [{ nom: 'S1', cle: 'S1', x: null, y: null, z: null, profondeur: 0, lithologie: [], equipement: [], pid: [], observations: [], niveauEau: 1.2, echantillons: [], date: '' }],
       sols: [
         {
           fichier: 'labo.xlsx',
@@ -169,7 +169,8 @@ describe('modèle de l’exemple', () => {
   it('réunit forages et ouvrages, en Lambert 93', () => {
     expect(m.georef).toBe(true)
     expect(m.relatif).toBe(false)
-    expect(m.points).toHaveLength(13)
+    // 13 boreholes and wells, 3 soil gas probes.
+    expect(m.points).toHaveLength(16)
     expect(donnees.base!.campagnes).toHaveLength(14)
     const pz2 = m.points.find((p) => p.nom === 'PZ2')!
     expect(pz2.forage).not.toBeNull()
@@ -178,13 +179,14 @@ describe('modèle de l’exemple', () => {
     expect(pz2.crepine).toEqual({ de: 3, a: 11 })
   })
 
-  it('modèle géologique : les couches des logs, empilées', () => {
-    const g = m.geologie!
+  it('modèle géologique en blocs : les couches des logs, empilées', () => {
+    const mb = construireModele(donnees, { representation: 'blocs' })
+    const g = mb.geologie!
     expect(g.classes).toEqual(expect.arrayContaining(['remb', 'silt', 'sable', 'grav', 'marne', 'argile']))
     // Under PZ2, the block at 6 m depth is sandy gravel, the one at 0.4 m is fill.
-    const pz2 = m.points.find((p) => p.nom === 'PZ2')!
+    const pz2 = mb.points.find((p) => p.nom === 'PZ2')!
     const bloc = (prof: number) => {
-      const b = m.blocs
+      const b = mb.blocs
       const i = Math.floor((pz2.x - b.x0) / b.dx)
       const j = Math.floor((pz2.y - b.y0) / b.dy)
       const k = Math.floor((pz2.zSol - prof - b.z0) / b.dz)
@@ -206,6 +208,7 @@ describe('modèle de l’exemple', () => {
     expect(n.grille).not.toBeNull()
     const f = nappeForation(m)
     expect(f.charges.length).toBe(13)
+    expect(n.validation!.rmse).toBeLessThan(1)
   })
 
   it('panache : tétrachloroéthylène plus fort au droit de PZ2', () => {

@@ -33,6 +33,14 @@ export interface MesurePid extends Intervalle {
   valeur: number
 }
 
+/** Remarks and organoleptic observations of the log (Comments sheet). */
+export interface Observation extends Intervalle {
+  /** Odour, colour, sheen… as written. */
+  organoleptique: string
+  remarque: string
+  humidite: string
+}
+
 export interface ValeurSol {
   /** In the parameter's unit; the LQ itself when `inferieur`. */
   valeur: number | null
@@ -70,6 +78,7 @@ export interface Forage {
   lithologie: CoucheLitho[]
   equipement: Equipement[]
   pid: MesurePid[]
+  observations: Observation[]
   /** Water depth met while drilling, below ground (m). */
   niveauEau: number | null
   echantillons: EchantillonSol[]
@@ -96,6 +105,15 @@ export interface DonneesEaux {
   corrections: Corrections | null
 }
 
+/** Soil gas results, in a concentration (µg/m³ or mg/m³), by sampling point. */
+export interface LectureGaz {
+  fichier: string
+  date: string
+  parametres: ParametreSol[]
+  /** By point name (the gas probe, matched with a borehole by name). */
+  points: Record<string, Record<string, ValeurSol>>
+}
+
 /** Soil results not yet attached to a borehole: matched by sample name ("S3 (0,5-1 m)"). */
 export interface LectureSol {
   fichier: string
@@ -119,5 +137,8 @@ export interface Source {
   parametresSol: ParametreSol[]
   sols: LectureSol[]
   eaux: DonneesEaux | null
+  gaz?: LectureGaz[]
+  /** Outline of the site's parcels, Lambert 93 rings (the example's; a dossier's site wins). */
+  parcelles?: [number, number][][]
   avertissements: string[]
 }

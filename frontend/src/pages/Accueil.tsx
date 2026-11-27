@@ -132,8 +132,8 @@ const CATEGORIES: Categorie[] = [
         titre: 'Modèle 3D du site',
         accroche: 'Vue d’ensemble en 3D',
         description:
-          'Forages et piézomètres à leur place, modèle géologique interpolé entre les logs, nappe et sens d’écoulement à chaque campagne, panache d’un composé, sols au-dessus d’un seuil : on choisit ce qu’on affiche, on coupe et on parcourt les dates.',
-        points: ['Reprend Logs de forage, Suivi temporel et Résultats labo du dossier', 'Relief IGN, photo aérienne, carte géologique BRGM'],
+          'Formations géologiques continues dans les parcelles du site, nappe krigée et isopièzes à chaque date, panache et son évolution, terres par filière, gaz du sol, schéma conceptuel : on choisit ce qu’on affiche, on coupe, on compare deux dates.',
+        points: ['Reprend Logs de forage, Suivi temporel, Résultats labo et le site du dossier', 'Krigeage et incertitude, relief IGN, BD TOPO, carte géologique BRGM'],
         route: '/modele-3d',
       },
     ],

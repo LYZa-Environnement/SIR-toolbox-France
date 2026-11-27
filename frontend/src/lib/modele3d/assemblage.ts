@@ -13,9 +13,24 @@ import { CORRECTIONS_VIDES, construireBase, placerLots, type Base, type Campagne
 import { cleSol } from './logs.ts'
 import type { EchantillonSol, Forage, LectureSol, OuvrageDecrit, ParametreSol, Source, ValeurSol } from './types.ts'
 
+/** A soil gas result set at a probe, matched with a borehole by name. */
+export interface MesureGaz {
+  /** Borehole key (cleOuvrage of the point's name). */
+  cle: string
+  nom: string
+  fichier: string
+  date: string
+  resultats: Record<string, ValeurSol>
+}
+
 export interface Donnees {
   forages: Forage[]
   parametresSol: ParametreSol[]
+  /** Soil gas, in µg/m³. */
+  parametresGaz: ParametreSol[]
+  gaz: MesureGaz[]
+  /** Outline of the site's parcels (Lambert 93 rings), when a source gives it. */
+  parcelles: [number, number][][] | null
   base: Base | null
   corrections: Corrections
   avertissements: string[]
@@ -59,6 +74,7 @@ function fusionnerForage(avant: Forage, apres: Forage): Forage {
     lithologie: apres.lithologie.length ? apres.lithologie : avant.lithologie,
     equipement: apres.equipement.length ? apres.equipement : avant.equipement,
     pid: apres.pid.length ? apres.pid : avant.pid,
+    observations: apres.observations.length ? apres.observations : avant.observations,
     niveauEau: apres.niveauEau ?? avant.niveauEau,
     echantillons: fusionnerEchantillons(avant.echantillons, apres.echantillons),
     date: apres.date || avant.date,
@@ -176,11 +192,32 @@ export function assembler(sources: Source[]): Donnees {
     }
   }
 
+  // Soil gas: concentrations brought to µg/m³, each probe matched with a borehole by name.
+  const parametresGaz = new Map<string, ParametreSol>()
+  const gaz: MesureGaz[] = []
+  for (const l of sources.flatMap((s) => s.gaz ?? [])) {
+    const facteurs = new Map(l.parametres.map((p) => [p.cle, facteurUnite(p.unite, 'µg/m³') ?? 1]))
+    for (const p of l.parametres) if (!parametresGaz.has(p.cle)) parametresGaz.set(p.cle, { ...p, unite: facteurUnite(p.unite, 'µg/m³') === null ? p.unite : 'µg/m³' })
+    for (const [nom, valeurs] of Object.entries(l.points)) {
+      const resultats: Record<string, ValeurSol> = {}
+      for (const [k, v] of Object.entries(valeurs)) {
+        const f = facteurs.get(k) ?? 1
+        resultats[k] = f === 1 || v.valeur === null ? v : { ...v, valeur: v.valeur * f, brut: `${v.inferieur ? '<' : ''}${String(Number((v.valeur * f).toPrecision(3))).replace('.', ',')}` }
+      }
+      gaz.push({ cle: cleOuvrage(nom), nom, fichier: l.fichier, date: l.date, resultats })
+    }
+  }
+  const sansForage = gaz.filter((g) => !forages.has(g.cle)).map((g) => g.nom)
+  if (sansForage.length) avertissements.push(`Gaz du sol sans forage du même nom (non placés) : ${sansForage.join(', ')}.`)
+
   const liste = [...forages.values()].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true }))
   const utilises = new Set(liste.flatMap((f) => f.echantillons.flatMap((e) => Object.keys(e.resultats))))
   return {
     forages: liste,
     parametresSol: [...parametres.values()].filter((p) => utilises.has(p.cle)),
+    parametresGaz: [...parametresGaz.values()],
+    gaz: gaz.filter((g) => forages.has(g.cle)),
+    parcelles: sources.find((s) => s.parcelles?.length)?.parcelles ?? null,
     base,
     corrections,
     avertissements: [...avertissements, ...sources.flatMap((s) => s.avertissements.map((a) => `${s.nom} : ${a}`))],
