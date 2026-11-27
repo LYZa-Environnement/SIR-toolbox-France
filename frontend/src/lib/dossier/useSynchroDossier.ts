@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from 'react'
+import { abonnerPoints, lireEtatPoints, rafraichirPoints, suivrePoints, type EtatPoints } from './points'
 import { abonner, demarrer, lireEtat, type EtatSession } from './session'
 import { SynchroOutil, type EtatSynchro, type OptionsSynchro } from './synchro'
 
@@ -42,4 +43,18 @@ export function useSynchroDossier<T>({
 export function useDossier(): EtatSession {
   useEffect(() => void demarrer(), [])
   return useSyncExternalStore(abonner, lireEtat)
+}
+
+/**
+ * The investigation points of the open dossier (see points.ts), read again
+ * when the tool opens and when the tab comes back to the front.
+ */
+export function usePointsDossier(): EtatPoints {
+  useEffect(() => {
+    void demarrer().then(() => {
+      suivrePoints()
+      void rafraichirPoints()
+    })
+  }, [])
+  return useSyncExternalStore(abonnerPoints, lireEtatPoints)
 }

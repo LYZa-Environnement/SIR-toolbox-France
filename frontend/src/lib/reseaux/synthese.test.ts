@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { distanceAuSite, formatDistance, formatLongueur, gestionnaires, longueurDansCercle, longueurDansRayon, projecteur, situer, synthese, versCsv } from './synthese'
+import { distanceAuSite, distanceFiable, distancesAuxPoints, formatDistance, formatLongueur, gestionnaires, longueurDansCercle, longueurDansRayon, projecteur, situer, synthese, versCsv, versCsvPoints } from './synthese'
 import type { ObjetReseau } from './types'
 
 // Site at 45° N: one degree of longitude is 111 320 × cos 45° = 78 715 m.
@@ -123,5 +123,41 @@ describe('formats', () => {
     expect(formatLongueur(0)).toBe('—')
     expect(formatLongueur(196.2)).toBe('196 m')
     expect(formatLongueur(1250)).toMatch(/^1,25\s?km$/)
+  })
+})
+
+describe('distancesAuxPoints', () => {
+  // Gas line running north–south 20 m east of the search point; electricity 3 m west of S1.
+  const objets = [
+    objet('g', 'gaz', { type: 'LineString', coordinates: [a(20, -300), a(20, 300)] }),
+    objet('e', 'electricite', { type: 'Point', coordinates: a(-33, 0) }, undefined, 'Poste'),
+  ]
+  const point = (nom: string, est: number, nord: number) => {
+    const [lon, lat] = a(est, nord)
+    return { nom, lon, lat }
+  }
+
+  it('gives each point its nearest network, nearest point first', () => {
+    const { lignes, horsZone } = distancesAuxPoints([point('PZ1', 15, 0), point('S1', -30, 0), point('LOIN', 500, 0)], objets, { lat: LAT, lon: LON }, 100)
+    expect(horsZone).toBe(1)
+    expect(lignes.map((l) => l.nom)).toEqual(['S1', 'PZ1'])
+    // S1, 30 m west: electricity 3 m away, gas 50 m away.
+    expect(lignes[0].plusProche).toMatchObject({ reseau: 'electricite', element: 'Poste' })
+    expect(lignes[0].plusProche!.distanceM).toBeCloseTo(3, 1)
+    expect(lignes[0].parReseau.gaz).toBeCloseTo(50, 1)
+    // 30 m from the centre in a 100 m square: networks all loaded within 70 m of S1.
+    expect(lignes[0].fiableM).toBeCloseTo(70, 1)
+    expect(lignes[1].plusProche).toMatchObject({ reseau: 'gaz' })
+    expect(lignes[1].plusProche!.distanceM).toBeCloseTo(5, 1)
+  })
+
+  it('does not claim a distance beyond what was loaded', () => {
+    expect(distanceFiable(4.26, 70)).toBe('4,3 m')
+    expect(distanceFiable(50, 70)).toBe('50 m')
+    expect(distanceFiable(90, 70)).toBe('> 70 m')
+    expect(distanceFiable(undefined, 70.6)).toBe('> 70 m')
+    const { lignes } = distancesAuxPoints([point('S1', -30, 0)], objets, { lat: LAT, lon: LON }, 100)
+    const csv = versCsvPoints(lignes, ['electricite', 'gaz'])
+    expect(csv.split('\r\n')[1]).toBe('S1;Électricité;Poste;3;3;50;70')
   })
 })

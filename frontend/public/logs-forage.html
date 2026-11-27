@@ -181,6 +181,7 @@ details.match .rows{max-height:320px;overflow:auto;border-top:1px solid var(--li
       </select>
     </div>
     <label class="row"><input type="checkbox" id="optCoords"> Ajouter coordonnées, cote du terrain et niveau d'eau en m NGF</label>
+    <p class="hint" id="coordsDossier" hidden></p>
     <div class="field">Bloc société
       <textarea id="optCompany">ERM France
 Bureau de Paris
@@ -447,6 +448,7 @@ function loadSheets(sheets, fileName){
   }
   state.holes = holes; state.fileName = fileName;
   state.include = new Set(holes.keys());
+  majCoordsDossier();
   if (state.lab){ attachLab(); renderLabPanel(); }
   validate(); renderAll();
 }
@@ -1449,8 +1451,8 @@ function drawHeader(h, L, T, line){
   if (I.bottle) right.push(['Type de flaconnage :', I.bottle]);
   if (I.shipping) right.push(['Envoi en glacières :', I.shipping]);
   if (state.opt.coords){
-    const cc = h.collar || {};
-    if (cc.x != null) right.push(['X / Y :', `${cc.x} / ${cc.y}`]);
+    const cc = collarAvecDossier(h);
+    if (cc.x != null) right.push([cc.l93 ? 'X / Y (L93) :' : 'X / Y :', `${cc.x} / ${cc.y}`]);
     if (cc.z != null) right.push(['Cote TN :', `${fmtM(cc.z)} m NGF`]);
     if (cc.z != null && h.water[0]) right.push(['Niveau d\'eau :', `${fmtM(h.water[0].depth)} m/TN – ${fmtM(Math.round((cc.z - h.water[0].depth)*100)/100)} m NGF`]);
   }
@@ -1744,12 +1746,44 @@ function appliquerDossier(d){
   $('#optCoords').checked = state.opt.coords; $('#optCompany').value = state.opt.company;
   $('#logsOk').hidden = !state.holes.size;
   $('#logsOk').textContent = state.holes.size ? `${state.fileName} : ${state.holes.size} forage(s), repris du dossier.` : '';
-  renderLabPanel(); validate(); renderAll();
+  majCoordsDossier(); renderLabPanel(); validate(); renderAll();
+}
+/* Points d'investigation du dossier : coordonnées (Lambert 93) et cote du
+   terrain naturel des forages que l'onglet Collars ne donne pas, rapprochés
+   par le nom (« PZ01 » = « Pz1 »). Lus à l'affichage, jamais enregistrés
+   avec les logs : ils restent ceux du dossier. */
+let pointDossier = () => null;
+function collarAvecDossier(h){
+  const cc = { ...(h.collar || {}) };
+  const p = pointDossier(h.id);
+  if (!p) return cc;
+  if (cc.x == null || cc.y == null){ cc.x = Math.round(p.x93 * 100) / 100; cc.y = Math.round(p.y93 * 100) / 100; cc.l93 = true; }
+  if (cc.z == null && p.altitude != null) cc.z = p.altitude;
+  return cc;
+}
+function majCoordsDossier(){
+  const el = $('#coordsDossier');
+  const n = [...state.holes.values()].filter(h => { const p = pointDossier(h.id); const c = h.collar || {};
+    return p && (c.x == null || c.y == null || (c.z == null && p.altitude != null)); }).length;
+  el.hidden = !n;
+  el.textContent = n ? `Coordonnées ou cote du terrain de ${n} forage(s) reprises des points d'investigation du dossier (Lambert 93), là où l'onglet Collars n'en donne pas.` : '';
+}
+async function lirePointsDossier(){
+  const D = window.SirDossier;
+  if (!D) return;
+  try {
+    const pts = await D.points();
+    pointDossier = pts.length ? D.indexerPoints(pts) : () => null;
+  } catch { pointDossier = () => null; }
+  majCoordsDossier(); renderAll();
 }
 function brancherDossier(){
   const D = window.SirDossier;
   if (!D || synchroDossier) return;
   D.bandeau();
+  void lirePointsDossier();
+  D.surChangement(() => void lirePointsDossier());
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void lirePointsDossier(); });
   synchroDossier = D.synchroniser({ outil:'logs-forage', version:1, lire:etatDossier, appliquer:appliquerDossier, estVide:() => !state.holes.size && !state.lab });
 }
 if (window.SirDossier) brancherDossier();

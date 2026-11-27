@@ -42,6 +42,7 @@ n'est envoyé à un serveur : le partage passe par la synchronisation OneDrive.
   dossier.json            fiche : nom, n° d'affaire, site, création, dernière modification de chaque outil
   reseaux.json            un fichier par outil utilisé
   maillage.json
+  points.json             points d'investigation : fichiers lus, systèmes choisis, points repris par les outils
   logs-forage.json
   resultats-labo.json
   suivi-temporel.json
@@ -59,6 +60,14 @@ n'est envoyé à un serveur : le partage passe par la synchronisation OneDrive.
   par Réseaux (point de recherche), Création maillage (parcelles, quand le
   maillage est vide) et Données environnementales (carte centrée, emprise
   dessinée).
+- **Les points d'investigation** se chargent une fois, depuis le résumé du
+  dossier (accueil) ou le bandeau (« Points d'investigation ») : voir
+  [points-investigation.md](points-investigation.md). Ils sont repris par
+  Réseaux (points sur la carte, réseau le plus proche de chacun), Suivi
+  temporel (coordonnées et cote du repère des ouvrages) et Logs de forage
+  (coordonnées et cote du terrain naturel), rapprochés par le nom (« PZ01 » =
+  « Pz1 »). Un outil lit les points avec `usePointsDossier()` ; une page
+  autonome avec `SirDossier.points()` et `SirDossier.indexerPoints()`.
 - **sources/** : tout fichier choisi ou déposé dans une page pendant qu'un
   dossier est ouvert. Le même fichier déposé deux fois n'est copié qu'une
   fois ; un autre fichier de même nom est numéroté (« rapport (2).xlsx »).

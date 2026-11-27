@@ -41,6 +41,13 @@ dossier se rouvre plus tard, sur le même poste ou sur celui d'un collègue ;
 une version enregistrée entre-temps par quelqu'un d'autre n'est jamais
 écrasée sans le demander. Voir [docs/dossiers.md](docs/dossiers.md).
 
+Le **site** et les **[points d'investigation](docs/points-investigation.md)**
+(sondages, piézomètres, piézairs, vapor pins…) se saisissent une fois par
+[dossier d'étude](docs/dossiers.md) et sont repris par les outils. Les points
+se chargent depuis le résumé du dossier sur l'accueil ou le bandeau Dossier :
+EQuIS, Field Maps, tableau du géomètre, GPS, SIG, convertis en Lambert 93 et
+WGS 84.
+
 L'accès au site et aux pages autonomes est protégé par un mot de passe
 (`frontend/src/lib/acces.ts`, empreinte SHA-256) : une simple barrière, le
 site étant statique.

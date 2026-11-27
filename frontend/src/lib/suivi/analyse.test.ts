@@ -79,3 +79,28 @@ describe('tableau historique', () => {
     expect(lots.map((l) => l.date)).toEqual(['2021-03-15', '2021-09-20'])
   })
 })
+
+describe('points d’investigation du dossier', () => {
+  const f = exemple()
+  // Wells described without coordinates nor measuring point; the dossier gives them, names written otherwise.
+  const sansCoordonnees = f.ouvrages.map((o) => ({ ...o, x: null, y: null, repere: null }))
+  const points = [
+    { nom: 'Pz01', x93: 652300, y93: 6862420, repere: 54.2 },
+    { nom: 'pz-2', x93: 652355, y93: 6862305 },
+  ]
+  const base = (ouvragesDecrits: typeof f.ouvrages) =>
+    construireBase({ lots: f.lots, campagnes: placerLots([], f.lots), releves: [], ouvragesDecrits, corrections: CORRECTIONS_VIDES, pointsDossier: points })
+
+  it('reprend les coordonnées et la cote du repère des ouvrages qui n’en ont pas', () => {
+    const b = base(sansCoordonnees)
+    expect(b.ouvrages.find((o) => o.nom === 'PZ1')).toMatchObject({ x: 652300, y: 6862420, repere: 54.2 })
+    expect(b.ouvrages.find((o) => o.nom === 'PZ2')).toMatchObject({ x: 652355, y: 6862305, repere: null })
+    expect(b.notes.join(' ')).toMatch(/Coordonnées de 2 ouvrages reprises des points d'investigation du dossier/)
+  })
+
+  it('ne mélange pas deux systèmes : les coordonnées des fichiers l’emportent toutes', () => {
+    const autreSysteme = sansCoordonnees.map((o, i) => (i === 2 ? { ...o, x: 1652430, y: 8190000 } : o))
+    const b = base(autreSysteme)
+    expect(b.ouvrages.find((o) => o.nom === 'PZ1')).toMatchObject({ x: null, y: null })
+  })
+})
