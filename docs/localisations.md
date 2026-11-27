@@ -69,6 +69,20 @@ Un même nom (sans tenir compte de la casse) dans plusieurs fichiers :
 Les points sans coordonnées sont listés à part (« Localisation non trouvée »,
 blancs, prélèvements sur une unité de traitement).
 
+## Dossier d'étude
+
+Avec un [dossier d'étude](dossiers.md) ouvert :
+
+- les fichiers déposés sont copiés dans `sources/` ;
+- `localisations.json` garde chaque fichier lu (coordonnées telles que dans
+  le fichier, système détecté ou choisi, fichier masqué ou non) et les
+  versions retenues entre fichiers ; les points en Lambert 93 et WGS 84 se
+  recalculent à l'ouverture ;
+- le site du dossier (Site Setting) départage les systèmes ambigus du
+  premier fichier déposé et son emprise est dessinée sur la carte ;
+- les exports sont copiés dans `exports/` — le GeoJSON s'ouvre directement
+  dans QGIS depuis le dossier OneDrive.
+
 ## Exports
 
 - **GeoJSON** : WGS 84, Lambert 93 dans les attributs — le format d'échange

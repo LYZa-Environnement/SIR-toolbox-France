@@ -4297,3 +4297,10 @@ svg .halo {
   font-size: 0.72rem;
   font-weight: 700;
 }
+
+.loc__dossier {
+  max-width: 40rem;
+  margin: 0.8rem 0 0;
+  font-size: 0.86rem;
+  color: var(--color-muted);
+}

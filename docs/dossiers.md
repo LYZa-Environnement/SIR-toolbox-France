@@ -42,6 +42,7 @@ n'est envoyé à un serveur : le partage passe par la synchronisation OneDrive.
   dossier.json            fiche : nom, n° d'affaire, site, création, dernière modification de chaque outil
   reseaux.json            un fichier par outil utilisé
   maillage.json
+  localisations.json      points d'investigation : fichiers lus, systèmes choisis
   logs-forage.json
   resultats-labo.json
   suivi-temporel.json

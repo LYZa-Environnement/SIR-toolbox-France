@@ -4,6 +4,7 @@ import L from 'leaflet'
 import '../leaflet-icon-fix'
 import ZoneDepot from '../components/ZoneDepot'
 import { BASE_LAYERS } from '../lib/basemap'
+import { useDossier, useSynchroDossier } from '../lib/dossier/useSynchroDossier'
 import { telechargerBlob, telechargerClasseurExcel } from '../lib/fichiers'
 import { jourIso } from '../lib/format'
 import { classeurEquis, classeurExcel, modeleSimple, systemeLocal, versCsv, versGeoJson, versGpx, versKml } from '../lib/localisations/export'
@@ -12,6 +13,7 @@ import { FORMATS_GEO, lireFichiers } from '../lib/localisations/lecture'
 import { centre, cleNom, synthese, systemeDe, type Conflit, type FormeSituee, type PointSitue, type Synthese } from '../lib/localisations/synthese'
 import { courtSysteme, LAMBERT93, nomSysteme, PAR_CODE, SYSTEMES, WGS84 } from '../lib/localisations/systemes'
 import type { Couche, Famille, Format } from '../lib/localisations/types'
+import type { Site } from '../types/site'
 
 const FORMAT: Record<Format, string> = {
   equis: 'EQuIS (EDD)',
@@ -107,7 +109,7 @@ function Cadrage({ emprise }: { emprise: Synthese['emprise'] }) {
   return null
 }
 
-function Carte({ s, cle, etiquettes }: { s: Synthese; cle: string; etiquettes: boolean }) {
+function Carte({ s, cle, etiquettes, site }: { s: Synthese; cle: string; etiquettes: boolean; site: Site | null }) {
   const [baseId, setBaseId] = useState(BASE_LAYERS[0].id)
   const base = BASE_LAYERS.find((b) => b.id === baseId) ?? BASE_LAYERS[0]
   const placables = useMemo(() => s.points.filter((p) => !p.horsFrance), [s.points])
@@ -117,6 +119,14 @@ function Carte({ s, cle, etiquettes }: { s: Synthese; cle: string; etiquettes: b
       <div className="reseaux__carte loc__carte">
         <MapContainer center={depart} zoom={s.emprise ? 17 : 6} zoomSnap={0.5} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
           <TileLayer key={base.id} url={base.url} attribution={base.attribution} maxNativeZoom={base.maxNativeZoom} maxZoom={21} />
+          {site?.emprise && (
+            <GeoJSON
+              key={`site-${site.lat},${site.lon}`}
+              data={{ type: 'Feature', geometry: site.emprise, properties: {} } as never}
+              style={() => ({ color: '#00ffbe', weight: 2.5, dashArray: '6 4', fill: false })}
+              interactive={false}
+            />
+          )}
           {s.formes.length > 0 && <CoucheFormes key={s.formes.map((f) => f.id).join()} formes={s.formes} />}
           <CouchePoints points={placables} etiquettes={etiquettes} />
           <Cadrage key={cle} emprise={s.emprise} />
@@ -329,6 +339,23 @@ export default function Localisations() {
   const [etiquettes, setEtiquettes] = useState<boolean | null>(null)
   const [systemeEdd, setSystemeEdd] = useState<string | null>(null)
 
+  // Kept in the open dossier: the files as read (coordinates as in each file,
+  // systems chosen by the reader) and the versions chosen between files.
+  // The points are recomputed from them; display choices are not saved.
+  const sauve = useMemo(() => ({ couches, choix }), [couches, choix])
+  useSynchroDossier({
+    outil: 'localisations',
+    version: 1,
+    etat: sauve,
+    estVide: couches.length === 0,
+    appliquer: (d) => {
+      setCouches(d.couches)
+      setChoix(d.choix ?? {})
+    },
+  })
+  const dossier = useDossier()
+  const site = dossier.etat === 'ouvert' ? dossier.dossier.fiche.site : null
+
   const s = useMemo(() => synthese(couches, choix), [couches, choix])
   // What is shown is what is exported: the kinds switched off are left out of both.
   const vue = useMemo<Synthese>(
@@ -343,7 +370,8 @@ export default function Localisations() {
   async function ajouter(fichiers: File[]) {
     setChargement(true)
     try {
-      const { couches: nouvelles, erreurs: e } = await lireFichiers(fichiers, { reference: centre(s) })
+      // The points already loaded, else the dossier's site, settle the systems that fit several ways.
+      const { couches: nouvelles, erreurs: e } = await lireFichiers(fichiers, { reference: centre(s) ?? (site ? [site.lon, site.lat] : null) })
       setCouches((c) => [...c, ...nouvelles])
       setErreurs(e)
     } finally {
@@ -400,6 +428,12 @@ export default function Localisations() {
               </div>
             )}
           />
+          {dossier.etat === 'ouvert' && (
+            <p className="loc__dossier">
+              Dossier « {dossier.dossier.fiche.nom} » ouvert : les fichiers déposés sont copiés dans <code>sources/</code>, les points et les systèmes choisis
+              enregistrés dans <code>localisations.json</code>, les exports copiés dans <code>exports/</code>.
+            </p>
+          )}
           {erreurs.length > 0 && (
             <div className="alerte" role="alert" style={{ marginTop: '1rem', maxWidth: '40rem' }}>
               {erreurs.map((e) => (
@@ -455,7 +489,7 @@ export default function Localisations() {
             )}
 
             <div className="reseaux__grille">
-              <Carte s={vue} cle={cleCadrage} etiquettes={avecEtiquettes} />
+              <Carte s={vue} cle={cleCadrage} etiquettes={avecEtiquettes} site={site} />
               <aside className="reseaux__legende" aria-label="Familles de points">
                 <p className="reseaux__legende-titre">Familles de points</p>
                 <ul>
