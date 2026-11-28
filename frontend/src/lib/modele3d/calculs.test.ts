@@ -5,8 +5,8 @@ import type { Resultat } from '../suivi/modele.ts'
 import { assembler } from './assemblage.ts'
 import { deprojeter, detecterSysteme, projeter, systemeDe, versLambert93 } from './coordonnees.ts'
 import { comportement, partSolubilite } from './comportement.ts'
-import { coteDe, delimiterPanache, fermetureDe, fermeturesPanache, versDirection } from './delimitation.ts'
-import { aquifereDe, crepineConseillee, HYPOTHESES_DEFAUT, lirePermeabilite, longueurStationnaire, RAPPORT_ANISOTROPIE, transportDe } from './hydrogeologie.ts'
+import { coteDe, delimitationsParCampagne, delimiterPanache, fermetureDe, fermeturesPanache, versDirection } from './delimitation.ts'
+import { aquifereDe, attenuationAxe, crepineConseillee, declinSource, HYPOTHESES_DEFAUT, lirePermeabilite, longueurStationnaire, RAPPORT_ANISOTROPIE, transportDe } from './hydrogeologie.ts'
 import { exemple } from './exemple.ts'
 import { classerEchantillons, volumesFilieres } from './filieres.ts'
 import { contactsForage, construireFormations, formationA, proposerFormations } from './formations.ts'
@@ -584,5 +584,65 @@ describe('géologie et comportement des polluants (BRGM)', () => {
     // Screens down to the base of the aquifer (the marls, about 10 m deep).
     expect(aval.crepine!.raison).toContain('Marne')
     expect(aval.crepine!.a).toBeGreaterThan(9)
+  })
+})
+
+describe('atténuation et suivi par campagne', () => {
+  it('atténuation le long de l’axe : ÷ 10 tous les 100 m, demi-vie apparente k = v·pente (Newell et al., 2002)', () => {
+    // Flow to the south; 100, 10, 1 every 100 m downgradient; E 60° off the axis is left out.
+    const pts = [
+      { nom: 'S', x: 0, y: 0, valeur: 100, inferieur: false },
+      { nom: 'B', x: 0, y: -100, valeur: 10, inferieur: false },
+      { nom: 'D', x: 0, y: -200, valeur: 1, inferieur: false },
+      { nom: 'E', x: 100, y: -50, valeur: 50, inferieur: false },
+    ]
+    const a = attenuationAxe(pts, 180, 5, [100, 50])!
+    expect(a.ouvrages.map((o) => o.nom)).toEqual(['S', 'B', 'D'])
+    // Slope ln(0.1) / 100 m = −0.0230259 /m: tenfold every 100 m.
+    expect(a.pente).toBeCloseTo(-0.0230259, 6)
+    expect(a.decade).toBeCloseTo(100, 6)
+    // B at 10 is the farthest above 5: ln(10 / 5) / 0.0230259 = 30.10 m beyond it.
+    expect(a.prolongement).toEqual({ depuis: 'B', distance: expect.closeTo(30.103, 2) })
+    // k = 0.0230259 × 100 m/year = 2.3026 /year → half-life 0.30103 year; at 50 m/year, 0.60206.
+    expect(a.demiVie![0]).toBeCloseTo(0.30103, 4)
+    expect(a.demiVie![1]).toBeCloseTo(0.60206, 4)
+    expect(attenuationAxe(pts, 180, 5, null)!.demiVie).toBeNull()
+    // Rising downgradient: no attenuation.
+    expect(attenuationAxe([pts[2], { ...pts[0], valeur: 0.5 }], 180, 5, null)).toBeNull()
+  })
+
+  const d = assembler([exemple()])
+  const base = d.base!
+  const m = construireModele(d)
+  const pce = base.composes.find((c) => c.cas === '127-18-4')!
+  const derniere = base.campagnes[base.campagnes.length - 1]
+
+  it('déclin de la source : le tétrachloroéthylène de PZ2, demi-vie de 2,6 ans dans l’exemple', () => {
+    // The example's PCE at PZ2 halves every 2.6 years (suivi/exemple.ts), with seasonal noise.
+    const r = declinSource(base, m.points.find((p) => p.nom === 'PZ2')!.cle, pce.cle, derniere.t)!
+    expect(r.n).toBe(14)
+    expect(r.demiVie!).toBeGreaterThan(2.2)
+    expect(r.demiVie!).toBeLessThan(3)
+  })
+
+  it('verdict à chaque campagne, chacune avec son écoulement', () => {
+    const tce = base.composes.find((c) => c.cas === '79-01-6')!
+    const v = delimitationsParCampagne(m, base, tce.cle, reference(tce, d.corrections)!.valeur, { aval: null })
+    expect(v).toHaveLength(14)
+    expect(v.every((x) => ['delimite', 'a-confirmer', 'non-delimite', 'aucun-depassement'].includes(x.verdict))).toBe(true)
+    // TCE reached PZ4, the most downgradient well, in 2022 (suivi/exemple.ts): open downgradient since.
+    const dernier = v[v.length - 1]
+    expect(dernier.verdict).toBe('non-delimite')
+    expect(dernier.ouverts).toContain('aval')
+  })
+
+  it('valeurs du guide signalées, colonnes du bromoforme lues dans leur ordre', () => {
+    const tce = comportement({ cas: '79-01-6', nom: '', famille: '' })
+    expect(tce.substance!.douteux![0]).toMatchObject({ champ: 'densite', autre: expect.stringContaining('1,46') })
+    expect(comportement({ cas: '100-41-4', nom: '', famille: '' }).substance!.douteux![0].autre).toContain('150')
+    const bromoforme = comportement({ cas: '75-25-2', nom: '', famille: '' }).substance!
+    expect(bromoforme.densite).toBe(2.9)
+    expect(bromoforme.logKow).toEqual([2.4, 2.4])
+    expect(comportement({ cas: '127-18-4', nom: '', famille: '' }).substance!.douteux).toBeUndefined()
   })
 })

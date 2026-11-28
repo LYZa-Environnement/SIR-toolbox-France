@@ -202,6 +202,34 @@ vue, calcul dans le Web Worker).
     (battement de l'ouvrage voisin) pour un composé plus léger que l'eau ;
     jusqu'au mur de l'aquifère sans le traverser pour un composé plus
     dense ; sur la hauteur saturée de l'aquifère sinon.
+- **Atténuation tirée des données** : pente de ln C en fonction de la
+  distance le long de l'écoulement, de la source (la plus forte
+  concentration quantifiée) aux ouvrages quantifiés à moins de 45° de l'axe
+  en aval (moindres carrés) : facteur 10 tous les X m, distance où la pente
+  prolongée atteint la valeur au-delà du dernier ouvrage qui la dépasse ;
+  avec une perméabilité mesurée, constante d'atténuation globale
+  k = v·(−pente) et demi-vie apparente (C. J. Newell et al., US EPA,
+  EPA/540/S-02/500, 2002), proposée en un clic comme demi-vie du composé.
+  Déclin de la source dans le temps (pente de Sen sur ln C, quatre résultats
+  quantifiés au moins) : durée de vie de la source, signalée comme telle.
+- **Valeurs du guide signalées** : masse volumique du TCE (1,27 dans le
+  tableau 13, 1,46 dans les tables de constantes physiques) et du
+  tétrachlorure de carbone (1,46 contre 1,59), solubilité de l'éthylbenzène
+  (866 mg/l, contre 150 mg/l dans le guide de 2008), solubilités des
+  1,2-dichloroéthylènes (sources divergentes selon la température) :
+  affichées à côté de la valeur du guide, que le calcul garde. Bromoforme :
+  la seconde partie du tableau 13 donne le log Kow avant la masse volumique.
+- **Affichage** : bandeau de trois chiffres (côtés non délimités, surface
+  où le dépassement est probable, surface au classement douteux avant et
+  après les emplacements), trois onglets (Délimitation, Géologie et
+  comportement, Emplacements), motif de chaque emplacement en pastille (la
+  phrase complète au survol et dans l'export), crépine conseillée en barre
+  de profondeur (crépine, aquifère, eau, mur). Dans la frise, une pastille
+  sous chaque campagne donne le verdict de la délimitation à cette date,
+  calculé avec l'écoulement de la campagne. Dans la vue, le nom des
+  emplacements proposés est porté par un trait de rappel, au coin qui ne
+  masque aucun nom d'ouvrage (ouvrage choisi, puis ouvrages de suivi, puis
+  piézairs) ; échelle graphique en vue de dessus, reprise dans l'image PNG.
 - Limites : en inverse distance, ni probabilité ni emplacement « douteux »
   (fermeture seule) ; sous six ouvrages, variogramme par défaut
   (probabilités indicatives) ; la variance de la tendance n'est pas comptée
@@ -256,7 +284,11 @@ SVG.
 - Bâtiments BD TOPO : ceux du site en volume, les voisins en emprise.
 - Image PNG avec les étiquettes ; tableaux des valeurs affichées.
 - Calculs lourds (modèle, formations, krigeage, volumes, évolution,
-  tendances) dans un Web Worker ; blocs réduits à leurs faces visibles.
+  tendances, délimitation et verdicts par campagne) dans un Web Worker ;
+  blocs réduits à leurs faces visibles. La scène (three.js, `rendu.ts`) est
+  chargée à l'affichage de la vue, dans un fichier à part.
+- Composants de la page : `Legende.tsx`, `Tableaux.tsx`, `Filieres.tsx`,
+  `Methode.tsx`, `Delimitation.tsx`, couleurs dans `palettes.ts`.
 
 Le modèle enregistre dans le dossier (`modele-3d.json`) les fichiers
 déposés dans l'outil, les sources décochées, les coordonnées et cotes

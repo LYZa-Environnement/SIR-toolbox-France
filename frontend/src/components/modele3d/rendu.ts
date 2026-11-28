@@ -151,6 +151,8 @@ export class Rendu3D {
   private readonly controles: OrbitControls
   private readonly rappels: Rappels
   private readonly bulle: HTMLDivElement
+  /** Scale bar, shown when looking down on the model. */
+  private readonly echelle: HTMLDivElement
   private readonly observateur: ResizeObserver
 
   private modele: Modele | null = null
@@ -176,7 +178,8 @@ export class Rendu3D {
   private filieresCourantes: VolumesFilieres | null = null
   private ecart = 0
   private etiquettesParCle = new Map<string, HTMLDivElement>()
-  private prioritaires = new Set<string>()
+  /** Rank of each label when names overlap: the selected point, the monitoring wells, the other screened points (gas probes), the rest. */
+  private prioritaires = new Map<string, number>()
   private halo: THREE.Object3D | null = null
   private rayon = 1
   private demande = 0
@@ -202,6 +205,14 @@ export class Rendu3D {
     this.bulle.className = 'm3d-bulle'
     this.bulle.hidden = true
     conteneur.appendChild(this.bulle)
+
+    this.echelle = document.createElement('div')
+    this.echelle.className = 'm3d-echelle'
+    this.echelle.hidden = true
+    this.echelle.append(document.createElement('span'), document.createElement('span'))
+    ;(this.echelle.children[0] as HTMLElement).className = 'm3d-echelle__barre'
+    ;(this.echelle.children[1] as HTMLElement).className = 'm3d-echelle__texte'
+    conteneur.appendChild(this.echelle)
 
     this.camera = new THREE.PerspectiveCamera(40, 1, 0.5, 20000)
     this.controles = new OrbitControls(this.camera, this.renderer.domElement)
@@ -268,7 +279,27 @@ export class Rendu3D {
       this.renderer.render(this.scene, this.camera)
       this.etiquettes.render(this.scene, this.camera)
       this.desencombrer()
+      this.majEchelle()
     })
+  }
+
+  /** The scale bar in plan view: a round length about 110 px long at the depth of the target. */
+  private majEchelle() {
+    const dir = new THREE.Vector3()
+    this.camera.getWorldDirection(dir)
+    const largeur = this.conteneur.clientWidth
+    const t = this.controles.target
+    const a = t.clone().project(this.camera)
+    const b = t.clone().add(new THREE.Vector3(1, 0, 0)).project(this.camera)
+    const pxParM = (Math.abs(b.x - a.x) / 2) * largeur
+    if (!this.modele || dir.y > -0.97 || !(pxParM > 0)) {
+      this.echelle.hidden = true
+      return
+    }
+    const L = pasRond(110 / pxParM)
+    ;(this.echelle.children[0] as HTMLElement).style.width = `${Math.round(L * pxParM)}px`
+    ;(this.echelle.children[1] as HTMLElement).textContent = `${fr(L)} m`
+    this.echelle.hidden = false
   }
 
   /**
@@ -278,20 +309,37 @@ export class Rendu3D {
    */
   private desencombrer() {
     const gardes: DOMRect[] = []
-    // The proposed wells first: their labels are few and the reason for the layer.
-    for (const div of this.etiquettes.domElement.querySelectorAll<HTMLElement>('.m3d-proposition')) {
-      if (div.style.display === 'none') continue
-      const r = div.getBoundingClientRect()
-      if (r.width) gardes.push(r)
-    }
-    const liste = [...this.etiquettesParCle.entries()].sort((a, b) => Number(this.prioritaires.has(b[0])) - Number(this.prioritaires.has(a[0])))
+    const chevauche = (r: DOMRect) => gardes.some((g) => r.left < g.right + 2 && r.right > g.left - 2 && r.top < g.bottom + 1 && r.bottom > g.top - 1)
+    const liste = [...this.etiquettesParCle.entries()].sort((a, b) => (this.prioritaires.get(b[0]) ?? 0) - (this.prioritaires.get(a[0]) ?? 0))
     for (const [, div] of liste) {
       if (div.style.display === 'none') continue
       div.style.visibility = ''
       const r = div.getBoundingClientRect()
       if (!r.width) continue
-      if (gardes.some((g) => r.left < g.right + 2 && r.right > g.left - 2 && r.top < g.bottom + 1 && r.bottom > g.top - 1)) div.style.visibility = 'hidden'
+      if (chevauche(r)) div.style.visibility = 'hidden'
       else gardes.push(r)
+    }
+    // The proposed wells, few and always shown: their name moved around its anchor, on a leader
+    // line, to the first corner that hides no other name.
+    for (const div of this.etiquettes.domElement.querySelectorAll<HTMLElement>('.m3d-proposition')) {
+      if (div.style.display === 'none') continue
+      const nom = div.firstElementChild as HTMLElement | null
+      if (!nom) continue
+      let garde: DOMRect | null = null
+      for (const position of ['ne', 'no', 'se', 'so']) {
+        div.dataset.position = position
+        const r = nom.getBoundingClientRect()
+        if (!r.width) break
+        if (!chevauche(r)) {
+          garde = r
+          break
+        }
+      }
+      if (!garde) {
+        div.dataset.position = 'ne'
+        garde = nom.getBoundingClientRect()
+      }
+      if (garde.width) gardes.push(garde)
     }
     // Contour values last: they give way to the names.
     for (const div of this.etiquettes.domElement.querySelectorAll<HTMLElement>('.m3d-isopieze')) {
@@ -466,7 +514,7 @@ export class Rendu3D {
   private construireForages() {
     const m = this.modele!
     const r = this.rayon
-    this.prioritaires = new Set(m.points.filter((p) => p.crepine || p.ouvrage).map((p) => p.cle))
+    this.prioritaires = rangsEtiquettes(m, null)
     for (const p of m.points) {
       const groupe = new THREE.Group()
       groupe.userData.cle = p.cle
@@ -822,7 +870,11 @@ export class Rendu3D {
       this.groupes.delimitation.add(tube)
       const div = document.createElement('div')
       div.className = 'm3d-proposition'
-      div.textContent = `N${p.rang}`
+      div.dataset.position = 'ne'
+      const nom = document.createElement('span')
+      nom.className = 'm3d-proposition__nom'
+      nom.textContent = `N${p.rang}`
+      div.append(nom)
       const o = new CSS2DObject(div)
       // In the stretched group: placed in model units, just above the ground.
       o.position.set(p.x, sol + 0.3, -p.y)
@@ -1171,7 +1223,7 @@ export class Rendu3D {
     const cleChoisie = s && 'cle' in s ? s.cle : null
     for (const [cle, div] of this.etiquettesParCle) div.classList.toggle('m3d-etiquette--choisie', cle === cleChoisie)
     const m = this.modele
-    if (m) this.prioritaires = new Set([...(cleChoisie ? [cleChoisie] : []), ...m.points.filter((p) => p.crepine || p.ouvrage).map((p) => p.cle)])
+    if (m) this.prioritaires = rangsEtiquettes(m, cleChoisie)
     const p = cleChoisie ? m?.points.find((x) => x.cle === cleChoisie) : null
     if (m && p) {
       const prof = Math.max(p.forage?.profondeur ?? 0, 6)
@@ -1232,7 +1284,7 @@ export class Rendu3D {
     ctx.drawImage(source, 0, 0)
     const rect = this.conteneur.getBoundingClientRect()
     ctx.textBaseline = 'top'
-    for (const el of this.etiquettes.domElement.querySelectorAll<HTMLElement>('.m3d-etiquette, .m3d-graduation, .m3d-nord, .m3d-isopieze, .m3d-mesure')) {
+    for (const el of this.etiquettes.domElement.querySelectorAll<HTMLElement>('.m3d-etiquette, .m3d-graduation, .m3d-nord, .m3d-isopieze, .m3d-mesure, .m3d-proposition__nom')) {
       if (el.style.display === 'none' || el.style.visibility === 'hidden' || !estVisibleDom(el)) continue
       const r = el.getBoundingClientRect()
       if (r.width === 0 || r.right < rect.left || r.left > rect.right || r.bottom < rect.top || r.top > rect.bottom) continue
@@ -1250,6 +1302,17 @@ export class Rendu3D {
         ctx.font = `${i === 0 && el.classList.contains('m3d-etiquette') ? '700' : '400'} ${taille}px Figtree, Arial, sans-serif`
         ctx.fillText(t, x + Number.parseFloat(style.paddingLeft) * echelle, y + Number.parseFloat(style.paddingTop) * echelle + i * taille * 1.2)
       })
+    }
+    if (!this.echelle.hidden) {
+      const barre = (this.echelle.children[0] as HTMLElement).getBoundingClientRect()
+      const x = (barre.left - rect.left) * echelle
+      const y = (barre.top - rect.top) * echelle
+      ctx.fillStyle = '#0d2421'
+      ctx.fillRect(x, y, barre.width * echelle, Math.max(2, barre.height * echelle))
+      ctx.font = `400 ${12 * echelle}px Figtree, Arial, sans-serif`
+      ctx.textBaseline = 'bottom'
+      ctx.fillText(this.echelle.children[1].textContent ?? '', x, y - 3 * echelle)
+      ctx.textBaseline = 'top'
     }
     ctx.font = `700 ${14 * echelle}px Figtree, Arial, sans-serif`
     ctx.fillStyle = '#0d2421'
@@ -1276,7 +1339,15 @@ export class Rendu3D {
     this.renderer.domElement.remove()
     this.etiquettes.domElement.remove()
     this.bulle.remove()
+    this.echelle.remove()
   }
+}
+
+/** Labels kept first: the selected point, then the monitoring wells, then the other screened points. */
+function rangsEtiquettes(m: Modele, choisi: string | null): Map<string, number> {
+  const rangs = new Map<string, number>()
+  for (const p of m.points) rangs.set(p.cle, p.cle === choisi ? 3 : p.ouvrage ? 2 : p.crepine ? 1 : 0)
+  return rangs
 }
 
 const estVisibleDom = (el: HTMLElement) => {

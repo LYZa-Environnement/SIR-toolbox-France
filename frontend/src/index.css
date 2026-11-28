@@ -4395,6 +4395,15 @@ svg .halo {
   inset: 1rem;
   height: fit-content;
 }
+.m3d-vue__chargement {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
 .m3d-etiquette {
   display: flex;
   flex-direction: column;
@@ -4961,6 +4970,105 @@ svg .halo {
   align-items: center;
   gap: 0.4rem;
 }
+.m3d-chiffres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.6rem;
+}
+.m3d-chiffre {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.m3d-chiffre--alerte {
+  border-color: var(--level-elevee);
+  background: var(--level-elevee-bg);
+}
+.m3d-chiffre__valeur {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.m3d-chiffre__libelle {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.m3d-onglets--panneau {
+  margin-top: 0.2rem;
+}
+.m3d-delimitation__onglet {
+  display: grid;
+  gap: 0.7rem;
+}
+.m3d-delimitation__actions {
+  justify-content: flex-end;
+  align-items: center;
+}
+.m3d-delimitation__methode summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+.m3d-motif {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.m3d-motif--fermer {
+  color: var(--level-elevee);
+  background: var(--level-elevee-bg);
+}
+.m3d-motif--doute {
+  color: var(--level-indeterminee);
+  background: var(--level-indeterminee-bg);
+}
+.m3d-tableau-emplacements td,
+.m3d-tableau-emplacements th {
+  vertical-align: middle;
+}
+.m3d-barre-crepine {
+  margin: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+.m3d-barre-crepine figcaption {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.m3d-barre-crepine__terrain {
+  fill: #e4dccd;
+}
+.m3d-barre-crepine__aquifere {
+  fill: #ecd078;
+  background: #ecd078;
+}
+.m3d-barre-crepine__crepine {
+  fill: #1f4e8c;
+  background: #1f4e8c;
+}
+.m3d-barre-crepine__eau {
+  stroke: #3d8fd1;
+  stroke-width: 2;
+  background: #3d8fd1;
+}
+.m3d-barre-crepine__mur {
+  stroke: #6b4a2b;
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+  background: #6b4a2b;
+}
+.m3d-geologie__douteux {
+  color: var(--level-moderee);
+}
 .m3d-geologie {
   display: grid;
   gap: 0.6rem;
@@ -4997,7 +5105,39 @@ svg .halo {
     grid-template-columns: 1fr;
   }
 }
+/* Proposed wells: an anchor dot, the name on a leader line at one of four corners. */
 .m3d-proposition {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6a3fb5;
+  border: 1.5px solid #ffffff;
+}
+.m3d-proposition::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 1.5px;
+  background: #6a3fb5;
+  transform-origin: 0 50%;
+  transform: rotate(-45deg);
+}
+.m3d-proposition[data-position='no']::after {
+  transform: rotate(-135deg);
+}
+.m3d-proposition[data-position='se']::after {
+  transform: rotate(45deg);
+}
+.m3d-proposition[data-position='so']::after {
+  transform: rotate(135deg);
+}
+.m3d-proposition__nom {
+  position: absolute;
+  left: 15px;
+  bottom: 15px;
   padding: 0 0.3rem;
   border-radius: 3px;
   background: #6a3fb5;
@@ -5005,6 +5145,49 @@ svg .halo {
   font-size: 0.7rem;
   font-weight: 700;
   white-space: nowrap;
+}
+.m3d-proposition[data-position='no'] .m3d-proposition__nom {
+  left: auto;
+  right: 15px;
+}
+.m3d-proposition[data-position='se'] .m3d-proposition__nom {
+  bottom: auto;
+  top: 15px;
+}
+.m3d-proposition[data-position='so'] .m3d-proposition__nom {
+  left: auto;
+  right: 15px;
+  bottom: auto;
+  top: 15px;
+}
+.m3d-echelle {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 2;
+}
+.m3d-echelle[hidden] {
+  display: none;
+}
+.m3d-echelle__barre {
+  display: block;
+  height: 4px;
+  background: #0d2421;
+  border-left: 1px solid #0d2421;
+  border-right: 1px solid #0d2421;
+}
+.m3d-echelle__texte {
+  font-size: 0.72rem;
+  color: #0d2421;
+  font-variant-numeric: tabular-nums;
 }
 .m3d-trait {
   display: inline-block;

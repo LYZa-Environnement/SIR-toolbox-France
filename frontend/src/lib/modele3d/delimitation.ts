@@ -46,6 +46,8 @@ import { fr } from './format.ts'
 import {
   aquifereAuForage,
   aquifereDe,
+  attenuationAxe,
+  declinSource,
   aquifereEnNoeud,
   battementDe,
   crepineConseillee,
@@ -55,13 +57,14 @@ import {
   masqueAquifere,
   transportDe,
   type Aquifere,
+  type Attenuation,
   type CrepineConseillee,
   type HypothesesTransport,
   type Transport,
 } from './hydrogeologie.ts'
 import { dansAnneaux, distancePlusProche, enveloppeConvexe, espacementMedian, transformeur, valeurEn, zoneInterpolee, type Grille, type Plan } from './interpolation.ts'
 import { ecartsKrigeage, interpolerDans } from './krigeage.ts'
-import { champSurGrille, donneesPanache, type Modele, type ValeurPoint } from './modele.ts'
+import { champSurGrille, donneesPanache, nappeCampagne, type Modele, type ValeurPoint } from './modele.ts'
 
 export type Cote = 'aval' | 'droite' | 'gauche' | 'amont'
 
@@ -208,6 +211,10 @@ export interface Delimitation {
   horsAquifere: number
   /** Wells at 1 % of the solubility or more (COHV): an organic phase is likely nearby. */
   phasePure: { nom: string; part: number }[]
+  /** Attenuation along the flow read in the concentrations (null: not enough wells on the axis, or no fall). */
+  attenuation: Attenuation | null
+  /** Decline in time of the source well up to the date (null: under four quantified results). */
+  declinSource: { nom: string; n: number; demiVie: number | null } | null
   avertissements: string[]
 }
 
@@ -502,7 +509,7 @@ export function delimiterPanache(m: Modele, base: Base, compose: string, campagn
       if (charge !== null && Number.isFinite(sol)) {
         const bat = battementDe(base, proche.cle)
         const hp = o.charges?.[proche.cle]
-        const eau = bat && hp !== undefined ? { haute: charge + (bat.haute - hp), basse: charge + (bat.basse - hp) } : { haute: charge + 0.5, basse: charge - 0.5 }
+        const eau = bat && hp !== undefined ? { haute: charge + (bat.haute - hp), basse: charge + (bat.basse - hp), date: charge } : { haute: charge + 0.5, basse: charge - 0.5, date: charge }
         const geo = aquifere ? aquifereEnNoeud(m, aquifere, noeud(x, y)) : null
         crepine = crepineConseillee(comp.phase, sol, eau, geo, aquifere?.mur?.nom ?? null)
       }
@@ -582,6 +589,21 @@ export function delimiterPanache(m: Modele, base: Base, compose: string, campagn
     }
   }
 
+  // ---- Attenuation read in the data ---------------------------------------------------------------
+  const attenuation =
+    aval !== null
+      ? attenuationAxe(
+          places.map((p) => ({ nom: p.nom, x: p.x, y: p.y, valeur: p.resultat.valeur, inferieur: p.resultat.inferieur })),
+          aval,
+          reference,
+          transport.vitessePolluant,
+        )
+      : null
+  const quantifies = places.filter((p) => !p.resultat.inferieur)
+  const source = quantifies.length ? quantifies.reduce((a, b) => (b.resultat.valeur > a.resultat.valeur ? b : a)) : null
+  const tCampagne = base.campagnes.find((x) => x.id === campagne)?.t ?? Number.POSITIVE_INFINITY
+  const declin = source ? declinSource(base, source.cle, compose, tCampagne) : null
+
   const verdict: Verdict = !depassants.length
     ? 'aucun-depassement'
     : cotes.some((x) => x.statut === 'ouvert')
@@ -614,8 +636,34 @@ export function delimiterPanache(m: Modele, base: Base, compose: string, campagn
     anisotropie,
     horsAquifere,
     phasePure,
+    attenuation,
+    declinSource: declin && source ? { nom: source.nom, ...declin } : null,
     avertissements,
   }
+}
+
+/** The verdict of each campaign where the compound was analysed, each with its own flow and water levels. */
+export function delimitationsParCampagne(
+  m: Modele,
+  base: Base,
+  compose: string,
+  reference: number,
+  o: Omit<OptionsDelimitation, 'nappe' | 'charges' | 'gradient' | 'propositions'>,
+): { campagne: string; verdict: Verdict; ouverts: Cote[] }[] {
+  const analysees = new Set(base.resultats.filter((r) => r.compose === compose && !r.exclu).map((r) => r.campagne))
+  return base.campagnes
+    .filter((c) => analysees.has(c.id))
+    .map((c) => {
+      const n = nappeCampagne(m, base, c.id)
+      const r = delimiterPanache(m, base, compose, c.id, reference, {
+        ...o,
+        aval: n.ecoulement?.azimut ?? o.aval,
+        gradient: n.ecoulement?.gradient ?? null,
+        charges: Object.fromEntries(n.charges.map((x) => [x.cle, x.charge])),
+        propositions: 0,
+      })
+      return { campagne: c.id, verdict: r.verdict, ouverts: r.cotes.filter((x) => x.statut === 'ouvert').map((x) => x.cote) }
+    })
 }
 
 // ---- Wording ------------------------------------------------------------------------------

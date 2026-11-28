@@ -34,6 +34,7 @@
  */
 
 import type { Base } from '../suivi/modele.ts'
+import { sen } from '../suivi/stats.ts'
 import type { Comportement, Phase } from './comportement.ts'
 import { cleMotCle } from './formations.ts'
 import { CLASSES_LITHO } from './lithologie.ts'
@@ -310,6 +311,11 @@ export interface CrepineConseillee {
   /** Depth of the borehole (m). */
   profondeur: number
   raison: string
+  /** Depths of the water at the date, its lowest level, and the aquifer's top and base there (m below ground; null when unknown). */
+  eau: number
+  eauBasse: number
+  toit: number | null
+  mur: number | null
 }
 
 /**
@@ -319,7 +325,13 @@ export interface CrepineConseillee {
  * Elevations in m NGF: ground, water at the date, its highest and lowest
  * levels, aquifer's top and base (base null when unknown).
  */
-export function crepineConseillee(phase: Phase, sol: number, eau: { haute: number; basse: number }, aquifere: { toit: number; mur: number | null } | null, murNom: string | null): CrepineConseillee | null {
+export function crepineConseillee(
+  phase: Phase,
+  sol: number,
+  eau: { haute: number; basse: number; date?: number },
+  aquifere: { toit: number; mur: number | null } | null,
+  murNom: string | null,
+): CrepineConseillee | null {
   const prof = (z: number) => Math.round((sol - z) * 10) / 10
   const mur = aquifere?.mur ?? null
   let zHaut: number
@@ -340,7 +352,16 @@ export function crepineConseillee(phase: Phase, sol: number, eau: { haute: numbe
         : 'sur la hauteur saturée de l’aquifère'
   }
   if (!(zHaut - zBas > 0.5)) return null
-  return { de: prof(zHaut), a: prof(zBas), profondeur: prof(zBas), raison }
+  return {
+    de: prof(zHaut),
+    a: prof(zBas),
+    profondeur: prof(zBas),
+    raison,
+    eau: prof(eau.date ?? (eau.haute + eau.basse) / 2),
+    eauBasse: prof(eau.basse),
+    toit: aquifere ? prof(aquifere.toit) : null,
+    mur: mur !== null ? prof(mur) : null,
+  }
 }
 
 /** Highest and lowest head of a well over the monitoring (m NGF): measured, else its measuring point minus the depth to water. */
@@ -399,4 +420,92 @@ export function hypothesesDe(r: ReglagesHydro, compose: string): HypothesesTrans
     foc: r.foc,
     demiVie: r.demiVies[compose] ?? null,
   }
+}
+
+// ---- Attenuation read in the data ------------------------------------------------------------
+
+export interface Attenuation {
+  /** The source (highest concentration) and the wells downgradient of it, by distance along the flow (m). */
+  ouvrages: { nom: string; distance: number; valeur: number }[]
+  /** Slope of ln C with the distance along the flow (1/m, negative), and the distance over which C falls tenfold (m). */
+  pente: number
+  decade: number
+  /** Beyond the farthest well still above the value, where the slope brings C down to it (m), when one is. */
+  prolongement: { depuis: string; distance: number } | null
+  /**
+   * Bulk attenuation rate k = −pente × v (1/year) and its half-life
+   * ln 2 / k (years), for the fastest and the slowest pollutant velocity;
+   * null without a velocity (no measured K).
+   */
+  demiVie: [number, number] | null
+}
+
+/**
+ * Attenuation along the plume's axis (C. J. Newell et al., « Calculation
+ * and use of first-order rate constants for monitored natural attenuation
+ * studies », US EPA, EPA/540/S-02/500, 2002: concentration against
+ * distance, the bulk attenuation rate k = v·(−slope), dispersion and
+ * sorption included): the source, the well with the highest quantified
+ * concentration, and the quantified wells downgradient of it (within 45° of
+ * the flow); least-squares line of ln C against the distance along the
+ * flow. Null under two wells, or when C does not fall downgradient.
+ */
+export function attenuationAxe(
+  points: { nom: string; x: number; y: number; valeur: number; inferieur: boolean }[],
+  aval: number,
+  reference: number,
+  vitesse: [number, number] | null,
+): Attenuation | null {
+  const quantifies = points.filter((p) => !p.inferieur && p.valeur > 0)
+  if (quantifies.length < 2) return null
+  const source = quantifies.reduce((a, b) => (b.valeur > a.valeur ? b : a))
+  const t = (aval * Math.PI) / 180
+  const [ux, uy] = [Math.sin(t), Math.cos(t)]
+  const ouvrages = quantifies
+    .map((p) => {
+      const dx = p.x - source.x
+      const dy = p.y - source.y
+      const le = dx * ux + dy * uy
+      return { nom: p.nom, distance: le, valeur: p.valeur, dans: p === source || (le > 0.01 && le >= Math.hypot(dx, dy) * Math.SQRT1_2) }
+    })
+    .filter((p) => p.dans)
+    .map(({ nom, distance, valeur }) => ({ nom, distance, valeur }))
+    .sort((a, b) => a.distance - b.distance)
+  if (ouvrages.length < 2) return null
+  const n = ouvrages.length
+  const mx = ouvrages.reduce((s, p) => s + p.distance, 0) / n
+  const my = ouvrages.reduce((s, p) => s + Math.log(p.valeur), 0) / n
+  let sxy = 0
+  let sxx = 0
+  for (const p of ouvrages) {
+    sxy += (p.distance - mx) * (Math.log(p.valeur) - my)
+    sxx += (p.distance - mx) ** 2
+  }
+  const pente = sxx > 0 ? sxy / sxx : 0
+  if (!(pente < 0)) return null
+  const dernier = [...ouvrages].reverse().find((p) => p.valeur >= reference) ?? null
+  return {
+    ouvrages,
+    pente,
+    decade: Math.LN10 / -pente,
+    prolongement: dernier ? { depuis: dernier.nom, distance: Math.log(dernier.valeur / reference) / -pente } : null,
+    demiVie: vitesse ? [Math.LN2 / (-pente * vitesse[0]), Math.LN2 / (-pente * vitesse[1])] : null,
+  }
+}
+
+/**
+ * Decline of the source in time: Theil-Sen slope of ln C against time at a
+ * well over the campaigns up to a date (4 quantified results at least),
+ * as Suivi temporel reads a series. The rate « k point » of Newell et al.
+ * (2002): the lifetime of the source, not a degradation in the plume.
+ */
+export function declinSource(base: Base, ouvrage: string, compose: string, jusqua: number): { n: number; demiVie: number | null } | null {
+  const rs = base.resultats.filter((r) => r.ouvrage === ouvrage && r.compose === compose && !r.exclu && !r.inferieur && r.valeur > 0 && r.t <= jusqua + 1e-9)
+  if (rs.length < 4) return null
+  const s = sen(
+    rs.map((r) => r.t),
+    rs.map((r) => Math.log(r.valeur)),
+  )
+  if (!s) return null
+  return { n: rs.length, demiVie: s.pente < 0 ? Math.LN2 / -s.pente : null }
 }

@@ -104,6 +104,8 @@ export interface Substance {
   /** Boiling point (°C): a compound boiling below 20 °C forms no liquid phase. */
   ebullition: number | null
   source: string
+  /** Values of the guide that other references contradict: shown beside them, the guide's kept for the calculations. */
+  douteux?: { champ: 'densite' | 'solubilite'; autre: string; source: string }[]
 }
 
 const T13 = `${GUIDE_2024}, tableau 13 (p. 148)`
@@ -140,13 +142,36 @@ export const SUBSTANCES: Substance[] = [
   cohv('156-60-5', 'trans-1,2-Dichloroéthylène', [600, 600], 1.27, 2.09, 0.138, 47.5),
   cohv('75-35-4', '1,1-Dichloroéthylène', [2500, 2500], 1.223, 2.13, 0.186, 31.7),
   cohv('75-01-4', 'Chlorure de vinyle', [1100, 9500], 0.91, 1.4, 0.71, -13.4),
-  cohv('75-25-2', 'Bromoforme', [1100, 1100], 2.4, 2.9, null, 149.5),
+  // Second part of tableau 13 (bromoforms): solubility, log Kow, then density.
+  cohv('75-25-2', 'Bromoforme', [1100, 1100], 2.9, 2.4, null, 149.5),
   // Tableau 9: BTEX (solubility mg/l, log Pow, density g/cm³, Henry Pa·m³/mol, boiling point).
   { cas: '71-43-2', nom: 'Benzène', famille: 'btex', densite: 0.879, solubilite: [1770, 1780], logKow: [1.8, 2.1], henry: { valeur: 557, unite: 'Pa·m³/mol' }, ebullition: 80, source: T9 },
   { cas: '108-88-3', nom: 'Toluène', famille: 'btex', densite: 0.872, solubilite: [530, 530], logKow: [2.39, 2.39], henry: { valeur: 668, unite: 'Pa·m³/mol' }, ebullition: 110.8, source: T9 },
   { cas: '100-41-4', nom: 'Éthylbenzène', famille: 'btex', densite: 0.867, solubilite: [866, 866], logKow: [3.15, 3.15], henry: { valeur: 881, unite: 'Pa·m³/mol' }, ebullition: 136.2, source: T9 },
   { cas: '1330-20-7', nom: 'Xylènes', famille: 'btex', densite: 0.86, solubilite: [175, 198], logKow: [3.13, 3.2], henry: { valeur: 366, unite: 'Pa·m³/mol' }, ebullition: 138, source: `${T9}, o-, m- et p-xylènes (densité 0,86 à 0,88, Henry 366 à 512)` },
 ]
+
+const CRC = 'tables de constantes physiques des composés organiques (CRC Handbook of Chemistry and Physics)'
+const DOUTEUX: Record<string, Substance['douteux']> = {
+  '79-01-6': [{ champ: 'densite', autre: '1,46 g/cm³ à 20 °C', source: CRC }],
+  '56-23-5': [{ champ: 'densite', autre: '1,59 g/cm³ à 20 °C', source: CRC }],
+  '100-41-4': [{ champ: 'solubilite', autre: '150 mg/l (éthylbenzène et xylènes)', source: GUIDE_2008 }],
+  '156-59-2': [
+    {
+      champ: 'solubilite',
+      autre: '3 500 mg/l à 25 °C (National Research Council, Drinking Water and Health, 1977) ; 6 410 mg/l à 25 °C (ATSDR, profil du 1,2-dichloroéthène, 2025)',
+      source: 'sources divergentes, la température comptant beaucoup',
+    },
+  ],
+  '156-60-5': [
+    {
+      champ: 'solubilite',
+      autre: '6 300 mg/l à 25 °C (National Research Council, Drinking Water and Health, 1977) ; 4 520 mg/l à 25 °C (ATSDR, profil du 1,2-dichloroéthène, 2025)',
+      source: 'sources divergentes, la température comptant beaucoup',
+    },
+  ],
+}
+for (const s of SUBSTANCES) if (DOUTEUX[s.cas]) s.douteux = DOUTEUX[s.cas]
 
 const PAR_CAS = new Map<string, Substance>()
 for (const s of SUBSTANCES) PAR_CAS.set(s.cas, s)
