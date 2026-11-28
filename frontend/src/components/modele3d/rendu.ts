@@ -20,6 +20,7 @@ import { ORDRE_FILIERES, FILIERES, type VolumesFilieres } from '../../lib/modele
 import { pasRond, valeurEn, type Grille } from '../../lib/modele3d/interpolation.ts'
 import { CLASSES_LITHO } from '../../lib/modele3d/lithologie.ts'
 import type { Enveloppe, Modele, Nappe } from '../../lib/modele3d/modele.ts'
+import { USAGES } from '../../lib/modele3d/usages.ts'
 import { facesBlocs, geometrieFormation, grilleEnGeometrie, type Faces } from './geometries.ts'
 
 export type Selection =
@@ -896,15 +897,18 @@ export class Rendu3D {
   // ---- Surroundings ---------------------------------------------------------------------------
 
   /**
-   * Buildings (BD TOPO): those of the site raised to their height
-   * (unstretched, standing on the ground), the neighbours as flat footprints
-   * — targets to place, not a city model hiding the ground.
+   * Buildings (BD TOPO), coloured by their use (usages.ts): raised to their
+   * height (unstretched, standing on the ground), the roof in the colour of
+   * the secondary use when it differs. Those of the site are see-through
+   * (the boreholes drilled inside them stay visible); the neighbours are
+   * raised too, or drawn as flat footprints when they would hide the ground.
    */
-  batiments(liste: Batiment[], surSite: (b: Batiment) => boolean) {
+  batiments(liste: Batiment[], surSite: (b: Batiment) => boolean, voisinsEnVolume: boolean) {
     this.vider(this.groupes.batiments)
     const m = this.modele
     if (!m) return
     const e = m.emprise
+    const arete = this.materiau('arete-batiment', () => new THREE.LineBasicMaterial({ color: '#3d3a35', transparent: true, opacity: 0.45 }))
     liste.forEach((b, i) => {
       const pts = b.anneau.filter(([x, y]) => x > e.xmin - 50 && x < e.xmax + 50 && y > e.ymin - 50 && y < e.ymax + 50)
       if (pts.length < 3) return
@@ -912,11 +916,17 @@ export class Rendu3D {
       const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length
       const forme = new THREE.Shape(b.anneau.map(([x, y]) => new THREE.Vector2(x - cx, y - cy)))
       const site = surSite(b)
-      const geo = new THREE.ExtrudeGeometry(forme, { depth: site ? (b.hauteur ?? 6) : 0.4, bevelEnabled: false })
+      const volume = site || voisinsEnVolume
+      const geo = new THREE.ExtrudeGeometry(forme, { depth: volume ? (b.hauteur ?? 6) : 0.4, bevelEnabled: false })
       geo.rotateX(-Math.PI / 2)
-      const mesh = new THREE.Mesh(geo, this.lambert(site ? '#a9a296' : '#c9c4ba', site ? 0.55 : 0.45, true))
+      const opacite = site ? 0.7 : volume ? 1 : 0.8
+      const murs = this.lambert(USAGES[b.categorie].couleur, opacite, site)
+      // ExtrudeGeometry: group 0 the caps (roof and floor), group 1 the walls.
+      const toit = volume && b.secondaire ? this.lambert(USAGES[b.secondaire].couleur, opacite, site) : murs
+      const mesh = new THREE.Mesh(geo, [toit, murs])
       mesh.userData.selection = { type: 'batiment', index: i } satisfies Selection
       mesh.renderOrder = 4
+      if (volume) mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), arete))
       this.groupes.batiments.add(mesh)
       this.placer(mesh, cx, cy, valeurEn(m.sol, cx, cy))
     })
@@ -1107,9 +1117,11 @@ export class Rendu3D {
   selectionner(s: Selection | null) {
     if (this.halo) {
       this.halo.parent?.remove(this.halo)
-      const h = this.halo as THREE.Mesh
-      h.geometry.dispose()
-      ;(h.material as THREE.Material).dispose()
+      this.halo.traverse((o) => {
+        const h = o as THREE.Mesh
+        h.geometry?.dispose()
+        ;(h.material as THREE.Material | undefined)?.dispose()
+      })
       this.halo = null
     }
     const cleChoisie = s && 'cle' in s ? s.cle : null
@@ -1126,6 +1138,20 @@ export class Rendu3D {
       anneau.position.set(p.x, p.zSol + 0.6 - (prof + 1.2) / 2, -p.y)
       this.monde.add(anneau)
       this.halo = anneau
+    }
+    if (s?.type === 'batiment') {
+      const mesh = this.groupes.batiments.children.find((o) => (o.userData.selection as Selection | undefined)?.type === 'batiment' && (o.userData.selection as { index: number }).index === s.index) as THREE.Mesh | undefined
+      if (mesh) {
+        // A see-through shell a little larger than the building, and its edges drawn over everything.
+        const coque = new THREE.Mesh(mesh.geometry.clone(), new THREE.MeshBasicMaterial({ color: COULEUR_SELECTION, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide }))
+        coque.scale.set(1.06, 1.1, 1.06)
+        coque.renderOrder = 5
+        const contour = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 30), new THREE.LineBasicMaterial({ color: COULEUR_SELECTION, depthTest: false }))
+        contour.renderOrder = 6
+        coque.add(contour)
+        mesh.add(coque)
+        this.halo = coque
+      }
     }
     this.dessiner()
   }

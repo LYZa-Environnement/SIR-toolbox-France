@@ -1,6 +1,7 @@
 /**
  * What lies around the site, for the conceptual model: the buildings (IGN
- * BD TOPO®, `BDTOPO_V3:batiment`: footprint, height, use), the watercourses
+ * BD TOPO®, `BDTOPO_V3:batiment`: footprint, height, use and dwellings —
+ * classed in usages.ts), the watercourses
  * (`BDTOPO_V3:troncon_hydrographique`) — both through API Carto's
  * wfs-geoportail module, as the Site Setting does — and the groundwater
  * abstractions declared to the BNPE (Hub'Eau, prélèvements en eau). All in
@@ -11,14 +12,45 @@ import { bboxToPolygon, fromLambert93, toLambert93, type Bbox } from '../geo.ts'
 import { fetchPrelevements } from '../hubeau.ts'
 import { requete } from '../reseau.ts'
 import type { Modele } from './modele.ts'
+import { classerBatiment, type Classement } from './usages.ts'
 
 const WFS = 'https://apicarto.ign.fr/api/wfs-geoportail/search'
 
-export interface Batiment {
+export interface Batiment extends Classement {
   anneau: [number, number][]
   /** Height (m), when BD TOPO gives it. */
   hauteur: number | null
+  /** Main and secondary use as written (« Résidentiel, Commercial et services »), or « Indifférencié ». */
   usage: string
+  /** BD TOPO `nature` (« Indifférenciée », « Industriel, agricole ou commercial »…), or null. */
+  nature: string | null
+  /** Dwellings and storeys (Fichiers fonciers), when given. */
+  logements: number | null
+  etages: number | null
+}
+
+const texte = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+const entier = (v: unknown) => {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() ? Number(v) : Number.NaN
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : null
+}
+
+/** A building from the properties of a BD TOPO feature. */
+export function lireBatiment(anneau: [number, number][], p: Record<string, unknown>): Batiment {
+  const usage1 = texte(p.usage_1)
+  const usage2 = texte(p.usage_2)
+  const nature = texte(p.nature)
+  const logements = entier(p.nombre_de_logements)
+  const h = typeof p.hauteur === 'number' ? p.hauteur : Number(p.hauteur)
+  return {
+    anneau,
+    hauteur: Number.isFinite(h) && h > 0 ? h : null,
+    usage: [usage1, usage2].filter(Boolean).join(', ') || 'Indifférencié',
+    nature,
+    logements,
+    etages: entier(p.nombre_d_etages),
+    ...classerBatiment({ usage1, usage2, nature, logements }),
+  }
 }
 
 export interface CoursDEau {
@@ -76,11 +108,12 @@ export async function chargerCibles(m: Modele): Promise<Cibles> {
           const g = f.geometry
           const p = f.properties ?? {}
           const polys = g?.type === 'Polygon' ? [g.coordinates as number[][][]] : g?.type === 'MultiPolygon' ? (g.coordinates as number[][][][]) : []
-          return polys.map((poly) => ({
-            anneau: poly[0].map((c) => versLocal(m, [c[0], c[1]])),
-            hauteur: typeof p.hauteur === 'number' && p.hauteur > 0 ? p.hauteur : null,
-            usage: [p.usage_1, p.usage_2].filter((u) => typeof u === 'string' && u).join(', ') || 'Indifférencié',
-          }))
+          return polys.map((poly) =>
+            lireBatiment(
+              poly[0].map((c) => versLocal(m, [c[0], c[1]])),
+              p,
+            ),
+          )
         }),
       )
       .catch((e) => {

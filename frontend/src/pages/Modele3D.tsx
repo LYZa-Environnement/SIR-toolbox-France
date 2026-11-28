@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import ZoneDepot from '../components/ZoneDepot'
 import Evolution from '../components/modele3d/Evolution'
 import Fiche, { type ForageVirtuel, type SelectionPage } from '../components/modele3d/Fiche'
@@ -17,7 +17,7 @@ import { jourIso } from '../lib/format'
 import { ringsOfGeometry, toLambert93 } from '../lib/geo'
 import { assembler } from '../lib/modele3d/assemblage'
 import { chargerCibles, type Cibles } from '../lib/modele3d/cibles'
-import { schemaConceptuel, schemaSvg } from '../lib/modele3d/conceptuel'
+import { centreBatiment, centrePoints, positionHydraulique, schemaConceptuel, schemaSvg } from '../lib/modele3d/conceptuel'
 import type { Systeme } from '../lib/modele3d/coordonnees'
 import { COULEUR_NQ, couleurChamp, couleurValeur, etendue, RAMPE, type Echelle } from '../lib/modele3d/couleurs'
 import { gazDeResultats, lireSourcesDossier } from '../lib/modele3d/dossier'
@@ -48,6 +48,7 @@ import {
   type SaisiePoint,
 } from '../lib/modele3d/modele'
 import type { Source } from '../lib/modele3d/types'
+import { compterUsages, ORDRE_USAGES, USAGES, type CategorieUsage } from '../lib/modele3d/usages'
 import { valeurGuideEn } from '../lib/resultats/guides'
 import { LectureImpossible } from '../lib/resultats/parse'
 import { CLASSES, reference } from '../lib/suivi/analyse'
@@ -92,6 +93,8 @@ interface Reglages {
   epaisseur: number
   densite: number
   valeursSurvol: boolean
+  /** Neighbouring buildings raised to their height (else flat footprints). */
+  voisinsEnVolume: boolean
   /** Items of the conceptual model kept or set aside by the user. */
   schema: Record<string, boolean>
 }
@@ -147,6 +150,7 @@ const REGLAGES_DEFAUT: Reglages = {
   epaisseur: 5,
   densite: 1.8,
   valeursSurvol: false,
+  voisinsEnVolume: true,
   schema: {},
 }
 
@@ -163,7 +167,7 @@ const LIBELLES_COUCHES: [NomCouche, string][] = [
   ['echantillons', 'Échantillons de sol'],
   ['gaz', 'Gaz du sol'],
   ['filieres', 'Terres par filière'],
-  ['batiments', 'Bâtiments (BD TOPO)'],
+  ['batiments', 'Bâtiments et usages (BD TOPO)'],
   ['coursdeau', 'Cours d’eau (BD TOPO)'],
   ['etiquettes', 'Noms des forages'],
   ['cadre', 'Cadre, cotes, parcelles et nord'],
@@ -176,7 +180,7 @@ const VUES: [Vue, string][] = [
   ['est', 'Depuis l’est'],
 ]
 
-type Preset = 'geologie' | 'nappe' | 'sols' | 'ensemble'
+type Preset = 'geologie' | 'nappe' | 'sols' | 'cibles' | 'ensemble'
 
 const PRESETS: Record<Preset, { libelle: string; couches: Partial<Couches>; opaciteSol: number; coupe: Reglages['coupe']; vue: Vue }> = {
   geologie: {
@@ -197,6 +201,13 @@ const PRESETS: Record<Preset, { libelle: string; couches: Partial<Couches>; opac
     libelle: 'Sols et gaz',
     couches: { geologie: false, forages: true, nappe: false, isopiezes: false, eaux: false, echantillons: true, gaz: true, observations: true, pid: true, filieres: false },
     opaciteSol: 0.3,
+    coupe: { axe: 'aucune', valeur: null, inverse: false },
+    vue: '3d',
+  },
+  cibles: {
+    libelle: 'Bâtiments et usages',
+    couches: { geologie: false, forages: true, equipement: false, nappe: true, isopiezes: false, eaux: true, echantillons: false, gaz: false, filieres: false, observations: false, pid: false, batiments: true, coursdeau: true },
+    opaciteSol: 0.6,
     coupe: { axe: 'aucune', valeur: null, inverse: false },
     vue: '3d',
   },
@@ -660,6 +671,20 @@ export default function Modele3D() {
     [modele, donnees, guides, base, corrections, guidesGaz, nappeSchema, ciblesCourantes],
   )
 
+  // Buildings and their place: on the site or around it, up- or downstream at the latest campaign.
+  const lignesBatiments = useMemo(() => {
+    if (!modele || !ciblesCourantes) return RIEN
+    const { x: cx, y: cy } = centrePoints(modele)
+    const ec = nappeSchema?.ecoulement ?? null
+    return ciblesCourantes.batiments
+      .map((b, index) => {
+        const k = centreBatiment(b)
+        return { b, index, site: batimentSurSite(b), position: ec ? positionHydraulique(ec.azimut, k.x - cx, k.y - cy) : null, distance: Math.hypot(k.x - cx, k.y - cy) }
+      })
+      .sort((a, b) => Number(b.site) - Number(a.site) || ORDRE_USAGES.indexOf(a.b.categorie) - ORDRE_USAGES.indexOf(b.b.categorie) || a.distance - b.distance)
+  }, [modele, ciblesCourantes, nappeSchema, batimentSurSite])
+  const usagesVisibles = useMemo(() => (reglages.couches.batiments && ciblesCourantes?.batiments.length ? compterUsages(ciblesCourantes.batiments) : null), [reglages.couches.batiments, ciblesCourantes])
+
   // ---- View --------------------------------------------------------------------------------
   const exagAuto = modele ? Math.min(25, Math.max(1, Math.round((0.3 * Math.max(modele.emprise.xmax - modele.emprise.xmin, modele.emprise.ymax - modele.emprise.ymin)) / Math.max(1, modele.zmax - modele.zmin)))) : 1
   const exag = reglages.exag ?? exagAuto
@@ -772,7 +797,10 @@ export default function Modele3D() {
         const v = parametreGaz ? g?.resultats[parametreGaz.cle] : undefined
         return g ? `${g.nom}${v && parametreGaz ? ` · ${parametreGaz.nom} : ${v.brut} ${parametreGaz.unite}` : ''}` : ''
       }
-      if (s.type === 'batiment') return ciblesCourantes?.batiments[s.index]?.usage ?? 'Bâtiment'
+      if (s.type === 'batiment') {
+        const b = ciblesCourantes?.batiments[s.index]
+        return b ? [USAGES[b.categorie].libelle, b.secondaire ? `et ${USAGES[b.secondaire].libelle.toLowerCase()}` : '', b.logements ? `${b.logements} logement${b.logements > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ') : 'Bâtiment'
+      }
       if (s.type === 'enveloppe') return parametreSol && seuil ? `${parametreSol.nom} ≥ ${fr(seuil)} ${parametreSol.unite} (interpolé)` : ''
       return ''
     },
@@ -1099,6 +1127,7 @@ export default function Modele3D() {
                       gaz={marqueursGaz}
                       batiments={ciblesCourantes?.batiments ?? RIEN}
                       batimentSurSite={batimentSurSite}
+                      voisinsEnVolume={reglages.voisinsEnVolume}
                       coursDEau={lignesCoursEau}
                       libelles={libelles}
                       selection={selection && selection.type !== 'virtuel' ? selection : null}
@@ -1126,6 +1155,8 @@ export default function Modele3D() {
                         pid={reglages.couches.pid && pid.length > 0}
                         enveloppe={reglages.enveloppe ? (enveloppe ?? null) : null}
                         seuil={seuil}
+                        usages={usagesVisibles}
+                        mixtes={!!ciblesCourantes?.batiments.some((b) => b.secondaire)}
                       />
                       {reglages.fond === 'geologie' && etatSol === 'erreur' && urlSol && vignetteKo !== urlSol && (
                         <figure className="m3d-vignette">
@@ -1196,9 +1227,25 @@ export default function Modele3D() {
                       <fieldset role="tabpanel">
                         <legend>Calques</legend>
                         {LIBELLES_COUCHES.map(([k, l]) => (
-                          <label key={k} className="st-coche">
-                            <input type="checkbox" checked={reglages.couches[k]} onChange={() => basculerCouche(k)} /> {l}
-                          </label>
+                          <Fragment key={k}>
+                            <label className="st-coche">
+                              <input type="checkbox" checked={reglages.couches[k]} onChange={() => basculerCouche(k)} /> {l}
+                            </label>
+                            {k === 'batiments' && reglages.couches.batiments && (
+                              <div className="m3d-sous">
+                                <label className="st-coche">
+                                  <input type="checkbox" checked={reglages.voisinsEnVolume} onChange={(e) => regler('voisinsEnVolume', e.target.checked)} /> Bâtiments voisins en volume (sinon leur emprise au sol)
+                                </label>
+                                <p className="st-note">
+                                  {etatCibles === 'indisponible'
+                                    ? 'Bâtiments : coordonnées en Lambert 93 nécessaires.'
+                                    : etatCibles === 'chargement'
+                                      ? 'Recherche des bâtiments…'
+                                      : `${ciblesCourantes?.batiments.length ? pluriel(ciblesCourantes.batiments.length, 'bâtiment') : 'Aucun bâtiment'} de la BD TOPO, colorés par usage ; ceux du site en transparence.`}
+                                </p>
+                              </div>
+                            )}
+                          </Fragment>
                         ))}
                         <div className="m3d-sous">
                           <label className="champ">
@@ -1739,6 +1786,48 @@ export default function Modele3D() {
                       </div>
                     </>
                   )}
+                  {reglages.couches.batiments && lignesBatiments.length > 0 && (
+                    <>
+                      <h3>Bâtiments et usages (BD TOPO)</h3>
+                      <div className="tableau-defile">
+                        <table className="tableau">
+                          <thead>
+                            <tr>
+                              <th>Usage</th>
+                              <th>Usage et nature (BD TOPO)</th>
+                              <th>Emplacement</th>
+                              <th>Hauteur</th>
+                              <th>Logements</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lignesBatiments.map((l) => (
+                              <tr key={l.index}>
+                                <th scope="row">
+                                  <button type="button" className="lien-bouton" onClick={() => setSelection({ type: 'batiment', index: l.index })}>
+                                    <span className="m3d-pastille" style={{ background: USAGES[l.b.categorie].couleur }} aria-hidden="true" />
+                                    {USAGES[l.b.categorie].libelle}
+                                  </button>
+                                  {l.b.deduit && <span className="st-note"> (d’après {l.b.deduit})</span>}
+                                </th>
+                                <td>
+                                  {l.b.usage}
+                                  {l.b.nature && !/^indiff/i.test(l.b.nature) ? ` · ${l.b.nature}` : ''}
+                                </td>
+                                <td>{[l.site ? 'Sur le site' : 'Voisin', l.position && !l.site ? l.position.replace('lateral', 'latéral') : ''].filter(Boolean).join(', ')}</td>
+                                <td>{l.b.hauteur !== null ? frM(l.b.hauteur) : '–'}</td>
+                                <td>{l.b.logements ?? '–'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="st-note">
+                        Usages de la BD TOPO® (IGN), issus des Fichiers fonciers : à confirmer par la visite du site et de ses abords. Amont, aval : d’après le sens d’écoulement de la
+                        dernière campagne, depuis le centre des ouvrages.
+                      </p>
+                    </>
+                  )}
                 </details>
 
                 <details className="m3d-tableaux">
@@ -1773,6 +1862,11 @@ export default function Modele3D() {
                     <li>
                       <strong>Gaz du sol</strong> : concentrations de Résultats labo (volume prélevé saisi là-bas) rattachées aux forages du même nom, comparées à titre de repère à
                       la valeur R1 de l’air intérieur.
+                    </li>
+                    <li>
+                      <strong>Bâtiments</strong> : BD TOPO® (IGN), usage principal et secondaire issus des Fichiers fonciers ; usage indifférencié complété par le nombre de
+                      logements, puis par la nature du bâtiment (signalé comme déduit). Hauteur réelle, sans exagération ; 6 m quand elle manque. À confirmer par la visite du site
+                      et de ses abords, en particulier les établissements sensibles (circulaire du 8 février 2007).
                     </li>
                   </ul>
                 </details>
@@ -1820,12 +1914,16 @@ function Legende(p: {
   pid: boolean
   enveloppe: { volume: number } | null
   seuil: number | null
+  /** Buildings shown, by use, or null. */
+  usages: [CategorieUsage, number][] | null
+  /** Some buildings have a secondary use (their roof). */
+  mixtes: boolean
 }) {
   const blocs: { titre: string; echelle: Echelle; unite: string }[] = []
   if (p.compose && p.echelleEaux && !p.comparaison) blocs.push({ titre: `Eaux : ${p.compose.nom}`, echelle: p.echelleEaux, unite: p.compose.unite })
   if (p.parametre) blocs.push({ titre: `Sols : ${p.parametre.nom}`, echelle: p.echelleSol, unite: p.parametre.unite })
   if (p.gaz && p.echelleGaz) blocs.push({ titre: `Gaz du sol : ${p.gaz.nom}`, echelle: p.echelleGaz, unite: p.gaz.unite })
-  const vide = !blocs.length && !p.enveloppe && !p.comparaison && !p.incertitude && !p.filieres && !p.pid
+  const vide = !blocs.length && !p.enveloppe && !p.comparaison && !p.incertitude && !p.filieres && !p.pid && !p.usages
   if (vide) return null
   return (
     <div className={`m3d-legende${p.ouverte ? '' : ' m3d-legende--repliee'}`}>
@@ -1907,6 +2005,20 @@ function Legende(p: {
             <div className="m3d-legende__bloc">
               <strong>PID (ppm, échelle logarithmique)</strong>
               <div className="m3d-rampe" style={{ background: `linear-gradient(to right, ${RAMPE_PID.join(', ')})` }} aria-hidden="true" />
+            </div>
+          )}
+          {p.usages && (
+            <div className="m3d-legende__bloc">
+              <strong>Bâtiments : usage (BD TOPO)</strong>
+              <ul>
+                {p.usages.map(([u, n]) => (
+                  <li key={u}>
+                    <span className="m3d-pastille" style={{ background: USAGES[u].couleur }} aria-hidden="true" />
+                    {USAGES[u].libelle} ({n})
+                  </li>
+                ))}
+                {p.mixtes && <li className="st-note">toit : usage secondaire, s’il diffère</li>}
+              </ul>
             </div>
           )}
           {p.enveloppe && p.seuil && (

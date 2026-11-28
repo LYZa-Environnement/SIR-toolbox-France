@@ -27,8 +27,10 @@ interface Props {
   observations: { cle: string; index: number; z: number }[]
   gaz: MarqueurGaz[]
   batiments: Batiment[]
-  /** Buildings of the site (raised), the others flat. */
+  /** Buildings of the site (see-through), the others opaque. */
   batimentSurSite: (b: Batiment) => boolean
+  /** Neighbouring buildings raised to their height, or flat footprints. */
+  voisinsEnVolume: boolean
   coursDEau: [number, number][][]
   libelles: Map<string, string[]>
   selection: Selection | null
@@ -113,12 +115,13 @@ export default function Vue3D(p: Props) {
   useEffect(() => rendu?.pid(p.pid), [rendu, modele, p.pid])
   useEffect(() => rendu?.observations(p.observations), [rendu, modele, p.observations])
   useEffect(() => rendu?.gaz(p.gaz), [rendu, modele, p.gaz])
-  useEffect(() => rendu?.batiments(p.batiments, p.batimentSurSite), [rendu, modele, p.batiments, p.batimentSurSite])
+  useEffect(() => rendu?.batiments(p.batiments, p.batimentSurSite, p.voisinsEnVolume), [rendu, modele, p.batiments, p.batimentSurSite, p.voisinsEnVolume])
   useEffect(() => rendu?.coursDEau(p.coursDEau), [rendu, modele, p.coursDEau])
   useEffect(() => rendu?.libelles(p.libelles), [rendu, modele, p.libelles])
   // After the markers: the visibility of each borehole applies to them too.
   useEffect(() => rendu?.points(p.points), [rendu, modele, p.points, p.marqueursEaux, p.echantillons, p.observations, p.gaz, p.pid])
-  useEffect(() => rendu?.selectionner(p.selection), [rendu, modele, p.selection])
+  // After the buildings, which a rebuild would leave without their highlight.
+  useEffect(() => rendu?.selectionner(p.selection), [rendu, modele, p.selection, p.batiments, p.batimentSurSite, p.voisinsEnVolume])
   useEffect(() => rendu?.choisirOutil(p.outil), [rendu, p.outil])
   useEffect(() => rendu?.forageVirtuel(p.virtuel), [rendu, modele, p.virtuel, exageration])
 
