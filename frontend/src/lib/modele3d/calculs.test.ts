@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { toLambert93 } from '../geo.ts'
 import { reference } from '../suivi/analyse.ts'
+import type { Resultat } from '../suivi/modele.ts'
 import { assembler } from './assemblage.ts'
 import { deprojeter, detecterSysteme, projeter, systemeDe, versLambert93 } from './coordonnees.ts'
+import { comportement, partSolubilite } from './comportement.ts'
+import { coteDe, delimitationsParCampagne, delimiterPanache, fermetureDe, fermeturesPanache, versDirection } from './delimitation.ts'
+import { aquifereDe, attenuationAxe, crepineConseillee, declinSource, HYPOTHESES_DEFAUT, lirePermeabilite, longueurStationnaire, RAPPORT_ANISOTROPIE, transportDe } from './hydrogeologie.ts'
 import { exemple } from './exemple.ts'
 import { classerEchantillons, volumesFilieres } from './filieres.ts'
 import { contactsForage, construireFormations, formationA, proposerFormations } from './formations.ts'
-import { nouvelleGrille, remplir } from './interpolation.ts'
-import { ajusterVariogramme, gamma, interpoler, inverser } from './krigeage.ts'
+import { nouvelleGrille, remplir, transformeur } from './interpolation.ts'
+import { ajusterVariogramme, ecartsKrigeage, gamma, interpoler, inverser } from './krigeage.ts'
 import { construireModele, evolutionPanache, isolignes, nappeCampagne } from './modele.ts'
 import type { Forage } from './types.ts'
 
@@ -143,6 +147,29 @@ describe('krigeage', () => {
     const k = interpoler(pts, 'krigeage')
     expect(k.estimer(55, 33).v).toBeCloseTo(50 - 0.55 + 0.66, 6)
     expect(k.validation!.rmse).toBeLessThan(1e-6)
+  })
+
+  it('l’incertitude ne dépend que de la position des points', () => {
+    const pts = [
+      { x: 0, y: 0, v: 1 },
+      { x: 10, y: 0, v: 3 },
+      { x: 0, y: 10, v: 2 },
+      { x: 10, y: 10, v: 5 },
+      { x: 5, y: 5, v: 4 },
+      { x: 15, y: 3, v: 2.5 },
+    ]
+    const k = interpoler(pts, 'krigeage', false)
+    const s = ecartsKrigeage(pts, k.variogramme!)!
+    for (const [x, y] of [
+      [3, 4],
+      [12, 8],
+      [20, 20],
+    ])
+      expect(s(x, y)).toBeCloseTo(k.estimer(x, y).ecart, 9)
+    // One more point: less uncertainty around it, none on it.
+    const s2 = ecartsKrigeage([...pts, { x: 20, y: 20 }], k.variogramme!)!
+    expect(s2(20, 20)).toBe(0)
+    expect(s2(18, 18)).toBeLessThan(s(18, 18))
   })
 
   it('ajuste un variogramme sur des données structurées', () => {
@@ -351,5 +378,315 @@ describe('schéma conceptuel', () => {
     expect(el('riverains-activites').preuves[0]).toMatch(/^2 bâtiments \(1 commercial ou de services, 1 d’activité sans précision\) hors site/)
     expect(el('riverains-activites').preuves[1]).toContain('établissements sensibles')
     expect(s.liens).toContainEqual({ de: 'migration', vers: 'riverains-activites' })
+  })
+})
+
+describe('délimitation du panache', () => {
+  const res = (valeur: number, inferieur = false): Resultat => ({
+    id: '',
+    ouvrage: '',
+    compose: 'c',
+    campagne: 'k',
+    date: '2025-03-12',
+    t: 2025.2,
+    valeur,
+    inferieur,
+    brut: inferieur ? `<${valeur}` : String(valeur),
+    fichier: '',
+    exclu: false,
+  })
+  const pt = (nom: string, x: number, y: number, valeur: number, inferieur = false) => ({ cle: nom, nom, x, y, resultat: res(valeur, inferieur) })
+
+  it('quadrants autour de l’écoulement', () => {
+    // Flow to the south (180°): south downgradient; looking south, west is on the right, east on the left.
+    expect(coteDe(0, -10, 180)).toBe('aval')
+    expect(coteDe(-10, 0, 180)).toBe('droite')
+    expect(coteDe(10, 0, 180)).toBe('gauche')
+    expect(coteDe(0, 10, 180)).toBe('amont')
+    // Azimuth 220° is 40° from the flow: downgradient; 230° is 50° from it: on the right.
+    const vers = (az: number): [number, number] => [Math.sin((az * Math.PI) / 180), Math.cos((az * Math.PI) / 180)]
+    expect(coteDe(...vers(220), 180)).toBe('aval')
+    expect(coteDe(...vers(230), 180)).toBe('droite')
+  })
+
+  it('ce qui ferme le panache, contre une valeur de 10', () => {
+    expect(fermetureDe(res(3), 10)).toBe('nette') // under half the value
+    expect(fermetureDe(res(7), 10)).toBe('juste') // between half the value and the value
+    expect(fermetureDe(res(10), 10)).toBeNull() // at the value: above it
+    expect(fermetureDe(res(5, true), 10)).toBe('nette') // < LQ, the LQ at half the value
+    expect(fermetureDe(res(8, true), 10)).toBe('juste')
+    expect(fermetureDe(res(20, true), 10)).toBeNull() // an LQ above the value says nothing
+  })
+
+  it('un ouvrage entouré : chaque côté fermé, un de justesse', () => {
+    // W at 5 × the value; south 3 (net), east 7 (just), west and north not quantified (LQ 0.5).
+    const f = fermeturesPanache([pt('W', 0, 0, 50), pt('S', 0, -50, 3), pt('E', 50, 0, 7), pt('O', -50, 0, 0.5, true), pt('N', 0, 50, 0.5, true)], 10, 180)
+    expect(Object.fromEntries(f.cotes.map((c) => [c.cote, c.statut]))).toEqual({ aval: 'delimite', droite: 'delimite', gauche: 'juste', amont: 'delimite' })
+    expect(f.depassants[0].rapport).toBe(5)
+    expect(f.cotes.find((c) => c.cote === 'aval')!.temoins[0]).toMatchObject({ nom: 'S', distance: 50 })
+    // Sides: downgradient south, right west, left east, upgradient north.
+    expect(f.cotes.map((c) => c.azimut)).toEqual([180, 270, 90, 0])
+  })
+
+  it('panache ouvert vers l’aval : le front est l’ouvrage le plus en aval, une LQ trop haute ne ferme rien', () => {
+    // A 100 and B 30 (40 m south of A) above 10; M not quantified 60 m north; L not quantified at an LQ of 20.
+    const f = fermeturesPanache([pt('A', 0, 0, 100), pt('B', 0, -40, 30), pt('M', 0, 60, 0.5, true), pt('L', 30, -20, 20, true)], 10, 180)
+    const aval = f.cotes.find((c) => c.cote === 'aval')!
+    expect(aval.statut).toBe('ouvert')
+    // A has B beyond it: B alone is the front.
+    expect(aval.front).toEqual(['B'])
+    expect(f.lqHautes).toEqual(['L'])
+    expect(f.cotes.find((c) => c.cote === 'amont')!.statut).toBe('delimite')
+    expect(f.cotes.find((c) => c.cote === 'gauche')!.statut).toBe('ouvert')
+  })
+
+  const d = assembler([exemple()])
+  const base = d.base!
+  const pce = base.composes.find((c) => c.cas === '127-18-4')!
+  const ref = reference(pce, d.corrections)!.valeur
+  const derniere = base.campagnes[base.campagnes.length - 1]
+
+  it('exemple : le tétrachloroéthylène n’est pas délimité à l’est, les emplacements proposés le ferment', () => {
+    const m = construireModele(d)
+    const n = nappeCampagne(m, base, derniere.id)
+    const r = delimiterPanache(m, base, pce.cle, derniere.id, ref, { aval: n.ecoulement!.azimut, nappe: { grille: n.grille, plan: n.plan }, propositions: 3 })
+    expect(r.verdict).toBe('non-delimite')
+    expect(r.depassants.map((w) => w.nom).sort()).toEqual(['PZ2', 'PZ3'])
+    // The wells stand in a line along the flow: nothing east of the source.
+    const gauche = r.cotes.find((c) => c.cote === 'gauche')!
+    expect(gauche.statut).toBe('ouvert')
+    expect(versDirection(gauche.azimut)).toBe('l’est')
+    expect(r.cotes.find((c) => c.cote === 'aval')!.temoins[0].nom).toBe('PZ4')
+    expect(r.cotes.find((c) => c.cote === 'amont')!.temoins[0].nom).toBe('PZ1')
+    expect(r.partBord).toBeGreaterThan(0)
+    const ps = [...r.probabilite!].filter(Number.isFinite)
+    expect(Math.min(...ps)).toBeGreaterThanOrEqual(0)
+    expect(Math.max(...ps)).toBeLessThanOrEqual(1)
+    expect(r.aire90!).toBeLessThanOrEqual(r.aire50!)
+    // First the wells closing the east side, east of a front well; each well leaves less doubt.
+    expect(r.propositions).toHaveLength(3)
+    const p0 = r.propositions[0]
+    expect(p0.motif).toMatchObject({ type: 'fermeture', cote: 'gauche' })
+    expect(versDirection(p0.pres.azimut)).toBe('l’est')
+    expect(p0.profondeurEau!).toBeGreaterThan(0)
+    const doutes = [r.douteux!, ...r.propositions.map((p) => p.douteuxApres!)]
+    for (let i = 1; i < doutes.length; i++) expect(doutes[i]).toBeLessThan(doutes[i - 1])
+  })
+
+  it('en inverse distance : la fermeture sans probabilité', () => {
+    const m = construireModele(d, { methode: 'idw' })
+    const r = delimiterPanache(m, base, pce.cle, derniere.id, ref, { aval: 170, propositions: 3 })
+    expect(r.verdict).toBe('non-delimite')
+    expect(r.probabilite).toBeNull()
+    expect(r.propositions.length).toBeGreaterThan(0)
+    expect(r.propositions.every((p) => p.motif.type === 'fermeture' && p.probabilite === null && p.concentration !== null)).toBe(true)
+  })
+
+  it('pas de dépassement : rien à délimiter', () => {
+    const m = construireModele(d)
+    const ni = base.composes.find((c) => c.cas === '7440-02-0')!
+    const r = delimiterPanache(m, base, ni.cle, derniere.id, 1000, { aval: 170, propositions: 0 })
+    expect(r.verdict).toBe('aucun-depassement')
+    expect(r.depassants).toHaveLength(0)
+    expect(r.propositions).toHaveLength(0)
+  })
+})
+
+describe('géologie et comportement des polluants (BRGM)', () => {
+  it('comportement des composés : tableaux du guide BRGM/RP-74064-FR et familles', () => {
+    const pce = comportement({ cas: '127-18-4', nom: 'Tétrachloroéthylène', famille: 'COHV' })
+    expect(pce.famille).toBe('cohv')
+    expect(pce.phase).toBe('dnapl')
+    expect(pce.substance!.densite).toBe(1.62)
+    expect(pce.substance!.solubilite).toEqual([100, 200])
+    expect(pce.logKoc).toEqual([1.5, 2.5])
+    expect(pce.sources[0]).toContain('tableau 13')
+    expect(comportement({ cas: '71-43-2', nom: 'Benzène', famille: 'BTEX' }).phase).toBe('lnapl')
+    // Vinyl chloride boils at −13,4 °C: no liquid phase.
+    expect(comportement({ cas: '75-01-4', nom: 'Chlorure de vinyle', famille: 'COHV' }).phase).toBe('dissous')
+    // An isomer of the xylenes, a compound with no CAS number, a salt, a metal.
+    expect(comportement({ cas: '95-47-6', nom: 'o-Xylène', famille: '' }).substance!.nom).toBe('Xylènes')
+    expect(comportement({ cas: '', nom: 'Hydrocarbures C10-C40', famille: 'Hydrocarbures' })).toMatchObject({ famille: 'hydrocarbures', phase: 'lnapl' })
+    expect(comportement({ cas: '16887-00-6', nom: 'Chlorures', famille: 'Anions' }).famille).toBe('autre')
+    expect(comportement({ cas: '7440-38-2', nom: 'Arsenic', famille: 'Métaux' })).toMatchObject({ famille: 'metaux', phase: 'dissous', logKoc: null })
+  })
+
+  it('part de la solubilité : une phase organique probable dès 1 % pour les COHV', () => {
+    // 2 000 µg/l of PCE = 2 mg/l against 100 mg/l (low end of the range): 2 %.
+    expect(partSolubilite(2000, comportement({ cas: '127-18-4', nom: '', famille: '' }))).toBeCloseTo(0.02, 12)
+    expect(partSolubilite(2000, comportement({ cas: '71-43-2', nom: '', famille: '' }))).toBeNull()
+  })
+
+  it('perméabilité saisie à la française', () => {
+    expect(lirePermeabilite('5e-4')).toBeCloseTo(5e-4, 15)
+    expect(lirePermeabilite('5.10-4')).toBeCloseTo(5e-4, 15)
+    expect(lirePermeabilite('2,5×10^-3')).toBeCloseTo(2.5e-3, 15)
+    expect(lirePermeabilite('0,0005')).toBeCloseTo(5e-4, 15)
+    expect(lirePermeabilite('')).toBeNull()
+    expect(lirePermeabilite('abc')).toBeNull()
+  })
+
+  it('vitesses : l’exemple du guide BRGM (K = 10⁻⁴ m/s, J = 0,5 %, ωc = 5 % → 315 m/an) et le facteur de retard', () => {
+    const pce = comportement({ cas: '127-18-4', nom: '', famille: '' })
+    const t = transportDe(null, { ...HYPOTHESES_DEFAUT, K: 1e-4, porositeCinematique: 0.05 }, 0.005, pce)
+    // u = 1e-4 × 0.005 / 0.05 = 1e-5 m/s = 315.58 m/year (Documents du BRGM 300, annexe 4: « 315 m/an »).
+    expect(t.vitesseEau!).toBeCloseTo(315.576, 2)
+    // R = 1 + 1.7 × 10^logKoc × 0.001 / 0.3: 1.1792 for log Koc 1.5, 2.7920 for 2.5.
+    expect(t.retard![0]).toBeCloseTo(1.179196, 5)
+    expect(t.retard![1]).toBeCloseTo(2.791957, 5)
+    expect(t.vitessePolluant![0]).toBeCloseTo(315.576 / 1.179196, 1)
+    // No measured K: no velocity.
+    expect(transportDe(null, HYPOTHESES_DEFAUT, 0.005, pce).vitesseEau).toBeNull()
+  })
+
+  it('longueur d’un panache stationnaire : v·ln(C / valeur) / λ', () => {
+    // 100 m/year, half-life 1 year, 10 × the value: 100 × log2(10) = 332.19 m.
+    expect(longueurStationnaire(100, 1, 10)).toBeCloseTo(332.193, 2)
+    expect(longueurStationnaire(100, 1, 0.5)).toBe(0)
+  })
+
+  it('anisotropie : 10 m en travers de l’écoulement comptent pour 30 m', () => {
+    // Flow to the east (90°), ratio 3: a point east stays at 10 m, a point north goes to 30 m.
+    const t = transformeur({ azimut: 90, rapport: 3 })
+    const [a, b] = t(10, 0)
+    expect(Math.hypot(a, b)).toBeCloseTo(10, 9)
+    const [c, d] = t(0, 10)
+    expect(Math.hypot(c, d)).toBeCloseTo(30, 9)
+    expect(RAPPORT_ANISOTROPIE).toBeCloseTo(Math.sqrt(10), 12)
+  })
+
+  it('crépine conseillée selon la densité du composé', () => {
+    // Ground 50, water 48 to 49, aquifer from 47 down to its base at 40 (m NGF).
+    const eau = { haute: 49, basse: 48 }
+    const aq = { toit: 47, mur: 40 }
+    expect(crepineConseillee('dnapl', 50, eau, aq, 'Marne')).toMatchObject({ de: 3, a: 10, profondeur: 10 })
+    expect(crepineConseillee('dnapl', 50, eau, aq, 'Marne')!.raison).toContain('mur')
+    // Light phase: from 0.5 m below the ground (high water + 0.5 = 49.5) to low water − 2 = 46.
+    expect(crepineConseillee('lnapl', 50, eau, aq, null)).toMatchObject({ de: 0.5, a: 4 })
+    expect(crepineConseillee('dissous', 50, eau, aq, null)).toMatchObject({ de: 3, a: 10 })
+  })
+
+  const d = assembler([exemple()])
+  const base = d.base!
+  const m = construireModele(d)
+  const derniere = base.campagnes[base.campagnes.length - 1]
+  const n = nappeCampagne(m, base, derniere.id)
+  const charges = Object.fromEntries(n.charges.map((c) => [c.cle, c.charge]))
+
+  it('exemple : l’aquifère des crépines, sables et graviers sur les marnes', () => {
+    const aq = aquifereDe(m, base)!
+    expect(aq.origine).toBe('crepines')
+    expect(aq.unites.map((u) => u.classe)).toEqual(['sable', 'grav'])
+    expect(aq.mur!.nom).toBe('Marne')
+    expect(aq.dansAquifere).toBe(aq.crepines)
+  })
+
+  it('un ouvrage crépiné hors de l’aquifère est écarté ; une crépine mal placée ferme sous réserve', () => {
+    const res = (valeur: number) => ({ id: '', ouvrage: '', compose: 'c', campagne: 'k', date: '', t: 0, valeur, inferieur: false, brut: String(valeur), fichier: '', exclu: false })
+    const pts = [
+      { cle: 'A', nom: 'A', x: 0, y: 0, resultat: res(50) },
+      { cle: 'S', nom: 'S', x: 0, y: -40, resultat: res(1) },
+      { cle: 'N', nom: 'N', x: 0, y: 40, resultat: res(1) },
+    ]
+    const f = fermeturesPanache(pts, 10, 180, (q) => (q.cle === 'S' ? { exclu: 'crépiné hors de l’aquifère (marnes)' } : q.cle === 'N' ? { reserve: 'crépine trop courte' } : null))
+    const aval = f.cotes.find((c) => c.cote === 'aval')!
+    expect(aval.statut).toBe('ouvert')
+    expect(aval.ecartes).toEqual([{ nom: 'S', motif: 'crépiné hors de l’aquifère (marnes)' }])
+    const amont = f.cotes.find((c) => c.cote === 'amont')!
+    expect(amont.statut).toBe('reserve')
+    expect(amont.temoins[0].reserve).toBe('crépine trop courte')
+  })
+
+  it('exemple : le benzène (plus léger que l’eau) n’est fermé que sous réserve par des crépines sous la nappe', () => {
+    const bz = base.composes.find((c) => c.cas === '71-43-2')!
+    const r = delimiterPanache(m, base, bz.cle, derniere.id, reference(bz, d.corrections)!.valeur, { aval: n.ecoulement!.azimut, charges, nappe: { grille: n.grille, plan: n.plan } })
+    expect(r.comportement.phase).toBe('lnapl')
+    const amont = r.cotes.find((c) => c.cote === 'amont')!
+    expect(amont.statut).toBe('reserve')
+    expect(amont.temoins[0].reserve).toContain('sous la nappe')
+    // Screens advised across the water table.
+    expect(r.propositions.length).toBeGreaterThan(0)
+    for (const p of r.propositions.filter((x) => x.crepine)) expect(p.crepine!.de).toBeLessThan(p.profondeurEau!)
+  })
+
+  it('exemple : le trichloroéthylène (plus dense) se crépine jusqu’au mur ; avec K et demi-vie, le transport situe la fin du panache', () => {
+    const tce = base.composes.find((c) => c.cas === '79-01-6')!
+    const r = delimiterPanache(m, base, tce.cle, derniere.id, reference(tce, d.corrections)!.valeur, {
+      aval: n.ecoulement!.azimut,
+      gradient: n.ecoulement!.gradient,
+      charges,
+      nappe: { grille: n.grille, plan: n.plan },
+      anisotropie: RAPPORT_ANISOTROPIE,
+      hypotheses: { ...HYPOTHESES_DEFAUT, K: 5e-4, demiVie: 3 },
+    })
+    expect(r.comportement.phase).toBe('dnapl')
+    expect(r.anisotropie).toBeCloseTo(Math.sqrt(10), 9)
+    expect(r.transport.vitesseEau).toBeGreaterThan(0)
+    // The closing well downgradient of PZ4 tells the end of the steady plume, far beyond the site.
+    const aval = r.propositions.find((p) => p.motif.type === 'fermeture' && p.motif.cote === 'aval')!
+    expect(aval.motif.type === 'fermeture' && aval.motif.transport).toBeGreaterThan(1000)
+    // Screens down to the base of the aquifer (the marls, about 10 m deep).
+    expect(aval.crepine!.raison).toContain('Marne')
+    expect(aval.crepine!.a).toBeGreaterThan(9)
+  })
+})
+
+describe('atténuation et suivi par campagne', () => {
+  it('atténuation le long de l’axe : ÷ 10 tous les 100 m, demi-vie apparente k = v·pente (Newell et al., 2002)', () => {
+    // Flow to the south; 100, 10, 1 every 100 m downgradient; E 60° off the axis is left out.
+    const pts = [
+      { nom: 'S', x: 0, y: 0, valeur: 100, inferieur: false },
+      { nom: 'B', x: 0, y: -100, valeur: 10, inferieur: false },
+      { nom: 'D', x: 0, y: -200, valeur: 1, inferieur: false },
+      { nom: 'E', x: 100, y: -50, valeur: 50, inferieur: false },
+    ]
+    const a = attenuationAxe(pts, 180, 5, [100, 50])!
+    expect(a.ouvrages.map((o) => o.nom)).toEqual(['S', 'B', 'D'])
+    // Slope ln(0.1) / 100 m = −0.0230259 /m: tenfold every 100 m.
+    expect(a.pente).toBeCloseTo(-0.0230259, 6)
+    expect(a.decade).toBeCloseTo(100, 6)
+    // B at 10 is the farthest above 5: ln(10 / 5) / 0.0230259 = 30.10 m beyond it.
+    expect(a.prolongement).toEqual({ depuis: 'B', distance: expect.closeTo(30.103, 2) })
+    // k = 0.0230259 × 100 m/year = 2.3026 /year → half-life 0.30103 year; at 50 m/year, 0.60206.
+    expect(a.demiVie![0]).toBeCloseTo(0.30103, 4)
+    expect(a.demiVie![1]).toBeCloseTo(0.60206, 4)
+    expect(attenuationAxe(pts, 180, 5, null)!.demiVie).toBeNull()
+    // Rising downgradient: no attenuation.
+    expect(attenuationAxe([pts[2], { ...pts[0], valeur: 0.5 }], 180, 5, null)).toBeNull()
+  })
+
+  const d = assembler([exemple()])
+  const base = d.base!
+  const m = construireModele(d)
+  const pce = base.composes.find((c) => c.cas === '127-18-4')!
+  const derniere = base.campagnes[base.campagnes.length - 1]
+
+  it('déclin de la source : le tétrachloroéthylène de PZ2, demi-vie de 2,6 ans dans l’exemple', () => {
+    // The example's PCE at PZ2 halves every 2.6 years (suivi/exemple.ts), with seasonal noise.
+    const r = declinSource(base, m.points.find((p) => p.nom === 'PZ2')!.cle, pce.cle, derniere.t)!
+    expect(r.n).toBe(14)
+    expect(r.demiVie!).toBeGreaterThan(2.2)
+    expect(r.demiVie!).toBeLessThan(3)
+  })
+
+  it('verdict à chaque campagne, chacune avec son écoulement', () => {
+    const tce = base.composes.find((c) => c.cas === '79-01-6')!
+    const v = delimitationsParCampagne(m, base, tce.cle, reference(tce, d.corrections)!.valeur, { aval: null })
+    expect(v).toHaveLength(14)
+    expect(v.every((x) => ['delimite', 'a-confirmer', 'non-delimite', 'aucun-depassement'].includes(x.verdict))).toBe(true)
+    // TCE reached PZ4, the most downgradient well, in 2022 (suivi/exemple.ts): open downgradient since.
+    const dernier = v[v.length - 1]
+    expect(dernier.verdict).toBe('non-delimite')
+    expect(dernier.ouverts).toContain('aval')
+  })
+
+  it('valeurs du guide signalées, colonnes du bromoforme lues dans leur ordre', () => {
+    const tce = comportement({ cas: '79-01-6', nom: '', famille: '' })
+    expect(tce.substance!.douteux![0]).toMatchObject({ champ: 'densite', autre: expect.stringContaining('1,46') })
+    expect(comportement({ cas: '100-41-4', nom: '', famille: '' }).substance!.douteux![0].autre).toContain('150')
+    const bromoforme = comportement({ cas: '75-25-2', nom: '', famille: '' }).substance!
+    expect(bromoforme.densite).toBe(2.9)
+    expect(bromoforme.logKow).toEqual([2.4, 2.4])
+    expect(comportement({ cas: '127-18-4', nom: '', famille: '' }).substance!.douteux).toBeUndefined()
   })
 })

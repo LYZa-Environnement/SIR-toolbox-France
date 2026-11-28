@@ -180,6 +180,21 @@ function krigeur(points: PointValeur[], v: Variogramme): ((x: number, y: number)
   }
 }
 
+/**
+ * Kriging standard deviation with data at these positions: it depends on
+ * where the data are and on the variogram, not on their values — the
+ * uncertainty a well not yet drilled would leave. Null when the system is
+ * singular.
+ */
+export function ecartsKrigeage(positions: { x: number; y: number }[], v: Variogramme): ((x: number, y: number) => number) | null {
+  if (!positions.length) return null
+  const k = krigeur(
+    positions.map((p) => ({ x: p.x, y: p.y, v: 0 })),
+    v,
+  )
+  return k ? (x, y) => k(x, y).ecart : null
+}
+
 function construire(points: PointValeur[], methode: Methode): Omit<Interpolateur, 'validation'> {
   const plan = points.length >= 3 ? planMoindresCarres(points) : null
   const tendance = (x: number, y: number) => (plan ? plan.a * x + plan.b * y + plan.c : 0)
@@ -221,4 +236,28 @@ export function validationCroisee(points: PointValeur[], methode: Methode): Vali
 /** The interpolation of a set of points with its trend, variogram and cross-validation. */
 export function interpoler(points: PointValeur[], methode: Methode, avecValidation = true): Interpolateur {
   return { ...construire(points, methode), validation: avecValidation ? validationCroisee(points, methode) : null }
+}
+
+/**
+ * The interpolation in transformed coordinates (an anisotropy along the
+ * flow, interpolation.ts): the points moved there, each estimate asked
+ * there. Without a transform, the plain interpolation.
+ */
+export function interpolerDans(points: PointValeur[], methode: Methode, avecValidation: boolean, transformer: ((x: number, y: number) => [number, number]) | null): Interpolateur {
+  if (!transformer) return interpoler(points, methode, avecValidation)
+  const i = interpoler(
+    points.map((p) => {
+      const [x, y] = transformer(p.x, p.y)
+      return { x, y, v: p.v }
+    }),
+    methode,
+    avecValidation,
+  )
+  return {
+    ...i,
+    estimer: (x, y) => {
+      const [u, w] = transformer(x, y)
+      return i.estimer(u, w)
+    },
+  }
 }

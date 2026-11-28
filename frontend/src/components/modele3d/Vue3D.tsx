@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Batiment } from '../../lib/modele3d/cibles'
+import type { Proposition, SegmentBord } from '../../lib/modele3d/delimitation'
 import type { VolumesFilieres } from '../../lib/modele3d/filieres'
 import type { Enveloppe, Modele, Nappe } from '../../lib/modele3d/modele'
-import { Rendu3D, type Colonne, type Couches, type Coupe, type Isoligne, type MarqueurEaux, type MarqueurGaz, type MarqueurSol, type Mesure, type Outil, type Selection } from './rendu'
+// The scene (three.js, the heaviest part of the page) is loaded when the view is shown: types only here.
+import type { Colonne, Couches, Coupe, Isoligne, MarqueurEaux, MarqueurGaz, MarqueurSol, Mesure, Outil, Rendu3D, Selection } from './rendu'
 
 interface Props {
   modele: Modele
@@ -26,6 +28,8 @@ interface Props {
   pid: { cle: string; index: number; de: number; a: number; couleur: string }[]
   observations: { cle: string; index: number; z: number }[]
   gaz: MarqueurGaz[]
+  /** Edge of the sampled wells and proposed wells (delineation of the plume), or null. */
+  delimitation: { bord: SegmentBord[]; propositions: Proposition[] } | null
   batiments: Batiment[]
   /** Buildings of the site (see-through), the others opaque. */
   batimentSurSite: (b: Batiment) => boolean
@@ -64,21 +68,29 @@ export default function Vue3D(p: Props) {
   const monter = useCallback(
     (conteneur: HTMLDivElement | null) => {
       if (!conteneur) return
-      let r: Rendu3D
-      try {
-        r = new Rendu3D(conteneur, {
-          surSelection: (s) => rappels.current.surSelection(s),
-          texteSurvol: (s) => rappels.current.texteSurvol(s),
-          surSol: (x, y) => rappels.current.surSol(x, y),
-          surMesure: (m) => rappels.current.surMesure(m),
+      let r: Rendu3D | null = null
+      let annule = false
+      import('./rendu')
+        .then(({ Rendu3D: Scene }) => {
+          if (annule) return
+          try {
+            r = new Scene(conteneur, {
+              surSelection: (s) => rappels.current.surSelection(s),
+              texteSurvol: (s) => rappels.current.texteSurvol(s),
+              surSol: (x, y) => rappels.current.surSol(x, y),
+              surMesure: (m) => rappels.current.surMesure(m),
+            })
+          } catch (e) {
+            setErreur(`La vue 3D ne peut pas s'afficher sur ce poste (WebGL indisponible : ${(e as Error).message}). Essayez Edge ou Chrome à jour, accélération matérielle activée.`)
+            return
+          }
+          setRendu(r)
+          surRendu(r)
         })
-      } catch (e) {
-        setErreur(`La vue 3D ne peut pas s'afficher sur ce poste (WebGL indisponible : ${(e as Error).message}). Essayez Edge ou Chrome à jour, accélération matérielle activée.`)
-        return
-      }
-      setRendu(r)
-      surRendu(r)
+        .catch((e: unknown) => !annule && setErreur(`La vue 3D n’a pas pu être chargée (${e instanceof Error ? e.message : String(e)}). Rechargez la page.`))
       return () => {
+        annule = true
+        if (!r) return
         surRendu(null)
         r.detruire()
         setRendu(null)
@@ -115,6 +127,7 @@ export default function Vue3D(p: Props) {
   useEffect(() => rendu?.pid(p.pid), [rendu, modele, p.pid])
   useEffect(() => rendu?.observations(p.observations), [rendu, modele, p.observations])
   useEffect(() => rendu?.gaz(p.gaz), [rendu, modele, p.gaz])
+  useEffect(() => rendu?.delimitation(p.delimitation), [rendu, modele, p.delimitation])
   useEffect(() => rendu?.batiments(p.batiments, p.batimentSurSite, p.voisinsEnVolume), [rendu, modele, p.batiments, p.batimentSurSite, p.voisinsEnVolume])
   useEffect(() => rendu?.coursDEau(p.coursDEau), [rendu, modele, p.coursDEau])
   useEffect(() => rendu?.libelles(p.libelles), [rendu, modele, p.libelles])
@@ -130,6 +143,11 @@ export default function Vue3D(p: Props) {
       {erreur && (
         <p role="alert" className="alerte m3d-vue__erreur">
           {erreur}
+        </p>
+      )}
+      {!erreur && !rendu && (
+        <p className="m3d-vue__chargement" aria-live="polite">
+          Chargement de la vue 3D…
         </p>
       )}
       {p.children}

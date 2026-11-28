@@ -44,6 +44,8 @@ import {
   valeurEn,
   zoneInterpolee,
   dansAnneaux,
+  transformeur,
+  type Anisotropie,
   type Grille,
   type Plan,
   type PointValeur,
@@ -51,7 +53,7 @@ import {
 import { ORDRE_CLASSES } from './lithologie.ts'
 import { detecterSysteme, LIBELLES_SYSTEME, versLambert93, type Systeme } from './coordonnees.ts'
 import { completerConfig, construireFormations, proposerFormations, type ConfigFormations, type ResultatFormations } from './formations.ts'
-import { interpoler, validationCroisee, type Methode, type Validation, type Variogramme } from './krigeage.ts'
+import { interpoler, interpolerDans, validationCroisee, type Interpolateur, type Methode, type Validation, type Variogramme } from './krigeage.ts'
 import type { Forage, Intervalle } from './types.ts'
 
 export type OrigineZ = 'forage' | 'dossier' | 'mnt' | 'repere' | 'interpole' | 'relatif' | 'saisie'
@@ -776,7 +778,12 @@ const valeurInterpolee = (valeur: number, inferieur: boolean) => Math.log10(Math
  * them. Field readings (pH, redox…) are weighted on their values
  * (`lineaire`), concentrations on their logarithm.
  */
-export function panache(m: Modele, base: Base, compose: string, campagne: string, lineaire = false, avecValidation = true): Panache {
+/**
+ * The results of a compound at a campaign (one per well), those of the
+ * placed wells, and the values interpolated there: log10 of the
+ * concentration (half the LQ when not quantified), or the value itself.
+ */
+export function donneesPanache(m: Modele, base: Base, compose: string, campagne: string, lineaire = false): { valeurs: ValeurPoint[]; places: ValeurPoint[]; pts: PointValeur[] } {
   const valeurs: ValeurPoint[] = []
   for (const r of base.resultats) {
     if (r.compose !== compose || r.campagne !== campagne || r.exclu) continue
@@ -784,9 +791,16 @@ export function panache(m: Modele, base: Base, compose: string, campagne: string
     if (p) valeurs.push({ cle: p.cle, nom: p.nom, x: p.x, y: p.y, resultat: r })
   }
   const places = valeurs.filter((v) => m.points.find((p) => p.cle === v.cle)?.place)
-  if (!places.length) return { valeurs, champ: null, incertitude: null, lineaire, validation: null }
   const pts = places.map((v) => ({ x: v.x, y: v.y, v: lineaire ? v.resultat.valeur : valeurInterpolee(v.resultat.valeur, v.resultat.inferieur) }))
-  const interp = interpoler(pts, m.methode, avecValidation)
+  return { valeurs, places, pts }
+}
+
+/**
+ * An interpolation on the ground grid's nodes, between the points and within
+ * the reach beyond (NaN elsewhere), and only where `garder` is 1 when given
+ * (the aquifer exists there).
+ */
+export function champSurGrille(m: Modele, pts: PointValeur[], interp: Interpolateur, garder: Uint8Array | null = null): { champ: Float64Array; incertitude: Float64Array } {
   const dedans = zoneInterpolee(pts, Math.max(m.portee, 20))
   const g = m.sol
   const champ = new Float64Array(g.nx * g.ny).fill(Number.NaN)
@@ -795,12 +809,32 @@ export function panache(m: Modele, base: Base, compose: string, campagne: string
     for (let i = 0; i < g.nx; i++) {
       const x = g.x0 + i * g.dx
       const y = g.y0 + j * g.dy
-      if (!dedans(x, y)) continue
+      if (!dedans(x, y) || (garder && !garder[j * g.nx + i])) continue
       const e = interp.estimer(x, y)
       champ[j * g.nx + i] = e.v
       incertitude[j * g.nx + i] = e.ecart
     }
-  return { valeurs, champ, incertitude, lineaire, validation: interp.validation }
+  return { champ, incertitude }
+}
+
+/** How a plume of concentrations is interpolated: stretched along the flow, kept within the aquifer. */
+export interface OptionsPanache {
+  anisotropie?: Anisotropie | null
+  /** Nodes of the ground grid where the aquifer exists (1), null: everywhere. */
+  garder?: Uint8Array | null
+}
+
+/** The interpolation of a plume's values (log10 of concentrations) with the options. */
+export function interpolerPanache(pts: PointValeur[], m: Modele, avecValidation: boolean, o: OptionsPanache = {}): Interpolateur {
+  return interpolerDans(pts, m.methode, avecValidation, o.anisotropie && o.anisotropie.rapport !== 1 ? transformeur(o.anisotropie) : null)
+}
+
+export function panache(m: Modele, base: Base, compose: string, campagne: string, lineaire = false, avecValidation = true, o: OptionsPanache = {}): Panache {
+  const { valeurs, places, pts } = donneesPanache(m, base, compose, campagne, lineaire)
+  if (!places.length) return { valeurs, champ: null, incertitude: null, lineaire, validation: null }
+  // Field readings (pH, redox) are no plume: plain interpolation.
+  const interp = lineaire ? interpoler(pts, m.methode, avecValidation) : interpolerPanache(pts, m, avecValidation, o)
+  return { valeurs, ...champSurGrille(m, pts, interp, lineaire ? null : (o.garder ?? null)), lineaire, validation: interp.validation }
 }
 
 export interface EtatPanache {
@@ -830,14 +864,14 @@ export interface Evolution {
  * a trend, not an inventory (the vertical distribution is not known from
  * screened wells). Concentrations in µg/l (or mg/l, converted).
  */
-export function evolutionPanache(m: Modele, base: Base, compose: string, reference: number | null, porosite = 0.2, epaisseur = 5): Evolution {
+export function evolutionPanache(m: Modele, base: Base, compose: string, reference: number | null, porosite = 0.2, epaisseur = 5, o: OptionsPanache = {}): Evolution {
   const c = base.composes.find((x) => x.cle === compose)
   const versMicrogrammesParLitre = c ? (facteurUnite(c.unite, 'µg/l') ?? 1) : 1
   const g = m.sol
   const aireCellule = g.dx * g.dy
   const etats: EtatPanache[] = []
   for (const camp of base.campagnes) {
-    const p = panache(m, base, compose, camp.id, false, false)
+    const p = panache(m, base, compose, camp.id, false, false, o)
     if (!p.champ || !p.valeurs.length) continue
     let aire = 0
     let masse = 0

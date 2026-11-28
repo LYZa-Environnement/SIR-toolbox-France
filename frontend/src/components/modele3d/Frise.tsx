@@ -19,6 +19,8 @@ interface Props {
   /** Date compared with the one shown (index), or null. */
   comparaison: number | null
   surComparaison: (i: number | null) => void
+  /** A mark under some dates (by step id), with its legend: the plume delineated or not at each campaign. */
+  marques?: { parEtape: Record<string, { couleur: string; titre: string }>; legende: { couleur: string; libelle: string }[] } | null
 }
 
 const COULEURS = { HE: '#2f6f9f', BE: '#b8701f', aucun: '#6b7a78' }
@@ -29,7 +31,7 @@ const COULEURS = { HE: '#2f6f9f', BE: '#b8701f', aucun: '#6b7a78' }
  * water in ochre. Previous / next, a reading that steps through them, and a
  * second date to compare with.
  */
-export default function Frise({ etapes, index, surIndex, comparaison, surComparaison }: Props) {
+export default function Frise({ etapes, index, surIndex, comparaison, surComparaison, marques = null }: Props) {
   const [lecture, setLecture] = useState(false)
   // Drawn at its real width: marks and years keep their size on a phone.
   const [largeur, setLargeur] = useState(1000)
@@ -128,9 +130,11 @@ export default function Frise({ etapes, index, surIndex, comparaison, surCompara
           const cx = X(x.t)
           const couleur = COULEURS[x.regime ?? 'aucun']
           const courant = k === i
+          const marque = marques?.parEtape[x.id]
           return (
             <g key={x.id} className="m3d-frise__point" onClick={() => (setLecture(false), surIndex(k))}>
-              <title>{`${x.libelle}${x.detail ? ` · ${x.detail}` : ''}`}</title>
+              <title>{`${x.libelle}${x.detail ? ` · ${x.detail}` : ''}${marque ? ` · ${marque.titre}` : ''}`}</title>
+              {marque && <rect x={cx - 3.5} y={41} width={7} height={7} rx={1.5} fill={marque.couleur} className="m3d-frise__marque" />}
               <circle cx={cx} cy={30} r={13} fill="transparent" />
               {courant && <circle cx={cx} cy={30} r={11} className="m3d-frise__courant" />}
               {comparaison === k && (
@@ -165,6 +169,12 @@ export default function Frise({ etapes, index, surIndex, comparaison, surCompara
           <span className="m3d-pastille m3d-pastille--rond" style={{ background: COULEURS.BE }} aria-hidden="true" /> basses eaux{' '}
           <span className="m3d-pastille m3d-pastille--rond m3d-pastille--creux" aria-hidden="true" /> niveaux seuls{' '}
           <span className="m3d-pastille" style={{ background: '#5f6b6b' }} aria-hidden="true" /> foration
+          {marques?.legende.map((l) => (
+            <span key={l.libelle}>
+              {' '}
+              <span className="m3d-pastille" style={{ background: l.couleur }} aria-hidden="true" /> {l.libelle}
+            </span>
+          ))}
         </p>
       </div>
     </div>

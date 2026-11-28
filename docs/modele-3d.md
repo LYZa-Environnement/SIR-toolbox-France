@@ -115,6 +115,128 @@ quadratique moyen). Inverse distance en option. Références : Matheron
   baisse) ou rapport des concentrations (÷ 10 vert à × 10 rouge), sur la
   surface et les étiquettes.
 
+## Délimitation du panache
+
+`delimitation.ts` : le panache est-il délimité par les ouvrages ? Pour le
+composé choisi, à la campagne affichée dans la frise, contre la valeur de
+comparaison de Suivi temporel (section « Délimitation du panache » sous la
+vue, calcul dans le Web Worker).
+
+- **Fermeture, ouvrage par ouvrage** : autour de chaque ouvrage au-dessus de
+  la valeur, quatre quadrants de 90° orientés sur l'écoulement de la date
+  (sinon de la dernière campagne, sinon sur le nord) : aval, côté droit et
+  côté gauche en regardant vers l'aval, amont. Un côté est fermé quand son
+  quadrant contient un ouvrage sous la valeur : nettement (moins de la
+  moitié de la valeur, ou non quantifié avec une LQ au plus égale à la
+  moitié), ou de justesse (entre la moitié et la valeur). Un ouvrage non
+  quantifié avec une LQ au-dessus de la valeur ne ferme rien (signalé). Pour
+  chaque côté : délimité, de justesse ou non délimité, les ouvrages du front
+  (au-dessus de la valeur, sans autre ouvrage au-dessus de la valeur
+  au-delà) et l'ouvrage qui ferme le plus proche. Un quadrant est convexe :
+  les témoins des ouvrages situés plus loin sont aussi ceux de l'ouvrage.
+- **Pourtour des ouvrages** : le long de l'enveloppe convexe des ouvrages
+  analysés, la part où le champ interpolé atteint la valeur ; tracée au sol
+  dans la vue (rouge : le panache sort des ouvrages ; vert : en deçà).
+- **Probabilité de dépassement** à chaque nœud, d'après le krigeage du
+  logarithme des concentrations, l'erreur supposée gaussienne :
+  P = 1 − Φ((log10 valeur − m) / σ) (Goovaerts, 1997, chapitre 7). Surfaces
+  où P ≥ 50 % et P ≥ 90 %, et surface au classement douteux
+  Σ min(P, 1 − P) × maille. Option « Colorer la nappe selon la probabilité
+  de dépasser la valeur de comparaison » (onglet Eaux : vert sûrement en
+  dessous, gris douteux, rouge sûrement au-dessus) ; probabilité au forage
+  virtuel.
+- **Emplacements proposés** (0 à 5, 3 par défaut) : d'abord un au-delà du
+  front de chaque côté ouvert, dans l'axe de ce côté, là où le modèle situe
+  la fin du panache (probabilité de dépassement de 25 % au plus), sinon au
+  bout de la portée de l'interpolation (le modèle ne lit pas plus loin : le
+  panache peut continuer) ; puis là où le classement au-dessus ou
+  au-dessous de la valeur est le plus douteux, la variance de krigeage
+  recalculée avec chaque ouvrage ajouté (elle ne dépend que des positions ;
+  Ranjan, Bingham et Michailidis, 2008 ; Bect et al., 2012). Pour chacun :
+  coordonnées, position par rapport à l'ouvrage le plus proche, probabilité
+  de dépassement et concentration estimées, profondeur de l'eau estimée,
+  sur le site ou non, surface douteuse restante. Tubes violets N1, N2… dans
+  la vue, fiche au clic, export CSV.
+- **Géologie et comportement du polluant** (`hydrogeologie.ts`,
+  `comportement.ts`), d'après les guides du BRGM : D. Hubé et al., « Guide
+  polluants et comportement des polluants dans le milieu souterrain »,
+  BRGM/RP-74064-FR (version 3 du 2 décembre 2024), et B. Lemière et al.,
+  « Guide sur le comportement des polluants dans les sols et les nappes »,
+  Documents du BRGM 300 (nouvelle édition 2008, BRGM/RP-50662-FR).
+  - *Composé* : masse volumique, solubilité, log Kow et constante de Henry
+    des tableaux 9 (BTEX, p. 132) et 13 (COHV, p. 148) du guide de 2024 ;
+    famille, phase (plus dense que l'eau : DNAPL, plus légère : LNAPL),
+    gamme de log Koc et stabilité des tableaux par famille du guide de 2008
+    (p. 29-30). Un composé qui bout sous 20 °C (chlorure de vinyle) ne forme
+    pas de phase. Sans n° CAS connu, la famille est lue dans le nom.
+  - *Aquifère* : les formations où sont crépinés les ouvrages analysés
+    (longueur crépinée lue dans le log de chacun), la plus chargée et ses
+    voisines d'au moins un quart de son poids ; le mur est la formation
+    au-dessous. Toit et mur en tout point d'après les formations continues.
+  - *Fermeture* : un ouvrage crépiné hors de l'aquifère est écarté ; pour
+    un composé plus dense que l'eau, une crépine arrêtée à plus d'un mètre
+    au-dessus du mur, ou un forage arrêté dans l'aquifère, ne ferme que
+    sous réserve (le panache se tient à la base : guide 2024, § 4.3 et
+    § 6.3) ; pour un composé plus léger, une crépine dont le sommet est à
+    plus de 30 cm sous le niveau d'eau de la date aussi. Seuils propres à
+    l'outil, le guide étant qualitatif.
+  - *Phase pure* : COHV à 1 % de leur solubilité ou plus (guide 2024,
+    § 10.6.5 : « 1 – 10 % de la solubilité »), avec la recommandation
+    d'ouvrages en PEHD ou en acier.
+  - *Champ* : krigeage étiré dans le sens de l'écoulement d'un rapport
+    √10 (dispersivité transversale du dixième de la longitudinale, guide
+    2008, annexe 4), et limité aux nœuds où l'aquifère existe ; le même
+    champ colore la nappe et sert à l'évolution du panache.
+  - *Transport* (guide 2008, annexe 4) : vitesse réelle u = K·J / ωc,
+    facteur de retard R = 1 + ρd·Koc·foc / ω, vitesse du polluant u / R.
+    Vitesses calculées seulement avec une perméabilité saisie (essai) : les
+    gammes par lithologie (Freeze et Cherry, 1979, tableau 2.2) couvrent
+    trois à six ordres de grandeur et sont seulement affichées. Avec une
+    demi-vie, longueur du panache stationnaire au-delà du front :
+    v·ln(C / valeur) / λ (advection et dégradation du premier ordre) ; le
+    puits de fermeture aval y est placé quand elle reste à moins de cinq
+    portées, sinon elle est seulement signalée. Hypothèses saisissables :
+    K, ωc (5 %), ω (30 %), ρd (1,7 kg/l), foc (0,1 %), demi-vie par
+    composé.
+  - *Crépine conseillée* pour chaque emplacement : à cheval sur la nappe
+    (battement de l'ouvrage voisin) pour un composé plus léger que l'eau ;
+    jusqu'au mur de l'aquifère sans le traverser pour un composé plus
+    dense ; sur la hauteur saturée de l'aquifère sinon.
+- **Atténuation tirée des données** : pente de ln C en fonction de la
+  distance le long de l'écoulement, de la source (la plus forte
+  concentration quantifiée) aux ouvrages quantifiés à moins de 45° de l'axe
+  en aval (moindres carrés) : facteur 10 tous les X m, distance où la pente
+  prolongée atteint la valeur au-delà du dernier ouvrage qui la dépasse ;
+  avec une perméabilité mesurée, constante d'atténuation globale
+  k = v·(−pente) et demi-vie apparente (C. J. Newell et al., US EPA,
+  EPA/540/S-02/500, 2002), proposée en un clic comme demi-vie du composé.
+  Déclin de la source dans le temps (pente de Sen sur ln C, quatre résultats
+  quantifiés au moins) : durée de vie de la source, signalée comme telle.
+- **Valeurs du guide signalées** : masse volumique du TCE (1,27 dans le
+  tableau 13, 1,46 dans les tables de constantes physiques) et du
+  tétrachlorure de carbone (1,46 contre 1,59), solubilité de l'éthylbenzène
+  (866 mg/l, contre 150 mg/l dans le guide de 2008), solubilités des
+  1,2-dichloroéthylènes (sources divergentes selon la température) :
+  affichées à côté de la valeur du guide, que le calcul garde. Bromoforme :
+  la seconde partie du tableau 13 donne le log Kow avant la masse volumique.
+- **Affichage** : bandeau de trois chiffres (côtés non délimités, surface
+  où le dépassement est probable, surface au classement douteux avant et
+  après les emplacements), trois onglets (Délimitation, Géologie et
+  comportement, Emplacements), motif de chaque emplacement en pastille (la
+  phrase complète au survol et dans l'export), crépine conseillée en barre
+  de profondeur (crépine, aquifère, eau, mur). Dans la frise, une pastille
+  sous chaque campagne donne le verdict de la délimitation à cette date,
+  calculé avec l'écoulement de la campagne. Dans la vue, le nom des
+  emplacements proposés est porté par un trait de rappel, au coin qui ne
+  masque aucun nom d'ouvrage (ouvrage choisi, puis ouvrages de suivi, puis
+  piézairs) ; échelle graphique en vue de dessus, reprise dans l'image PNG.
+- Limites : en inverse distance, ni probabilité ni emplacement « douteux »
+  (fermeture seule) ; sous six ouvrages, variogramme par défaut
+  (probabilités indicatives) ; la variance de la tendance n'est pas comptée
+  (régression-krigeage), l'incertitude est sous-estimée loin des ouvrages.
+  Emplacements indicatifs : accès, propriété, réseaux (DT-DICT) et crépine
+  à vérifier.
+
 ## Sols, gaz du sol, terrain
 
 - Échantillons colorés contre la valeur guide ERM (sols, sur site) ;
@@ -203,7 +325,11 @@ campagne). Usages à confirmer par la visite du site et de ses abords.
 - Bâtiments BD TOPO colorés par usage (voir Bâtiments et usages).
 - Image PNG avec les étiquettes ; tableaux des valeurs affichées.
 - Calculs lourds (modèle, formations, krigeage, volumes, évolution,
-  tendances) dans un Web Worker ; blocs réduits à leurs faces visibles.
+  tendances, délimitation et verdicts par campagne) dans un Web Worker ;
+  blocs réduits à leurs faces visibles. La scène (three.js, `rendu.ts`) est
+  chargée à l'affichage de la vue, dans un fichier à part.
+- Composants de la page : `Legende.tsx`, `Tableaux.tsx`, `Filieres.tsx`,
+  `Methode.tsx`, `Delimitation.tsx`, couleurs dans `palettes.ts`.
 
 Le modèle enregistre dans le dossier (`modele-3d.json`) les fichiers
 déposés dans l'outil, les sources décochées, les coordonnées et cotes
@@ -214,7 +340,7 @@ les réglages de la vue.
 
 `modele.test.ts`, `calculs.test.ts` (projections et reconnaissance des
 systèmes, saisies, points d'investigation du dossier, krigeage, formations et contacts, filières, isopièzes,
-évolution du panache, schéma conceptuel), `dossier.test.ts` (fichiers des
+évolution du panache, délimitation du panache : quadrants, fermetures calculées à la main, exemple, schéma conceptuel), `dossier.test.ts` (fichiers des
 outils relus après un aller-retour par l'encodage du dossier, fiches de
 prélèvement, tournées sans analyses, emprise des interpolations),
 `usages.test.ts` (classement des usages, usages mixtes et déduits, lecture
