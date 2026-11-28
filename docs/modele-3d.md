@@ -157,6 +157,51 @@ vue, calcul dans le Web Worker).
   de dépassement et concentration estimées, profondeur de l'eau estimée,
   sur le site ou non, surface douteuse restante. Tubes violets N1, N2… dans
   la vue, fiche au clic, export CSV.
+- **Géologie et comportement du polluant** (`hydrogeologie.ts`,
+  `comportement.ts`), d'après les guides du BRGM : D. Hubé et al., « Guide
+  polluants et comportement des polluants dans le milieu souterrain »,
+  BRGM/RP-74064-FR (version 3 du 2 décembre 2024), et B. Lemière et al.,
+  « Guide sur le comportement des polluants dans les sols et les nappes »,
+  Documents du BRGM 300 (nouvelle édition 2008, BRGM/RP-50662-FR).
+  - *Composé* : masse volumique, solubilité, log Kow et constante de Henry
+    des tableaux 9 (BTEX, p. 132) et 13 (COHV, p. 148) du guide de 2024 ;
+    famille, phase (plus dense que l'eau : DNAPL, plus légère : LNAPL),
+    gamme de log Koc et stabilité des tableaux par famille du guide de 2008
+    (p. 29-30). Un composé qui bout sous 20 °C (chlorure de vinyle) ne forme
+    pas de phase. Sans n° CAS connu, la famille est lue dans le nom.
+  - *Aquifère* : les formations où sont crépinés les ouvrages analysés
+    (longueur crépinée lue dans le log de chacun), la plus chargée et ses
+    voisines d'au moins un quart de son poids ; le mur est la formation
+    au-dessous. Toit et mur en tout point d'après les formations continues.
+  - *Fermeture* : un ouvrage crépiné hors de l'aquifère est écarté ; pour
+    un composé plus dense que l'eau, une crépine arrêtée à plus d'un mètre
+    au-dessus du mur, ou un forage arrêté dans l'aquifère, ne ferme que
+    sous réserve (le panache se tient à la base : guide 2024, § 4.3 et
+    § 6.3) ; pour un composé plus léger, une crépine dont le sommet est à
+    plus de 30 cm sous le niveau d'eau de la date aussi. Seuils propres à
+    l'outil, le guide étant qualitatif.
+  - *Phase pure* : COHV à 1 % de leur solubilité ou plus (guide 2024,
+    § 10.6.5 : « 1 – 10 % de la solubilité »), avec la recommandation
+    d'ouvrages en PEHD ou en acier.
+  - *Champ* : krigeage étiré dans le sens de l'écoulement d'un rapport
+    √10 (dispersivité transversale du dixième de la longitudinale, guide
+    2008, annexe 4), et limité aux nœuds où l'aquifère existe ; le même
+    champ colore la nappe et sert à l'évolution du panache.
+  - *Transport* (guide 2008, annexe 4) : vitesse réelle u = K·J / ωc,
+    facteur de retard R = 1 + ρd·Koc·foc / ω, vitesse du polluant u / R.
+    Vitesses calculées seulement avec une perméabilité saisie (essai) : les
+    gammes par lithologie (Freeze et Cherry, 1979, tableau 2.2) couvrent
+    trois à six ordres de grandeur et sont seulement affichées. Avec une
+    demi-vie, longueur du panache stationnaire au-delà du front :
+    v·ln(C / valeur) / λ (advection et dégradation du premier ordre) ; le
+    puits de fermeture aval y est placé quand elle reste à moins de cinq
+    portées, sinon elle est seulement signalée. Hypothèses saisissables :
+    K, ωc (5 %), ω (30 %), ρd (1,7 kg/l), foc (0,1 %), demi-vie par
+    composé.
+  - *Crépine conseillée* pour chaque emplacement : à cheval sur la nappe
+    (battement de l'ouvrage voisin) pour un composé plus léger que l'eau ;
+    jusqu'au mur de l'aquifère sans le traverser pour un composé plus
+    dense ; sur la hauteur saturée de l'aquifère sinon.
 - Limites : en inverse distance, ni probabilité ni emplacement « douteux »
   (fermeture seule) ; sous six ouvrages, variogramme par défaut
   (probabilités indicatives) ; la variance de la tendance n'est pas comptée

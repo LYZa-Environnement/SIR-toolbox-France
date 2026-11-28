@@ -4961,6 +4961,42 @@ svg .halo {
   align-items: center;
   gap: 0.4rem;
 }
+.m3d-geologie {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.m3d-geologie h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.m3d-geologie__dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 0.9rem;
+  margin: 0;
+}
+.m3d-geologie__dl dt {
+  font-weight: 700;
+}
+.m3d-geologie__dl dd {
+  margin: 0;
+}
+.m3d-geologie__alerte {
+  color: var(--level-elevee);
+}
+.m3d-geologie__hypotheses {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.6rem;
+}
+@media (max-width: 640px) {
+  .m3d-geologie__dl {
+    grid-template-columns: 1fr;
+  }
+}
 .m3d-proposition {
   padding: 0 0.3rem;
   border-radius: 3px;

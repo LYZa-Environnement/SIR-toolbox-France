@@ -202,3 +202,22 @@ export function dansAnneaux(anneaux: [number, number][][], x: number, y: number)
     }
   return dedans
 }
+
+/** Geometric anisotropy along an axis: distances across it count `rapport` times more than along it. */
+export interface Anisotropie {
+  /** Axis (° from north, clockwise): the groundwater flow. */
+  azimut: number
+  /** Range along the axis over the range across it (1: isotropic). */
+  rapport: number
+}
+
+/**
+ * Coordinates in which the anisotropy is isotropic: along the axis, and
+ * across it stretched by the ratio. A plane stays a plane (the transform is
+ * linear), and an interpolation there reaches further along the axis.
+ */
+export function transformeur(a: Anisotropie): (x: number, y: number) => [number, number] {
+  const t = (a.azimut * Math.PI) / 180
+  const [s, c] = [Math.sin(t), Math.cos(t)]
+  return (x, y) => [x * s + y * c, a.rapport * (x * c - y * s)]
+}

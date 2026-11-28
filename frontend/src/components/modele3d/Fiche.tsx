@@ -523,8 +523,16 @@ function FicheProposition(p: Props & { rang: number }) {
             <dd>≈ {frM(x.profondeurEau)} sous le sol (estimée à la date affichée)</dd>
           </>
         )}
+        {x.crepine && (
+          <>
+            <dt>Crépine</dt>
+            <dd>
+              de {frM(x.crepine.de)} à {frM(x.crepine.a)} : {x.crepine.raison}
+            </dd>
+          </>
+        )}
       </dl>
-      <p className="st-note">Indicatif : accès, propriété du terrain, réseaux enterrés (DT-DICT) et profondeur de la crépine à vérifier.</p>
+      <p className="st-note">Indicatif : accès, propriété du terrain et réseaux enterrés (DT-DICT) à vérifier ; crépine à caler sur la coupe relevée en forant.</p>
     </>
   )
 }

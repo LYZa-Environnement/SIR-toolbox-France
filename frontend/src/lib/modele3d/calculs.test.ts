@@ -4,11 +4,13 @@ import { reference } from '../suivi/analyse.ts'
 import type { Resultat } from '../suivi/modele.ts'
 import { assembler } from './assemblage.ts'
 import { deprojeter, detecterSysteme, projeter, systemeDe, versLambert93 } from './coordonnees.ts'
+import { comportement, partSolubilite } from './comportement.ts'
 import { coteDe, delimiterPanache, fermetureDe, fermeturesPanache, versDirection } from './delimitation.ts'
+import { aquifereDe, crepineConseillee, HYPOTHESES_DEFAUT, lirePermeabilite, longueurStationnaire, RAPPORT_ANISOTROPIE, transportDe } from './hydrogeologie.ts'
 import { exemple } from './exemple.ts'
 import { classerEchantillons, volumesFilieres } from './filieres.ts'
 import { contactsForage, construireFormations, formationA, proposerFormations } from './formations.ts'
-import { nouvelleGrille, remplir } from './interpolation.ts'
+import { nouvelleGrille, remplir, transformeur } from './interpolation.ts'
 import { ajusterVariogramme, ecartsKrigeage, gamma, interpoler, inverser } from './krigeage.ts'
 import { construireModele, evolutionPanache, isolignes, nappeCampagne } from './modele.ts'
 import type { Forage } from './types.ts'
@@ -443,5 +445,144 @@ describe('délimitation du panache', () => {
     expect(r.verdict).toBe('aucun-depassement')
     expect(r.depassants).toHaveLength(0)
     expect(r.propositions).toHaveLength(0)
+  })
+})
+
+describe('géologie et comportement des polluants (BRGM)', () => {
+  it('comportement des composés : tableaux du guide BRGM/RP-74064-FR et familles', () => {
+    const pce = comportement({ cas: '127-18-4', nom: 'Tétrachloroéthylène', famille: 'COHV' })
+    expect(pce.famille).toBe('cohv')
+    expect(pce.phase).toBe('dnapl')
+    expect(pce.substance!.densite).toBe(1.62)
+    expect(pce.substance!.solubilite).toEqual([100, 200])
+    expect(pce.logKoc).toEqual([1.5, 2.5])
+    expect(pce.sources[0]).toContain('tableau 13')
+    expect(comportement({ cas: '71-43-2', nom: 'Benzène', famille: 'BTEX' }).phase).toBe('lnapl')
+    // Vinyl chloride boils at −13,4 °C: no liquid phase.
+    expect(comportement({ cas: '75-01-4', nom: 'Chlorure de vinyle', famille: 'COHV' }).phase).toBe('dissous')
+    // An isomer of the xylenes, a compound with no CAS number, a salt, a metal.
+    expect(comportement({ cas: '95-47-6', nom: 'o-Xylène', famille: '' }).substance!.nom).toBe('Xylènes')
+    expect(comportement({ cas: '', nom: 'Hydrocarbures C10-C40', famille: 'Hydrocarbures' })).toMatchObject({ famille: 'hydrocarbures', phase: 'lnapl' })
+    expect(comportement({ cas: '16887-00-6', nom: 'Chlorures', famille: 'Anions' }).famille).toBe('autre')
+    expect(comportement({ cas: '7440-38-2', nom: 'Arsenic', famille: 'Métaux' })).toMatchObject({ famille: 'metaux', phase: 'dissous', logKoc: null })
+  })
+
+  it('part de la solubilité : une phase organique probable dès 1 % pour les COHV', () => {
+    // 2 000 µg/l of PCE = 2 mg/l against 100 mg/l (low end of the range): 2 %.
+    expect(partSolubilite(2000, comportement({ cas: '127-18-4', nom: '', famille: '' }))).toBeCloseTo(0.02, 12)
+    expect(partSolubilite(2000, comportement({ cas: '71-43-2', nom: '', famille: '' }))).toBeNull()
+  })
+
+  it('perméabilité saisie à la française', () => {
+    expect(lirePermeabilite('5e-4')).toBeCloseTo(5e-4, 15)
+    expect(lirePermeabilite('5.10-4')).toBeCloseTo(5e-4, 15)
+    expect(lirePermeabilite('2,5×10^-3')).toBeCloseTo(2.5e-3, 15)
+    expect(lirePermeabilite('0,0005')).toBeCloseTo(5e-4, 15)
+    expect(lirePermeabilite('')).toBeNull()
+    expect(lirePermeabilite('abc')).toBeNull()
+  })
+
+  it('vitesses : l’exemple du guide BRGM (K = 10⁻⁴ m/s, J = 0,5 %, ωc = 5 % → 315 m/an) et le facteur de retard', () => {
+    const pce = comportement({ cas: '127-18-4', nom: '', famille: '' })
+    const t = transportDe(null, { ...HYPOTHESES_DEFAUT, K: 1e-4, porositeCinematique: 0.05 }, 0.005, pce)
+    // u = 1e-4 × 0.005 / 0.05 = 1e-5 m/s = 315.58 m/year (Documents du BRGM 300, annexe 4: « 315 m/an »).
+    expect(t.vitesseEau!).toBeCloseTo(315.576, 2)
+    // R = 1 + 1.7 × 10^logKoc × 0.001 / 0.3: 1.1792 for log Koc 1.5, 2.7920 for 2.5.
+    expect(t.retard![0]).toBeCloseTo(1.179196, 5)
+    expect(t.retard![1]).toBeCloseTo(2.791957, 5)
+    expect(t.vitessePolluant![0]).toBeCloseTo(315.576 / 1.179196, 1)
+    // No measured K: no velocity.
+    expect(transportDe(null, HYPOTHESES_DEFAUT, 0.005, pce).vitesseEau).toBeNull()
+  })
+
+  it('longueur d’un panache stationnaire : v·ln(C / valeur) / λ', () => {
+    // 100 m/year, half-life 1 year, 10 × the value: 100 × log2(10) = 332.19 m.
+    expect(longueurStationnaire(100, 1, 10)).toBeCloseTo(332.193, 2)
+    expect(longueurStationnaire(100, 1, 0.5)).toBe(0)
+  })
+
+  it('anisotropie : 10 m en travers de l’écoulement comptent pour 30 m', () => {
+    // Flow to the east (90°), ratio 3: a point east stays at 10 m, a point north goes to 30 m.
+    const t = transformeur({ azimut: 90, rapport: 3 })
+    const [a, b] = t(10, 0)
+    expect(Math.hypot(a, b)).toBeCloseTo(10, 9)
+    const [c, d] = t(0, 10)
+    expect(Math.hypot(c, d)).toBeCloseTo(30, 9)
+    expect(RAPPORT_ANISOTROPIE).toBeCloseTo(Math.sqrt(10), 12)
+  })
+
+  it('crépine conseillée selon la densité du composé', () => {
+    // Ground 50, water 48 to 49, aquifer from 47 down to its base at 40 (m NGF).
+    const eau = { haute: 49, basse: 48 }
+    const aq = { toit: 47, mur: 40 }
+    expect(crepineConseillee('dnapl', 50, eau, aq, 'Marne')).toMatchObject({ de: 3, a: 10, profondeur: 10 })
+    expect(crepineConseillee('dnapl', 50, eau, aq, 'Marne')!.raison).toContain('mur')
+    // Light phase: from 0.5 m below the ground (high water + 0.5 = 49.5) to low water − 2 = 46.
+    expect(crepineConseillee('lnapl', 50, eau, aq, null)).toMatchObject({ de: 0.5, a: 4 })
+    expect(crepineConseillee('dissous', 50, eau, aq, null)).toMatchObject({ de: 3, a: 10 })
+  })
+
+  const d = assembler([exemple()])
+  const base = d.base!
+  const m = construireModele(d)
+  const derniere = base.campagnes[base.campagnes.length - 1]
+  const n = nappeCampagne(m, base, derniere.id)
+  const charges = Object.fromEntries(n.charges.map((c) => [c.cle, c.charge]))
+
+  it('exemple : l’aquifère des crépines, sables et graviers sur les marnes', () => {
+    const aq = aquifereDe(m, base)!
+    expect(aq.origine).toBe('crepines')
+    expect(aq.unites.map((u) => u.classe)).toEqual(['sable', 'grav'])
+    expect(aq.mur!.nom).toBe('Marne')
+    expect(aq.dansAquifere).toBe(aq.crepines)
+  })
+
+  it('un ouvrage crépiné hors de l’aquifère est écarté ; une crépine mal placée ferme sous réserve', () => {
+    const res = (valeur: number) => ({ id: '', ouvrage: '', compose: 'c', campagne: 'k', date: '', t: 0, valeur, inferieur: false, brut: String(valeur), fichier: '', exclu: false })
+    const pts = [
+      { cle: 'A', nom: 'A', x: 0, y: 0, resultat: res(50) },
+      { cle: 'S', nom: 'S', x: 0, y: -40, resultat: res(1) },
+      { cle: 'N', nom: 'N', x: 0, y: 40, resultat: res(1) },
+    ]
+    const f = fermeturesPanache(pts, 10, 180, (q) => (q.cle === 'S' ? { exclu: 'crépiné hors de l’aquifère (marnes)' } : q.cle === 'N' ? { reserve: 'crépine trop courte' } : null))
+    const aval = f.cotes.find((c) => c.cote === 'aval')!
+    expect(aval.statut).toBe('ouvert')
+    expect(aval.ecartes).toEqual([{ nom: 'S', motif: 'crépiné hors de l’aquifère (marnes)' }])
+    const amont = f.cotes.find((c) => c.cote === 'amont')!
+    expect(amont.statut).toBe('reserve')
+    expect(amont.temoins[0].reserve).toBe('crépine trop courte')
+  })
+
+  it('exemple : le benzène (plus léger que l’eau) n’est fermé que sous réserve par des crépines sous la nappe', () => {
+    const bz = base.composes.find((c) => c.cas === '71-43-2')!
+    const r = delimiterPanache(m, base, bz.cle, derniere.id, reference(bz, d.corrections)!.valeur, { aval: n.ecoulement!.azimut, charges, nappe: { grille: n.grille, plan: n.plan } })
+    expect(r.comportement.phase).toBe('lnapl')
+    const amont = r.cotes.find((c) => c.cote === 'amont')!
+    expect(amont.statut).toBe('reserve')
+    expect(amont.temoins[0].reserve).toContain('sous la nappe')
+    // Screens advised across the water table.
+    expect(r.propositions.length).toBeGreaterThan(0)
+    for (const p of r.propositions.filter((x) => x.crepine)) expect(p.crepine!.de).toBeLessThan(p.profondeurEau!)
+  })
+
+  it('exemple : le trichloroéthylène (plus dense) se crépine jusqu’au mur ; avec K et demi-vie, le transport situe la fin du panache', () => {
+    const tce = base.composes.find((c) => c.cas === '79-01-6')!
+    const r = delimiterPanache(m, base, tce.cle, derniere.id, reference(tce, d.corrections)!.valeur, {
+      aval: n.ecoulement!.azimut,
+      gradient: n.ecoulement!.gradient,
+      charges,
+      nappe: { grille: n.grille, plan: n.plan },
+      anisotropie: RAPPORT_ANISOTROPIE,
+      hypotheses: { ...HYPOTHESES_DEFAUT, K: 5e-4, demiVie: 3 },
+    })
+    expect(r.comportement.phase).toBe('dnapl')
+    expect(r.anisotropie).toBeCloseTo(Math.sqrt(10), 9)
+    expect(r.transport.vitesseEau).toBeGreaterThan(0)
+    // The closing well downgradient of PZ4 tells the end of the steady plume, far beyond the site.
+    const aval = r.propositions.find((p) => p.motif.type === 'fermeture' && p.motif.cote === 'aval')!
+    expect(aval.motif.type === 'fermeture' && aval.motif.transport).toBeGreaterThan(1000)
+    // Screens down to the base of the aquifer (the marls, about 10 m deep).
+    expect(aval.crepine!.raison).toContain('Marne')
+    expect(aval.crepine!.a).toBeGreaterThan(9)
   })
 })

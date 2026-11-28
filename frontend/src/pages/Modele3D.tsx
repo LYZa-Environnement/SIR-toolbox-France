@@ -23,6 +23,7 @@ import type { Systeme } from '../lib/modele3d/coordonnees'
 import { COULEUR_NQ, couleurChamp, couleurValeur, etendue, RAMPE, type Echelle } from '../lib/modele3d/couleurs'
 import { gazDeResultats, lireSourcesDossier } from '../lib/modele3d/dossier'
 import type { Proposition } from '../lib/modele3d/delimitation'
+import { aquifereDe, HYDRO_DEFAUT, hypothesesDe, masqueAquifere, RAPPORT_ANISOTROPIE, type ReglagesHydro } from '../lib/modele3d/hydrogeologie'
 import { exemple } from '../lib/modele3d/exemple'
 import { FILIERES, ORDRE_FILIERES } from '../lib/modele3d/filieres'
 import { fr, frM } from '../lib/modele3d/format'
@@ -92,6 +93,8 @@ interface Reglages {
   probabilite: boolean
   /** Number of wells proposed to delineate the plume. */
   propositions: number
+  /** Hydrogeology and behaviour of the compound for the plume and its delineation. */
+  hydro: ReglagesHydro
   limitesCoursEau: boolean
   revanche: number
   porosite: number
@@ -150,6 +153,7 @@ const REGLAGES_DEFAUT: Reglages = {
   incertitude: false,
   probabilite: false,
   propositions: 3,
+  hydro: HYDRO_DEFAUT,
   limitesCoursEau: false,
   revanche: 0.5,
   porosite: 0.2,
@@ -337,7 +341,7 @@ export default function Modele3D() {
       setFichiers(d.fichiers)
       setAvecExemple(d.avecExemple)
       setExclues(d.exclues)
-      setReglages({ ...REGLAGES_DEFAUT, ...d.reglages, couches: { ...COUCHES_DEFAUT, ...d.reglages?.couches } })
+      setReglages({ ...REGLAGES_DEFAUT, ...d.reglages, couches: { ...COUCHES_DEFAUT, ...d.reglages?.couches }, hydro: { ...HYDRO_DEFAUT, ...d.reglages?.hydro } })
       setSelection(null)
       setErreurs([])
     },
@@ -499,20 +503,49 @@ export default function Modele3D() {
   )
   const nappe = useMemo(() => nappeDe(etape), [nappeDe, etape])
   const nappeA = useMemo(() => nappeDe(etapeA), [nappeDe, etapeA])
-  const pan = useMemo(() => (modele && base && compose && campagne ? panache(modele, base, compose.cle, campagne, !!compose.terrain) : null), [modele, base, compose, campagne])
-  const panA = useMemo(() => (modele && base && compose && etapeA?.campagne ? panache(modele, base, compose.cle, etapeA.campagne, !!compose.terrain, false) : null), [modele, base, compose, etapeA])
-  const comparaisonConc = !!(pan?.champ && panA?.champ && reglages.panache && !compose?.terrain)
   // The latest campaign's water table: the conceptual model's, and the flow when the date shown has none.
   const nappeSchema = useMemo(() => nappeDe(etapes.filter((e) => e.campagne).at(-1) ?? etapes.at(-1) ?? null), [nappeDe, etapes])
+  const ecoulement = nappe?.ecoulement ?? nappeSchema?.ecoulement ?? null
+  const avalDelimitation = ecoulement?.azimut ?? null
+  // The plume as the geology shapes it: stretched along the flow, within the aquifer the wells are screened in.
+  const hydro = reglages.hydro
+  const aquifere = useMemo(() => (modele && base ? aquifereDe(modele, base) : null), [modele, base])
+  const masque = useMemo(() => (modele && hydro.limiterAquifere ? masqueAquifere(modele, aquifere) : null), [modele, aquifere, hydro.limiterAquifere])
+  const optionsPanache = useMemo(
+    () => ({ anisotropie: hydro.anisotropie && avalDelimitation !== null ? { azimut: avalDelimitation, rapport: RAPPORT_ANISOTROPIE } : null, garder: masque }),
+    [hydro.anisotropie, avalDelimitation, masque],
+  )
+  const pan = useMemo(() => (modele && base && compose && campagne ? panache(modele, base, compose.cle, campagne, !!compose.terrain, true, optionsPanache) : null), [modele, base, compose, campagne, optionsPanache])
+  const panA = useMemo(
+    () => (modele && base && compose && etapeA?.campagne ? panache(modele, base, compose.cle, etapeA.campagne, !!compose.terrain, false, optionsPanache) : null),
+    [modele, base, compose, etapeA, optionsPanache],
+  )
+  const comparaisonConc = !!(pan?.champ && panA?.champ && reglages.panache && !compose?.terrain)
 
   // ---- Delineation of the plume ------------------------------------------------------------
-  const avalDelimitation = (nappe?.ecoulement ?? nappeSchema?.ecoulement)?.azimut ?? null
+  const chargesDate = useMemo(() => Object.fromEntries((nappe?.charges ?? []).map((c) => [c.cle, c.charge])), [nappe])
   const argsDelimitation = useMemo(
     () =>
       modele && base && compose && !compose.terrain && campagne && refEaux?.valeur
-        ? ([modele, base, compose.cle, campagne, refEaux.valeur, { aval: avalDelimitation, nappe: nappe ? { grille: nappe.grille, plan: nappe.plan } : null, propositions: reglages.propositions }] as const)
+        ? ([
+            modele,
+            base,
+            compose.cle,
+            campagne,
+            refEaux.valeur,
+            {
+              aval: avalDelimitation,
+              gradient: ecoulement?.gradient ?? null,
+              nappe: nappe ? { grille: nappe.grille, plan: nappe.plan } : null,
+              charges: chargesDate,
+              propositions: reglages.propositions,
+              hypotheses: hypothesesDe(hydro, compose.cle),
+              anisotropie: hydro.anisotropie ? RAPPORT_ANISOTROPIE : null,
+              limiterAquifere: hydro.limiterAquifere,
+            },
+          ] as const)
         : null,
-    [modele, base, compose, campagne, refEaux, avalDelimitation, nappe, reglages.propositions],
+    [modele, base, compose, campagne, refEaux, avalDelimitation, ecoulement, nappe, chargesDate, reglages.propositions, hydro],
   )
   const delimitation = useCalcul('delimiterPanache', argsDelimitation).resultat
   const couleursNappe = useMemo(() => {
@@ -662,8 +695,11 @@ export default function Modele3D() {
 
   // ---- Evolution of the plume --------------------------------------------------------------
   const argsEvolution = useMemo(
-    () => (modele && base && compose && !compose.terrain && base.campagnes.length >= 2 ? ([modele, base, compose.cle, refEaux?.valeur ?? null, reglages.porosite, reglages.epaisseur] as const) : null),
-    [modele, base, compose, refEaux, reglages.porosite, reglages.epaisseur],
+    () =>
+      modele && base && compose && !compose.terrain && base.campagnes.length >= 2
+        ? ([modele, base, compose.cle, refEaux?.valeur ?? null, reglages.porosite, reglages.epaisseur, optionsPanache] as const)
+        : null,
+    [modele, base, compose, refEaux, reglages.porosite, reglages.epaisseur, optionsPanache],
   )
   const evolution = useCalcul('evolutionPanache', argsEvolution).resultat
 
@@ -1562,7 +1598,7 @@ export default function Modele3D() {
                             ))}
                           </ul>
                         </fieldset>
-                        <button type="button" className="btn btn--ghost btn--petit" onClick={() => setReglages((r) => ({ ...REGLAGES_DEFAUT, saisies: r.saisies, formations: r.formations, systeme: r.systeme, schema: r.schema }))}>
+                        <button type="button" className="btn btn--ghost btn--petit" onClick={() => setReglages((r) => ({ ...REGLAGES_DEFAUT, saisies: r.saisies, formations: r.formations, systeme: r.systeme, schema: r.schema, hydro: r.hydro }))}>
                           Réglages de vue par défaut
                         </button>
                       </fieldset>
@@ -1607,6 +1643,9 @@ export default function Modele3D() {
                         nombre={reglages.propositions}
                         surNombre={(n) => regler('propositions', n)}
                         surProposition={(rang) => setSelection({ type: 'proposition', rang })}
+                        hydro={hydro}
+                        compose={compose.cle}
+                        surHydro={(h) => regler('hydro', { ...hydro, ...h })}
                       />
                     ) : (
                       <p className="st-note">Calcul…</p>
@@ -1850,6 +1889,13 @@ export default function Modele3D() {
                       fermé ou non par un ouvrage sous la valeur ; pourtour des ouvrages franchi par le champ interpolé ; probabilité de dépassement tirée du krigeage du logarithme
                       (erreur gaussienne) ; emplacements proposés au-delà des fronts ouverts, puis là où le classement est le plus douteux, la variance de krigeage recalculée avec
                       chaque ouvrage ajouté.
+                    </li>
+                    <li>
+                      <strong>Géologie et comportement des polluants</strong> (guides du BRGM : RP-74064-FR, 2024 ; Documents du BRGM 300, 2008) : aquifère des crépines des
+                      ouvrages analysés, ouvrages crépinés ailleurs écartés de la délimitation ; crépines contrôlées selon la densité du composé (jusqu’au mur pour un composé plus
+                      dense que l’eau, à cheval sur la nappe pour un plus léger) ; phase pure probable dès 1 % de la solubilité des COHV ; panache étiré dans le sens de
+                      l’écoulement (αT = αL / 10) et limité à l’aquifère ; vitesses de l’eau et du polluant (facteur de retard) avec une perméabilité mesurée ; crépine conseillée
+                      pour chaque emplacement.
                     </li>
                     <li>
                       <strong>Sols</strong> : enveloppe au-dessus d’un seuil par inverse distance en trois dimensions ; filières d’après l’annexe II de l’arrêté du 12 décembre 2014

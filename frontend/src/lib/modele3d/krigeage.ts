@@ -237,3 +237,27 @@ export function validationCroisee(points: PointValeur[], methode: Methode): Vali
 export function interpoler(points: PointValeur[], methode: Methode, avecValidation = true): Interpolateur {
   return { ...construire(points, methode), validation: avecValidation ? validationCroisee(points, methode) : null }
 }
+
+/**
+ * The interpolation in transformed coordinates (an anisotropy along the
+ * flow, interpolation.ts): the points moved there, each estimate asked
+ * there. Without a transform, the plain interpolation.
+ */
+export function interpolerDans(points: PointValeur[], methode: Methode, avecValidation: boolean, transformer: ((x: number, y: number) => [number, number]) | null): Interpolateur {
+  if (!transformer) return interpoler(points, methode, avecValidation)
+  const i = interpoler(
+    points.map((p) => {
+      const [x, y] = transformer(p.x, p.y)
+      return { x, y, v: p.v }
+    }),
+    methode,
+    avecValidation,
+  )
+  return {
+    ...i,
+    estimer: (x, y) => {
+      const [u, w] = transformer(x, y)
+      return i.estimer(u, w)
+    },
+  }
+}
