@@ -4904,6 +4904,79 @@ svg .halo {
   width: 100%;
   height: auto;
 }
+/* Délimitation du panache */
+.m3d-delimitation {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+.m3d-delimitation h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.m3d-verdict {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 4px solid var(--level-indeterminee);
+  background: var(--level-indeterminee-bg);
+  border-radius: var(--radius);
+}
+.m3d-verdict--non-delimite {
+  border-left-color: var(--level-elevee);
+  background: var(--level-elevee-bg);
+}
+.m3d-verdict--a-confirmer {
+  border-left-color: var(--level-moderee);
+  background: var(--level-moderee-bg);
+}
+.m3d-verdict--delimite {
+  border-left-color: var(--level-faible);
+  background: var(--level-faible-bg);
+}
+.m3d-statut {
+  display: inline-block;
+  padding: 0 0.4rem;
+  border-radius: 3px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.m3d-statut--ok {
+  color: var(--level-faible);
+  background: var(--level-faible-bg);
+}
+.m3d-statut--juste {
+  color: var(--level-moderee);
+  background: var(--level-moderee-bg);
+}
+.m3d-statut--ouvert {
+  color: var(--level-elevee);
+  background: var(--level-elevee-bg);
+}
+.m3d-delimitation__chiffres {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.m3d-delimitation__nombre {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+.m3d-proposition {
+  padding: 0 0.3rem;
+  border-radius: 3px;
+  background: #6a3fb5;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.m3d-trait {
+  display: inline-block;
+  width: 1rem;
+  height: 3px;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
 .m3d-evolution {
   display: grid;
   gap: 0.8rem;

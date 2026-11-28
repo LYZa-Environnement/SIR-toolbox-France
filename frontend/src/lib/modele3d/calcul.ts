@@ -7,6 +7,7 @@
 
 import { analyser, REGLAGES_DEFAUT, type Classe } from '../suivi/analyse.ts'
 import type { Base, Corrections } from '../suivi/modele.ts'
+import { delimiterPanache } from './delimitation.ts'
 import { volumesFilieres } from './filieres.ts'
 import { construireModele, enveloppeSols, evolutionPanache } from './modele.ts'
 
@@ -30,7 +31,6 @@ export function tendances(base: Base, corrections: Corrections): Tendance[] {
   return a.series.map((s) => ({ ouvrage: s.ouvrage.cle, compose: s.compose.cle, classe: s.classe, pente: s.sen?.pente ?? null, n: s.n }))
 }
 
-
-export const CALCULS = { construireModele, enveloppeSols, evolutionPanache, volumesFilieres, tendances }
+export const CALCULS = { construireModele, enveloppeSols, evolutionPanache, delimiterPanache, volumesFilieres, tendances }
 
 export type NomCalcul = keyof typeof CALCULS

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Batiment } from '../../lib/modele3d/cibles'
+import type { Proposition, SegmentBord } from '../../lib/modele3d/delimitation'
 import type { VolumesFilieres } from '../../lib/modele3d/filieres'
 import type { Enveloppe, Modele, Nappe } from '../../lib/modele3d/modele'
 import { Rendu3D, type Colonne, type Couches, type Coupe, type Isoligne, type MarqueurEaux, type MarqueurGaz, type MarqueurSol, type Mesure, type Outil, type Selection } from './rendu'
@@ -26,6 +27,8 @@ interface Props {
   pid: { cle: string; index: number; de: number; a: number; couleur: string }[]
   observations: { cle: string; index: number; z: number }[]
   gaz: MarqueurGaz[]
+  /** Edge of the sampled wells and proposed wells (delineation of the plume), or null. */
+  delimitation: { bord: SegmentBord[]; propositions: Proposition[] } | null
   batiments: Batiment[]
   /** Buildings of the site (raised), the others flat. */
   batimentSurSite: (b: Batiment) => boolean
@@ -113,6 +116,7 @@ export default function Vue3D(p: Props) {
   useEffect(() => rendu?.pid(p.pid), [rendu, modele, p.pid])
   useEffect(() => rendu?.observations(p.observations), [rendu, modele, p.observations])
   useEffect(() => rendu?.gaz(p.gaz), [rendu, modele, p.gaz])
+  useEffect(() => rendu?.delimitation(p.delimitation), [rendu, modele, p.delimitation])
   useEffect(() => rendu?.batiments(p.batiments, p.batimentSurSite), [rendu, modele, p.batiments, p.batimentSurSite])
   useEffect(() => rendu?.coursDEau(p.coursDEau), [rendu, modele, p.coursDEau])
   useEffect(() => rendu?.libelles(p.libelles), [rendu, modele, p.libelles])

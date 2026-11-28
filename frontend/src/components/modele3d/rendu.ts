@@ -19,6 +19,7 @@ import type { Batiment } from '../../lib/modele3d/cibles.ts'
 import { ORDRE_FILIERES, FILIERES, type VolumesFilieres } from '../../lib/modele3d/filieres.ts'
 import { pasRond, valeurEn, type Grille } from '../../lib/modele3d/interpolation.ts'
 import { CLASSES_LITHO } from '../../lib/modele3d/lithologie.ts'
+import type { Proposition, SegmentBord } from '../../lib/modele3d/delimitation.ts'
 import type { Enveloppe, Modele, Nappe } from '../../lib/modele3d/modele.ts'
 import { facesBlocs, geometrieFormation, grilleEnGeometrie, type Faces } from './geometries.ts'
 
@@ -33,6 +34,7 @@ export type Selection =
   | { type: 'observation'; cle: string; index: number }
   | { type: 'gaz'; cle: string }
   | { type: 'batiment'; index: number }
+  | { type: 'proposition'; rang: number }
 
 export type NomCouche =
   | 'sol'
@@ -48,6 +50,7 @@ export type NomCouche =
   | 'enveloppe'
   | 'filieres'
   | 'gaz'
+  | 'delimitation'
   | 'batiments'
   | 'coursdeau'
   | 'etiquettes'
@@ -122,6 +125,9 @@ interface Repere {
 const COULEUR_NAPPE = '#3d8fd1'
 const COULEUR_CREPINE = '#1f4e8c'
 const COULEUR_SELECTION = '#00c896'
+const COULEUR_PROPOSITION = '#6a3fb5'
+const COULEUR_BORD = '#2f8f5b'
+const COULEUR_BORD_OUVERT = '#b3261e'
 
 const estVisible = (o: THREE.Object3D | null): boolean => {
   for (let x = o; x; x = x.parent) if (!x.visible) return false
@@ -227,12 +233,13 @@ export class Rendu3D {
       enveloppe: g(),
       filieres: g(),
       gaz: g(),
+      delimitation: g(),
       batiments: g(),
       coursdeau: g(),
       etiquettes: g(),
       cadre: g(),
     }
-    for (const k of ['sol', 'geologie', 'forages', 'equipement', 'pid', 'nappe', 'isopiezes', 'enveloppe', 'filieres', 'coursdeau', 'cadre'] as NomCouche[]) this.monde.add(this.groupes[k])
+    for (const k of ['sol', 'geologie', 'forages', 'equipement', 'pid', 'nappe', 'isopiezes', 'enveloppe', 'filieres', 'delimitation', 'coursdeau', 'cadre'] as NomCouche[]) this.monde.add(this.groupes[k])
     for (const k of ['echantillons', 'observations', 'eaux', 'gaz', 'batiments', 'etiquettes'] as NomCouche[]) this.reperes.add(this.groupes[k])
     this.reperes.add(this.graduations, this.outils)
 
@@ -271,6 +278,12 @@ export class Rendu3D {
    */
   private desencombrer() {
     const gardes: DOMRect[] = []
+    // The proposed wells first: their labels are few and the reason for the layer.
+    for (const div of this.etiquettes.domElement.querySelectorAll<HTMLElement>('.m3d-proposition')) {
+      if (div.style.display === 'none') continue
+      const r = div.getBoundingClientRect()
+      if (r.width) gardes.push(r)
+    }
     const liste = [...this.etiquettesParCle.entries()].sort((a, b) => Number(this.prioritaires.has(b[0])) - Number(this.prioritaires.has(a[0])))
     for (const [, div] of liste) {
       if (div.style.display === 'none') continue
@@ -775,6 +788,49 @@ export class Rendu3D {
     this.dessiner()
   }
 
+  /**
+   * Delineation of the plume: the edge of the sampled wells drawn on the
+   * ground, red where the interpolated plume reaches the comparison value on
+   * it (the plume runs out of the wells there), green elsewhere; the proposed wells
+   * as tubes from the ground to 3 m below the water (6 m without a water
+   * table), labelled N1, N2…
+   */
+  delimitation(d: { bord: SegmentBord[]; propositions: Proposition[] } | null) {
+    this.vider(this.groupes.delimitation)
+    const m = this.modele
+    if (!m || !d) return this.dessiner()
+    // On the ground: a plan outline, continuous whatever the reach of the water table.
+    const z = (x: number, y: number) => valeurEn(m.sol, x, y)
+    const traits: Record<string, number[]> = { [COULEUR_BORD]: [], [COULEUR_BORD_OUVERT]: [] }
+    for (const s of d.bord) traits[s.depasse ? COULEUR_BORD_OUVERT : COULEUR_BORD].push(s.x1, z(s.x1, s.y1) + 0.08, -s.y1, s.x2, z(s.x2, s.y2) + 0.08, -s.y2)
+    for (const [couleur, pos] of Object.entries(traits)) {
+      if (!pos.length) continue
+      const geo = new THREE.BufferGeometry()
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+      const mat = new THREE.LineBasicMaterial({ color: couleur })
+      mat.clippingPlanes = this.plans
+      this.groupes.delimitation.add(new THREE.LineSegments(geo, mat))
+    }
+    const r = this.rayon
+    for (const p of d.propositions) {
+      const sol = valeurEn(m.sol, p.x, p.y)
+      const bas = p.charge !== null ? p.charge - 3 : sol - 6
+      const h = Math.max(1, sol - bas)
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.8, r * 0.8, h, 12), this.lambert(COULEUR_PROPOSITION, 0.8))
+      tube.position.set(p.x, sol - h / 2, -p.y)
+      tube.userData.selection = { type: 'proposition', rang: p.rang } satisfies Selection
+      this.groupes.delimitation.add(tube)
+      const div = document.createElement('div')
+      div.className = 'm3d-proposition'
+      div.textContent = `N${p.rang}`
+      const o = new CSS2DObject(div)
+      // In the stretched group: placed in model units, just above the ground.
+      o.position.set(p.x, sol + 0.3, -p.y)
+      this.groupes.delimitation.add(o)
+    }
+    this.dessiner()
+  }
+
   /** Lines of each borehole's label (name first). */
   libelles(lignes: Map<string, string[]>) {
     for (const [cle, div] of this.etiquettesParCle) {
@@ -1039,7 +1095,7 @@ export class Rendu3D {
 
   private ciblesSelection() {
     const g = this.groupes
-    return [g.forages, g.equipement, g.pid, g.observations, g.echantillons, g.gaz, g.eaux, g.geologie, g.enveloppe, g.filieres, g.batiments]
+    return [g.forages, g.equipement, g.pid, g.observations, g.echantillons, g.gaz, g.eaux, g.delimitation, g.geologie, g.enveloppe, g.filieres, g.batiments]
   }
 
   private selectionDe(i: THREE.Intersection): Selection | null {

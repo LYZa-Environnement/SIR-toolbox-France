@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { toLambert93 } from '../geo.ts'
 import { reference } from '../suivi/analyse.ts'
+import type { Resultat } from '../suivi/modele.ts'
 import { assembler } from './assemblage.ts'
 import { deprojeter, detecterSysteme, projeter, systemeDe, versLambert93 } from './coordonnees.ts'
+import { coteDe, delimiterPanache, fermetureDe, fermeturesPanache, versDirection } from './delimitation.ts'
 import { exemple } from './exemple.ts'
 import { classerEchantillons, volumesFilieres } from './filieres.ts'
 import { contactsForage, construireFormations, formationA, proposerFormations } from './formations.ts'
 import { nouvelleGrille, remplir } from './interpolation.ts'
-import { ajusterVariogramme, gamma, interpoler, inverser } from './krigeage.ts'
+import { ajusterVariogramme, ecartsKrigeage, gamma, interpoler, inverser } from './krigeage.ts'
 import { construireModele, evolutionPanache, isolignes, nappeCampagne } from './modele.ts'
 import type { Forage } from './types.ts'
 
@@ -143,6 +145,29 @@ describe('krigeage', () => {
     const k = interpoler(pts, 'krigeage')
     expect(k.estimer(55, 33).v).toBeCloseTo(50 - 0.55 + 0.66, 6)
     expect(k.validation!.rmse).toBeLessThan(1e-6)
+  })
+
+  it('l’incertitude ne dépend que de la position des points', () => {
+    const pts = [
+      { x: 0, y: 0, v: 1 },
+      { x: 10, y: 0, v: 3 },
+      { x: 0, y: 10, v: 2 },
+      { x: 10, y: 10, v: 5 },
+      { x: 5, y: 5, v: 4 },
+      { x: 15, y: 3, v: 2.5 },
+    ]
+    const k = interpoler(pts, 'krigeage', false)
+    const s = ecartsKrigeage(pts, k.variogramme!)!
+    for (const [x, y] of [
+      [3, 4],
+      [12, 8],
+      [20, 20],
+    ])
+      expect(s(x, y)).toBeCloseTo(k.estimer(x, y).ecart, 9)
+    // One more point: less uncertainty around it, none on it.
+    const s2 = ecartsKrigeage([...pts, { x: 20, y: 20 }], k.variogramme!)!
+    expect(s2(20, 20)).toBe(0)
+    expect(s2(18, 18)).toBeLessThan(s(18, 18))
   })
 
   it('ajuste un variogramme sur des données structurées', () => {
@@ -307,5 +332,116 @@ describe('schéma conceptuel', () => {
     expect(positionHydraulique(90, 100, 0)).toBe('aval')
     expect(positionHydraulique(90, -100, 0)).toBe('amont')
     expect(positionHydraulique(90, 0, 100)).toBe('lateral')
+  })
+})
+
+describe('délimitation du panache', () => {
+  const res = (valeur: number, inferieur = false): Resultat => ({
+    id: '',
+    ouvrage: '',
+    compose: 'c',
+    campagne: 'k',
+    date: '2025-03-12',
+    t: 2025.2,
+    valeur,
+    inferieur,
+    brut: inferieur ? `<${valeur}` : String(valeur),
+    fichier: '',
+    exclu: false,
+  })
+  const pt = (nom: string, x: number, y: number, valeur: number, inferieur = false) => ({ cle: nom, nom, x, y, resultat: res(valeur, inferieur) })
+
+  it('quadrants autour de l’écoulement', () => {
+    // Flow to the south (180°): south downgradient; looking south, west is on the right, east on the left.
+    expect(coteDe(0, -10, 180)).toBe('aval')
+    expect(coteDe(-10, 0, 180)).toBe('droite')
+    expect(coteDe(10, 0, 180)).toBe('gauche')
+    expect(coteDe(0, 10, 180)).toBe('amont')
+    // Azimuth 220° is 40° from the flow: downgradient; 230° is 50° from it: on the right.
+    const vers = (az: number): [number, number] => [Math.sin((az * Math.PI) / 180), Math.cos((az * Math.PI) / 180)]
+    expect(coteDe(...vers(220), 180)).toBe('aval')
+    expect(coteDe(...vers(230), 180)).toBe('droite')
+  })
+
+  it('ce qui ferme le panache, contre une valeur de 10', () => {
+    expect(fermetureDe(res(3), 10)).toBe('nette') // under half the value
+    expect(fermetureDe(res(7), 10)).toBe('juste') // between half the value and the value
+    expect(fermetureDe(res(10), 10)).toBeNull() // at the value: above it
+    expect(fermetureDe(res(5, true), 10)).toBe('nette') // < LQ, the LQ at half the value
+    expect(fermetureDe(res(8, true), 10)).toBe('juste')
+    expect(fermetureDe(res(20, true), 10)).toBeNull() // an LQ above the value says nothing
+  })
+
+  it('un ouvrage entouré : chaque côté fermé, un de justesse', () => {
+    // W at 5 × the value; south 3 (net), east 7 (just), west and north not quantified (LQ 0.5).
+    const f = fermeturesPanache([pt('W', 0, 0, 50), pt('S', 0, -50, 3), pt('E', 50, 0, 7), pt('O', -50, 0, 0.5, true), pt('N', 0, 50, 0.5, true)], 10, 180)
+    expect(Object.fromEntries(f.cotes.map((c) => [c.cote, c.statut]))).toEqual({ aval: 'delimite', droite: 'delimite', gauche: 'juste', amont: 'delimite' })
+    expect(f.depassants[0].rapport).toBe(5)
+    expect(f.cotes.find((c) => c.cote === 'aval')!.temoins[0]).toMatchObject({ nom: 'S', distance: 50 })
+    // Sides: downgradient south, right west, left east, upgradient north.
+    expect(f.cotes.map((c) => c.azimut)).toEqual([180, 270, 90, 0])
+  })
+
+  it('panache ouvert vers l’aval : le front est l’ouvrage le plus en aval, une LQ trop haute ne ferme rien', () => {
+    // A 100 and B 30 (40 m south of A) above 10; M not quantified 60 m north; L not quantified at an LQ of 20.
+    const f = fermeturesPanache([pt('A', 0, 0, 100), pt('B', 0, -40, 30), pt('M', 0, 60, 0.5, true), pt('L', 30, -20, 20, true)], 10, 180)
+    const aval = f.cotes.find((c) => c.cote === 'aval')!
+    expect(aval.statut).toBe('ouvert')
+    // A has B beyond it: B alone is the front.
+    expect(aval.front).toEqual(['B'])
+    expect(f.lqHautes).toEqual(['L'])
+    expect(f.cotes.find((c) => c.cote === 'amont')!.statut).toBe('delimite')
+    expect(f.cotes.find((c) => c.cote === 'gauche')!.statut).toBe('ouvert')
+  })
+
+  const d = assembler([exemple()])
+  const base = d.base!
+  const pce = base.composes.find((c) => c.cas === '127-18-4')!
+  const ref = reference(pce, d.corrections)!.valeur
+  const derniere = base.campagnes[base.campagnes.length - 1]
+
+  it('exemple : le tétrachloroéthylène n’est pas délimité à l’est, les emplacements proposés le ferment', () => {
+    const m = construireModele(d)
+    const n = nappeCampagne(m, base, derniere.id)
+    const r = delimiterPanache(m, base, pce.cle, derniere.id, ref, { aval: n.ecoulement!.azimut, nappe: { grille: n.grille, plan: n.plan }, propositions: 3 })
+    expect(r.verdict).toBe('non-delimite')
+    expect(r.depassants.map((w) => w.nom).sort()).toEqual(['PZ2', 'PZ3'])
+    // The wells stand in a line along the flow: nothing east of the source.
+    const gauche = r.cotes.find((c) => c.cote === 'gauche')!
+    expect(gauche.statut).toBe('ouvert')
+    expect(versDirection(gauche.azimut)).toBe('l’est')
+    expect(r.cotes.find((c) => c.cote === 'aval')!.temoins[0].nom).toBe('PZ4')
+    expect(r.cotes.find((c) => c.cote === 'amont')!.temoins[0].nom).toBe('PZ1')
+    expect(r.partBord).toBeGreaterThan(0)
+    const ps = [...r.probabilite!].filter(Number.isFinite)
+    expect(Math.min(...ps)).toBeGreaterThanOrEqual(0)
+    expect(Math.max(...ps)).toBeLessThanOrEqual(1)
+    expect(r.aire90!).toBeLessThanOrEqual(r.aire50!)
+    // First the wells closing the east side, east of a front well; each well leaves less doubt.
+    expect(r.propositions).toHaveLength(3)
+    const p0 = r.propositions[0]
+    expect(p0.motif).toMatchObject({ type: 'fermeture', cote: 'gauche' })
+    expect(versDirection(p0.pres.azimut)).toBe('l’est')
+    expect(p0.profondeurEau!).toBeGreaterThan(0)
+    const doutes = [r.douteux!, ...r.propositions.map((p) => p.douteuxApres!)]
+    for (let i = 1; i < doutes.length; i++) expect(doutes[i]).toBeLessThan(doutes[i - 1])
+  })
+
+  it('en inverse distance : la fermeture sans probabilité', () => {
+    const m = construireModele(d, { methode: 'idw' })
+    const r = delimiterPanache(m, base, pce.cle, derniere.id, ref, { aval: 170, propositions: 3 })
+    expect(r.verdict).toBe('non-delimite')
+    expect(r.probabilite).toBeNull()
+    expect(r.propositions.length).toBeGreaterThan(0)
+    expect(r.propositions.every((p) => p.motif.type === 'fermeture' && p.probabilite === null && p.concentration !== null)).toBe(true)
+  })
+
+  it('pas de dépassement : rien à délimiter', () => {
+    const m = construireModele(d)
+    const ni = base.composes.find((c) => c.cas === '7440-02-0')!
+    const r = delimiterPanache(m, base, ni.cle, derniere.id, 1000, { aval: 170, propositions: 0 })
+    expect(r.verdict).toBe('aucun-depassement')
+    expect(r.depassants).toHaveLength(0)
+    expect(r.propositions).toHaveLength(0)
   })
 })

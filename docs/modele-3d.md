@@ -115,6 +115,55 @@ quadratique moyen). Inverse distance en option. Références : Matheron
   baisse) ou rapport des concentrations (÷ 10 vert à × 10 rouge), sur la
   surface et les étiquettes.
 
+## Délimitation du panache
+
+`delimitation.ts` : le panache est-il délimité par les ouvrages ? Pour le
+composé choisi, à la campagne affichée dans la frise, contre la valeur de
+comparaison de Suivi temporel (section « Délimitation du panache » sous la
+vue, calcul dans le Web Worker).
+
+- **Fermeture, ouvrage par ouvrage** : autour de chaque ouvrage au-dessus de
+  la valeur, quatre quadrants de 90° orientés sur l'écoulement de la date
+  (sinon de la dernière campagne, sinon sur le nord) : aval, côté droit et
+  côté gauche en regardant vers l'aval, amont. Un côté est fermé quand son
+  quadrant contient un ouvrage sous la valeur : nettement (moins de la
+  moitié de la valeur, ou non quantifié avec une LQ au plus égale à la
+  moitié), ou de justesse (entre la moitié et la valeur). Un ouvrage non
+  quantifié avec une LQ au-dessus de la valeur ne ferme rien (signalé). Pour
+  chaque côté : délimité, de justesse ou non délimité, les ouvrages du front
+  (au-dessus de la valeur, sans autre ouvrage au-dessus de la valeur
+  au-delà) et l'ouvrage qui ferme le plus proche. Un quadrant est convexe :
+  les témoins des ouvrages situés plus loin sont aussi ceux de l'ouvrage.
+- **Pourtour des ouvrages** : le long de l'enveloppe convexe des ouvrages
+  analysés, la part où le champ interpolé atteint la valeur ; tracée au sol
+  dans la vue (rouge : le panache sort des ouvrages ; vert : en deçà).
+- **Probabilité de dépassement** à chaque nœud, d'après le krigeage du
+  logarithme des concentrations, l'erreur supposée gaussienne :
+  P = 1 − Φ((log10 valeur − m) / σ) (Goovaerts, 1997, chapitre 7). Surfaces
+  où P ≥ 50 % et P ≥ 90 %, et surface au classement douteux
+  Σ min(P, 1 − P) × maille. Option « Colorer la nappe selon la probabilité
+  de dépasser la valeur de comparaison » (onglet Eaux : vert sûrement en
+  dessous, gris douteux, rouge sûrement au-dessus) ; probabilité au forage
+  virtuel.
+- **Emplacements proposés** (0 à 5, 3 par défaut) : d'abord un au-delà du
+  front de chaque côté ouvert, dans l'axe de ce côté, là où le modèle situe
+  la fin du panache (probabilité de dépassement de 25 % au plus), sinon au
+  bout de la portée de l'interpolation (le modèle ne lit pas plus loin : le
+  panache peut continuer) ; puis là où le classement au-dessus ou
+  au-dessous de la valeur est le plus douteux, la variance de krigeage
+  recalculée avec chaque ouvrage ajouté (elle ne dépend que des positions ;
+  Ranjan, Bingham et Michailidis, 2008 ; Bect et al., 2012). Pour chacun :
+  coordonnées, position par rapport à l'ouvrage le plus proche, probabilité
+  de dépassement et concentration estimées, profondeur de l'eau estimée,
+  sur le site ou non, surface douteuse restante. Tubes violets N1, N2… dans
+  la vue, fiche au clic, export CSV.
+- Limites : en inverse distance, ni probabilité ni emplacement « douteux »
+  (fermeture seule) ; sous six ouvrages, variogramme par défaut
+  (probabilités indicatives) ; la variance de la tendance n'est pas comptée
+  (régression-krigeage), l'incertitude est sous-estimée loin des ouvrages.
+  Emplacements indicatifs : accès, propriété, réseaux (DT-DICT) et crépine
+  à vérifier.
+
 ## Sols, gaz du sol, terrain
 
 - Échantillons colorés contre la valeur guide ERM (sols, sur site) ;
@@ -173,6 +222,6 @@ les réglages de la vue.
 
 `modele.test.ts`, `calculs.test.ts` (projections et reconnaissance des
 systèmes, saisies, points d'investigation du dossier, krigeage, formations et contacts, filières, isopièzes,
-évolution du panache, schéma conceptuel), `dossier.test.ts` (fichiers des
+évolution du panache, délimitation du panache : quadrants, fermetures calculées à la main, exemple, schéma conceptuel), `dossier.test.ts` (fichiers des
 outils relus après un aller-retour par l'encodage du dossier, fiches de
 prélèvement, tournées sans analyses, emprise des interpolations).

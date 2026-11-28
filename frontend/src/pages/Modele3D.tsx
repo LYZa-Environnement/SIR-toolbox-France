@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ZoneDepot from '../components/ZoneDepot'
+import Delimitation from '../components/modele3d/Delimitation'
 import Evolution from '../components/modele3d/Evolution'
 import Fiche, { type ForageVirtuel, type SelectionPage } from '../components/modele3d/Fiche'
 import Formations from '../components/modele3d/Formations'
@@ -21,6 +22,7 @@ import { schemaConceptuel, schemaSvg } from '../lib/modele3d/conceptuel'
 import type { Systeme } from '../lib/modele3d/coordonnees'
 import { COULEUR_NQ, couleurChamp, couleurValeur, etendue, RAMPE, type Echelle } from '../lib/modele3d/couleurs'
 import { gazDeResultats, lireSourcesDossier } from '../lib/modele3d/dossier'
+import type { Proposition } from '../lib/modele3d/delimitation'
 import { exemple } from '../lib/modele3d/exemple'
 import { FILIERES, ORDRE_FILIERES } from '../lib/modele3d/filieres'
 import { fr, frM } from '../lib/modele3d/format'
@@ -86,6 +88,10 @@ interface Reglages {
   ecart: number
   parametreGaz: string | null
   incertitude: boolean
+  /** Water table coloured by the probability of exceeding the comparison value. */
+  probabilite: boolean
+  /** Number of wells proposed to delineate the plume. */
+  propositions: number
   limitesCoursEau: boolean
   revanche: number
   porosite: number
@@ -110,6 +116,7 @@ const COUCHES_DEFAUT: Couches = {
   enveloppe: true,
   filieres: false,
   gaz: true,
+  delimitation: true,
   batiments: false,
   coursdeau: true,
   etiquettes: true,
@@ -141,6 +148,8 @@ const REGLAGES_DEFAUT: Reglages = {
   ecart: 0,
   parametreGaz: null,
   incertitude: false,
+  probabilite: false,
+  propositions: 3,
   limitesCoursEau: false,
   revanche: 0.5,
   porosite: 0.2,
@@ -163,6 +172,7 @@ const LIBELLES_COUCHES: [NomCouche, string][] = [
   ['echantillons', 'Échantillons de sol'],
   ['gaz', 'Gaz du sol'],
   ['filieres', 'Terres par filière'],
+  ['delimitation', 'Délimitation du panache (limite des ouvrages, emplacements proposés)'],
   ['batiments', 'Bâtiments (BD TOPO)'],
   ['coursdeau', 'Cours d’eau (BD TOPO)'],
   ['etiquettes', 'Noms des forages'],
@@ -181,21 +191,21 @@ type Preset = 'geologie' | 'nappe' | 'sols' | 'ensemble'
 const PRESETS: Record<Preset, { libelle: string; couches: Partial<Couches>; opaciteSol: number; coupe: Reglages['coupe']; vue: Vue }> = {
   geologie: {
     libelle: 'Géologie',
-    couches: { geologie: true, forages: true, nappe: false, isopiezes: false, eaux: false, echantillons: false, gaz: false, filieres: false, observations: false, pid: false, batiments: false },
+    couches: { geologie: true, forages: true, nappe: false, isopiezes: false, eaux: false, echantillons: false, gaz: false, filieres: false, observations: false, pid: false, batiments: false, delimitation: false },
     opaciteSol: 0.25,
     coupe: { axe: 'y', valeur: null, inverse: false },
     vue: 'sud',
   },
   nappe: {
     libelle: 'Nappe et panache',
-    couches: { geologie: false, forages: true, equipement: true, nappe: true, isopiezes: true, eaux: true, echantillons: false, gaz: false, filieres: false, observations: false, pid: false, coursdeau: true },
+    couches: { geologie: false, forages: true, equipement: true, nappe: true, isopiezes: true, eaux: true, echantillons: false, gaz: false, filieres: false, observations: false, pid: false, coursdeau: true, delimitation: true },
     opaciteSol: 0.35,
     coupe: { axe: 'aucune', valeur: null, inverse: false },
     vue: '3d',
   },
   sols: {
     libelle: 'Sols et gaz',
-    couches: { geologie: false, forages: true, nappe: false, isopiezes: false, eaux: false, echantillons: true, gaz: true, observations: true, pid: true, filieres: false },
+    couches: { geologie: false, forages: true, nappe: false, isopiezes: false, eaux: false, echantillons: true, gaz: true, observations: true, pid: true, filieres: false, delimitation: false },
     opaciteSol: 0.3,
     coupe: { axe: 'aucune', valeur: null, inverse: false },
     vue: '3d',
@@ -261,6 +271,7 @@ const CIBLES = new Map<string, Cibles>()
 const AUCUNE: Source[] = []
 const AUCUNE_ERREUR: string[] = []
 const RIEN: never[] = []
+const AUCUNE_PROPOSITION: Proposition[] = []
 
 export default function Modele3D() {
   const [fichiers, setFichiers] = useState<Source[]>([])
@@ -491,6 +502,19 @@ export default function Modele3D() {
   const pan = useMemo(() => (modele && base && compose && campagne ? panache(modele, base, compose.cle, campagne, !!compose.terrain) : null), [modele, base, compose, campagne])
   const panA = useMemo(() => (modele && base && compose && etapeA?.campagne ? panache(modele, base, compose.cle, etapeA.campagne, !!compose.terrain, false) : null), [modele, base, compose, etapeA])
   const comparaisonConc = !!(pan?.champ && panA?.champ && reglages.panache && !compose?.terrain)
+  // The latest campaign's water table: the conceptual model's, and the flow when the date shown has none.
+  const nappeSchema = useMemo(() => nappeDe(etapes.filter((e) => e.campagne).at(-1) ?? etapes.at(-1) ?? null), [nappeDe, etapes])
+
+  // ---- Delineation of the plume ------------------------------------------------------------
+  const avalDelimitation = (nappe?.ecoulement ?? nappeSchema?.ecoulement)?.azimut ?? null
+  const argsDelimitation = useMemo(
+    () =>
+      modele && base && compose && !compose.terrain && campagne && refEaux?.valeur
+        ? ([modele, base, compose.cle, campagne, refEaux.valeur, { aval: avalDelimitation, nappe: nappe ? { grille: nappe.grille, plan: nappe.plan } : null, propositions: reglages.propositions }] as const)
+        : null,
+    [modele, base, compose, campagne, refEaux, avalDelimitation, nappe, reglages.propositions],
+  )
+  const delimitation = useCalcul('delimiterPanache', argsDelimitation).resultat
   const couleursNappe = useMemo(() => {
     if (!nappe?.grille) return null
     const g = nappe.grille
@@ -504,6 +528,10 @@ export default function Modele3D() {
       const a = nappeA.grille.valeurs
       return Array.from(g.valeurs, (v, q) => (Number.isFinite(v) && Number.isFinite(a[q]) ? divergente(v - a[q], '#9c5b1f', '#1f5f9c') : null))
     }
+    if (reglages.probabilite && delimitation?.probabilite && delimitation.probabilite.length === g.nx * g.ny) {
+      // Probability of exceeding the comparison value: green certain below, grey doubtful, red certain above.
+      return Array.from(delimitation.probabilite, (v) => (Number.isFinite(v) ? divergente(2 * v - 1, '#2f8f5b', '#b3261e') : null))
+    }
     if (reglages.incertitude && nappe.incertitude) {
       const vs = [...nappe.incertitude].filter((x) => Number.isFinite(x))
       const max = Math.max(0.01, ...vs)
@@ -511,7 +539,7 @@ export default function Modele3D() {
     }
     if (reglages.panache && pan?.champ && echelleEaux) return Array.from(pan.champ, (v) => couleurChamp(v, echelleEaux))
     return null
-  }, [nappe, nappeA, etapeA, comparaisonConc, pan, panA, reglages.incertitude, reglages.panache, echelleEaux])
+  }, [nappe, nappeA, etapeA, comparaisonConc, pan, panA, reglages.probabilite, delimitation, reglages.incertitude, reglages.panache, echelleEaux])
   const lignesIso = useMemo(() => (nappe?.grille && reglages.couches.isopiezes ? isolignes(nappe.grille, niveauxIsolignes(nappe.grille)) : RIEN), [nappe, reglages.couches.isopiezes])
   const marqueursEaux = useMemo<MarqueurEaux[]>(() => {
     if (!modele) return []
@@ -640,7 +668,6 @@ export default function Modele3D() {
   const evolution = useCalcul('evolutionPanache', argsEvolution).resultat
 
   // ---- Conceptual model --------------------------------------------------------------------
-  const nappeSchema = useMemo(() => nappeDe(etapes.filter((e) => e.campagne).at(-1) ?? etapes.at(-1) ?? null), [nappeDe, etapes])
   const schema = useMemo(
     () =>
       modele && donnees
@@ -734,9 +761,16 @@ export default function Modele3D() {
       couches,
       charge,
       ecartCharge: charge !== null ? (nappe?.incertitude?.[q] ?? null) : null,
-      concentration: champ !== undefined && Number.isFinite(champ) && pan ? { valeur: pan.lineaire ? champ : 10 ** champ, facteur: !pan.lineaire && ec !== undefined && Number.isFinite(ec) ? 10 ** ec : null } : null,
+      concentration:
+        champ !== undefined && Number.isFinite(champ) && pan
+          ? {
+              valeur: pan.lineaire ? champ : 10 ** champ,
+              facteur: !pan.lineaire && ec !== undefined && Number.isFinite(ec) ? 10 ** ec : null,
+              probabilite: dansGrille && delimitation?.probabilite && Number.isFinite(delimitation.probabilite[q]) ? delimitation.probabilite[q] : null,
+            }
+          : null,
     }
-  }, [modele, virtuelAsk, nappe, pan])
+  }, [modele, virtuelAsk, nappe, pan, delimitation])
   const colonneVirtuelle = useMemo<Colonne | null>(() => (virtuel ? { x: virtuel.x, y: virtuel.y, couches: virtuel.couches.map((c) => ({ haut: c.haut, bas: c.bas, couleur: c.couleur })) } : null), [virtuel])
   const surSol = useCallback((x: number, y: number) => setSelection({ type: 'virtuel', x, y }), [])
 
@@ -774,9 +808,13 @@ export default function Modele3D() {
       }
       if (s.type === 'batiment') return ciblesCourantes?.batiments[s.index]?.usage ?? 'Bâtiment'
       if (s.type === 'enveloppe') return parametreSol && seuil ? `${parametreSol.nom} ≥ ${fr(seuil)} ${parametreSol.unite} (interpolé)` : ''
+      if (s.type === 'proposition') {
+        const x = delimitation?.propositions.find((p) => p.rang === s.rang)
+        return x ? `N${x.rang} · emplacement proposé${x.probabilite !== null ? ` · dépassement probable à ${Math.round(x.probabilite * 100)} %` : ''}` : ''
+      }
       return ''
     },
-    [modele, pan, nappe, compose, sols, parametreSol, seuil, donnees, parametreGaz, ciblesCourantes],
+    [modele, pan, nappe, compose, sols, parametreSol, seuil, donnees, parametreGaz, ciblesCourantes, delimitation],
   )
 
   // ---- Files -------------------------------------------------------------------------------
@@ -874,7 +912,7 @@ export default function Modele3D() {
           <h1 style={{ maxWidth: '24ch' }}>Modèle 3D du site</h1>
           <p className="lede">
             Les logs de forage, la géologie, les eaux souterraines et les résultats d’analyses réunis dans une même vue en trois dimensions : formations géologiques continues
-            dans les parcelles du site, nappe krigée et sens d’écoulement à chaque date, panache et son évolution, sols par filière, gaz du sol, schéma conceptuel. On choisit
+            dans les parcelles du site, nappe krigée et sens d’écoulement à chaque date, panache, son évolution et sa délimitation, sols par filière, gaz du sol, schéma conceptuel. On choisit
             ce qu’on affiche, on coupe le modèle, on compare deux dates.
           </p>
 
@@ -1097,6 +1135,7 @@ export default function Modele3D() {
                       pid={pid}
                       observations={observations}
                       gaz={marqueursGaz}
+                      delimitation={reglages.couches.delimitation && delimitation ? delimitation : null}
                       batiments={ciblesCourantes?.batiments ?? RIEN}
                       batimentSurSite={batimentSurSite}
                       coursDEau={lignesCoursEau}
@@ -1117,7 +1156,9 @@ export default function Modele3D() {
                         compose={reglages.couches.eaux || couleursNappe ? compose : null}
                         echelleEaux={echelleEaux}
                         comparaison={etapeA ? (comparaisonConc ? 'concentration' : 'charge') : null}
-                        incertitude={!etapeA && reglages.incertitude && !!nappe?.incertitude}
+                        incertitude={!etapeA && reglages.incertitude && !(reglages.probabilite && delimitation?.probabilite) && !!nappe?.incertitude}
+                        probabilite={!etapeA && reglages.probabilite && !!delimitation?.probabilite ? (refEaux?.valeur ?? null) : null}
+                        delimitation={reglages.couches.delimitation && !!delimitation && (delimitation.bord.length > 0 || delimitation.propositions.length > 0)}
                         parametre={reglages.couches.echantillons ? parametreSol : null}
                         echelleSol={echelleSol}
                         gaz={reglages.couches.gaz ? parametreGaz : null}
@@ -1159,6 +1200,8 @@ export default function Modele3D() {
                           gaz={donnees?.gaz ?? RIEN}
                           guideGaz={(c) => guidesGaz.get(c) ?? null}
                           batiments={ciblesCourantes?.batiments ?? RIEN}
+                          propositions={delimitation?.propositions ?? AUCUNE_PROPOSITION}
+                          referenceEaux={refEaux?.valeur ?? null}
                           virtuel={virtuel}
                           lienLog={lienLog}
                           surFermer={() => setSelection(null)}
@@ -1333,6 +1376,15 @@ export default function Modele3D() {
                         )}
                         <label className="st-coche">
                           <input type="checkbox" checked={reglages.incertitude} onChange={(e) => regler('incertitude', e.target.checked)} disabled={reglages.methode !== 'krigeage'} /> Colorer la nappe selon l’incertitude du krigeage
+                        </label>
+                        <label className="st-coche">
+                          <input
+                            type="checkbox"
+                            checked={reglages.probabilite}
+                            onChange={(e) => regler('probabilite', e.target.checked)}
+                            disabled={reglages.methode !== 'krigeage' || !refEaux || !!compose?.terrain}
+                          />{' '}
+                          Colorer la nappe selon la probabilité de dépasser la valeur de comparaison
                         </label>
                         <label className="st-coche">
                           <input type="checkbox" checked={reglages.limitesCoursEau} onChange={(e) => regler('limitesCoursEau', e.target.checked)} disabled={!lignesCoursEau.length} /> Cours d’eau comme limites de la nappe
@@ -1532,6 +1584,33 @@ export default function Modele3D() {
                       surPorosite={(v) => regler('porosite', v)}
                       surEpaisseur={(v) => regler('epaisseur', v)}
                     />
+                  </details>
+                )}
+
+                {compose && !compose.terrain && (
+                  <details className="m3d-tableaux" open>
+                    <summary>
+                      Délimitation du panache · {compose.nom}
+                      {etape ? ` · ${etape.libelle}` : ''}
+                    </summary>
+                    {!refEaux ? (
+                      <p className="st-note">Pas de valeur de comparaison pour ce composé : la saisir dans Suivi temporel, elle est reprise ici.</p>
+                    ) : !campagne ? (
+                      <p className="st-note">Choisissez dans la frise une campagne d’analyses (la date affichée n’a que des niveaux d’eau).</p>
+                    ) : delimitation ? (
+                      <Delimitation
+                        d={delimitation}
+                        nom={compose.nom}
+                        unite={compose.unite}
+                        date={etape?.libelle ?? ''}
+                        georef={modele.georef}
+                        nombre={reglages.propositions}
+                        surNombre={(n) => regler('propositions', n)}
+                        surProposition={(rang) => setSelection({ type: 'proposition', rang })}
+                      />
+                    ) : (
+                      <p className="st-note">Calcul…</p>
+                    )}
                   </details>
                 )}
 
@@ -1767,6 +1846,12 @@ export default function Modele3D() {
                       temporel (MAROS, pente de Sen).
                     </li>
                     <li>
+                      <strong>Délimitation du panache</strong> : autour de chaque ouvrage au-dessus de la valeur de comparaison, quatre quadrants orientés sur l’écoulement, chacun
+                      fermé ou non par un ouvrage sous la valeur ; pourtour des ouvrages franchi par le champ interpolé ; probabilité de dépassement tirée du krigeage du logarithme
+                      (erreur gaussienne) ; emplacements proposés au-delà des fronts ouverts, puis là où le classement est le plus douteux, la variance de krigeage recalculée avec
+                      chaque ouvrage ajouté.
+                    </li>
+                    <li>
                       <strong>Sols</strong> : enveloppe au-dessus d’un seuil par inverse distance en trois dimensions ; filières d’après l’annexe II de l’arrêté du 12 décembre 2014
                       et la décision 2003/33/CE, volumes par l’échantillon le plus proche. Ordres de grandeur, pas une cubature.
                     </li>
@@ -1812,6 +1897,9 @@ function Legende(p: {
   echelleEaux: Echelle | null
   comparaison: 'concentration' | 'charge' | null
   incertitude: boolean
+  /** Comparison value when the water table shows the probability of exceeding it. */
+  probabilite: number | null
+  delimitation: boolean
   parametre: { nom: string; unite: string } | null
   echelleSol: Echelle
   gaz: { nom: string; unite: string } | null
@@ -1825,7 +1913,7 @@ function Legende(p: {
   if (p.compose && p.echelleEaux && !p.comparaison) blocs.push({ titre: `Eaux : ${p.compose.nom}`, echelle: p.echelleEaux, unite: p.compose.unite })
   if (p.parametre) blocs.push({ titre: `Sols : ${p.parametre.nom}`, echelle: p.echelleSol, unite: p.parametre.unite })
   if (p.gaz && p.echelleGaz) blocs.push({ titre: `Gaz du sol : ${p.gaz.nom}`, echelle: p.echelleGaz, unite: p.gaz.unite })
-  const vide = !blocs.length && !p.enveloppe && !p.comparaison && !p.incertitude && !p.filieres && !p.pid
+  const vide = !blocs.length && !p.enveloppe && !p.comparaison && !p.incertitude && p.probabilite === null && !p.delimitation && !p.filieres && !p.pid
   if (vide) return null
   return (
     <div className={`m3d-legende${p.ouverte ? '' : ' m3d-legende--repliee'}`}>
@@ -1856,6 +1944,38 @@ function Legende(p: {
                 <span>faible</span>
                 <span>forte</span>
               </div>
+            </div>
+          )}
+          {p.probabilite !== null && (
+            <div className="m3d-legende__bloc">
+              <strong>
+                Probabilité de dépasser {fr(p.probabilite)} {p.compose?.unite}
+              </strong>
+              <div className="m3d-rampe" style={{ background: `linear-gradient(to right, #2f8f5b, ${MILIEU}, #b3261e)` }} aria-hidden="true" />
+              <div className="m3d-rampe__bornes">
+                <span>0 %</span>
+                <span>50 %</span>
+                <span>100 %</span>
+              </div>
+            </div>
+          )}
+          {p.delimitation && (
+            <div className="m3d-legende__bloc">
+              <strong>Délimitation du panache</strong>
+              <ul>
+                <li>
+                  <span className="m3d-trait" style={{ background: '#b3261e' }} aria-hidden="true" />
+                  limite des ouvrages franchie par le panache
+                </li>
+                <li>
+                  <span className="m3d-trait" style={{ background: '#2f8f5b' }} aria-hidden="true" />
+                  limite des ouvrages, panache en deçà
+                </li>
+                <li>
+                  <span className="m3d-pastille" style={{ background: '#6a3fb5' }} aria-hidden="true" />
+                  N1, N2… emplacements proposés
+                </li>
+              </ul>
             </div>
           )}
           {blocs.map((b) => (

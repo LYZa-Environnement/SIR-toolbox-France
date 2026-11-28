@@ -180,6 +180,21 @@ function krigeur(points: PointValeur[], v: Variogramme): ((x: number, y: number)
   }
 }
 
+/**
+ * Kriging standard deviation with data at these positions: it depends on
+ * where the data are and on the variogram, not on their values — the
+ * uncertainty a well not yet drilled would leave. Null when the system is
+ * singular.
+ */
+export function ecartsKrigeage(positions: { x: number; y: number }[], v: Variogramme): ((x: number, y: number) => number) | null {
+  if (!positions.length) return null
+  const k = krigeur(
+    positions.map((p) => ({ x: p.x, y: p.y, v: 0 })),
+    v,
+  )
+  return k ? (x, y) => k(x, y).ecart : null
+}
+
 function construire(points: PointValeur[], methode: Methode): Omit<Interpolateur, 'validation'> {
   const plan = points.length >= 3 ? planMoindresCarres(points) : null
   const tendance = (x: number, y: number) => (plan ? plan.a * x + plan.b * y + plan.c : 0)

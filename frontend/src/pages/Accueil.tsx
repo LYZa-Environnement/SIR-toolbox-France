@@ -132,7 +132,7 @@ const CATEGORIES: Categorie[] = [
         titre: 'Modèle 3D du site',
         accroche: 'Vue d’ensemble en 3D',
         description:
-          'Formations géologiques continues dans les parcelles du site, nappe krigée et isopièzes à chaque date, panache et son évolution, terres par filière, gaz du sol, schéma conceptuel : on choisit ce qu’on affiche, on coupe, on compare deux dates.',
+          'Formations géologiques continues dans les parcelles du site, nappe krigée et isopièzes à chaque date, panache, son évolution et sa délimitation (où implanter les prochains ouvrages), terres par filière, gaz du sol, schéma conceptuel : on choisit ce qu’on affiche, on coupe, on compare deux dates.',
         points: ['Reprend Logs de forage, Suivi temporel, Résultats labo et le site du dossier', 'Krigeage et incertitude, relief IGN, BD TOPO, carte géologique BRGM'],
         route: '/modele-3d',
       },

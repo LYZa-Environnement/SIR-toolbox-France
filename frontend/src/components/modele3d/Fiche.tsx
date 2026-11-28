@@ -2,6 +2,7 @@ import type { MesureGaz } from '../../lib/modele3d/assemblage'
 import type { Tendance } from '../../lib/modele3d/calcul'
 import type { Batiment } from '../../lib/modele3d/cibles'
 import { couleurValeur, type Echelle } from '../../lib/modele3d/couleurs'
+import { versDirection, type Proposition } from '../../lib/modele3d/delimitation'
 import { FILIERES, ORDRE_FILIERES, type VolumesFilieres } from '../../lib/modele3d/filieres'
 import { fr, frM } from '../../lib/modele3d/format'
 import { CLASSES_LITHO } from '../../lib/modele3d/lithologie'
@@ -26,7 +27,8 @@ export interface ForageVirtuel {
   couches: { nom: string; couleur: string; haut: number; bas: number; ecart: number | null }[]
   charge: number | null
   ecartCharge: number | null
-  concentration: { valeur: number; facteur: number | null } | null
+  /** Estimated concentration, its uncertainty factor (×/÷) and the probability of exceeding the comparison value. */
+  concentration: { valeur: number; facteur: number | null; probabilite: number | null } | null
 }
 
 interface Props {
@@ -48,6 +50,9 @@ interface Props {
   gaz: MesureGaz[]
   guideGaz: (cle: string) => number | null
   batiments: Batiment[]
+  /** Wells proposed to delineate the plume. */
+  propositions: Proposition[]
+  referenceEaux: number | null
   virtuel: ForageVirtuel | null
   lienLog: (nom: string) => string
   surFermer: () => void
@@ -105,6 +110,7 @@ export default function Fiche(p: Props) {
           </dl>
         </>
       )}
+      {s.type === 'proposition' && <FicheProposition {...p} rang={s.rang} />}
       {s.type === 'virtuel' && p.virtuel && <FicheVirtuelle {...p} v={p.virtuel} />}
     </aside>
   )
@@ -485,6 +491,44 @@ function FicheGaz(p: Props & { cle: string }) {
   )
 }
 
+/** A well proposed to delineate the plume. */
+function FicheProposition(p: Props & { rang: number }) {
+  const x = p.propositions.find((q) => q.rang === p.rang)
+  if (!x) return <p className="st-note">Emplacement recalculé : voir le tableau « Délimitation du panache ».</p>
+  return (
+    <>
+      <h3>Emplacement proposé N{x.rang}</h3>
+      <p className="m3d-fiche__nature">
+        {x.motif.type === 'fermeture' ? `Pour fermer le panache au-delà de ${x.motif.front}` : 'Là où la limite du panache est la plus incertaine'}
+      </p>
+      <dl className="m3d-fiche__dl">
+        <dt>Position</dt>
+        <dd>
+          {x.xa !== null && x.ya !== null ? `X ${fr(Math.round(x.xa))} · Y ${fr(Math.round(x.ya))}${p.modele.georef ? ' (Lambert 93)' : ''} · ` : ''}à {frM(Math.round(x.pres.distance))} de {x.pres.nom}, vers{' '}
+          {versDirection(x.pres.azimut)}
+          {x.surSite === null ? '' : x.surSite ? ' · sur le site' : ' · hors du site'}
+        </dd>
+        {x.concentration !== null && p.compose && (
+          <>
+            <dt>{p.compose.nom}</dt>
+            <dd>
+              ≈ {fr(Number(x.concentration.toPrecision(2)))} {p.compose.unite} (estimé){x.facteur !== null ? ` · ×/÷ ${fr(Number(x.facteur.toFixed(1)))}` : ''}
+              {x.probabilite !== null && p.referenceEaux !== null ? ` · ${Math.round(x.probabilite * 100)} % de chances de dépasser ${fr(p.referenceEaux)} ${p.compose.unite}` : ''}
+            </dd>
+          </>
+        )}
+        {x.profondeurEau !== null && (
+          <>
+            <dt>Nappe</dt>
+            <dd>≈ {frM(x.profondeurEau)} sous le sol (estimée à la date affichée)</dd>
+          </>
+        )}
+      </dl>
+      <p className="st-note">Indicatif : accès, propriété du terrain, réseaux enterrés (DT-DICT) et profondeur de la crépine à vérifier.</p>
+    </>
+  )
+}
+
 function FicheVirtuelle(p: Props & { v: ForageVirtuel }) {
   const v = p.v
   return (
@@ -530,6 +574,14 @@ function FicheVirtuelle(p: Props & { v: ForageVirtuel }) {
               ≈ {fr(v.concentration.valeur)} {p.compose.unite} (estimé)
               {v.concentration.facteur !== null ? ` · incertitude ×/÷ ${fr(v.concentration.facteur, 2)}` : ''}
             </dd>
+            {v.concentration.probabilite !== null && p.referenceEaux !== null && (
+              <>
+                <dt>Dépassement</dt>
+                <dd>
+                  probabilité de dépasser {fr(p.referenceEaux)} {p.compose.unite} : {Math.round(v.concentration.probabilite * 100)} %
+                </dd>
+              </>
+            )}
           </>
         )}
       </dl>

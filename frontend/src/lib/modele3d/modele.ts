@@ -51,7 +51,7 @@ import {
 import { ORDRE_CLASSES } from './lithologie.ts'
 import { detecterSysteme, LIBELLES_SYSTEME, versLambert93, type Systeme } from './coordonnees.ts'
 import { completerConfig, construireFormations, proposerFormations, type ConfigFormations, type ResultatFormations } from './formations.ts'
-import { interpoler, validationCroisee, type Methode, type Validation, type Variogramme } from './krigeage.ts'
+import { interpoler, validationCroisee, type Interpolateur, type Methode, type Validation, type Variogramme } from './krigeage.ts'
 import type { Forage, Intervalle } from './types.ts'
 
 export type OrigineZ = 'forage' | 'dossier' | 'mnt' | 'repere' | 'interpole' | 'relatif' | 'saisie'
@@ -776,7 +776,12 @@ const valeurInterpolee = (valeur: number, inferieur: boolean) => Math.log10(Math
  * them. Field readings (pH, redox…) are weighted on their values
  * (`lineaire`), concentrations on their logarithm.
  */
-export function panache(m: Modele, base: Base, compose: string, campagne: string, lineaire = false, avecValidation = true): Panache {
+/**
+ * The results of a compound at a campaign (one per well), those of the
+ * placed wells, and the values interpolated there: log10 of the
+ * concentration (half the LQ when not quantified), or the value itself.
+ */
+export function donneesPanache(m: Modele, base: Base, compose: string, campagne: string, lineaire = false): { valeurs: ValeurPoint[]; places: ValeurPoint[]; pts: PointValeur[] } {
   const valeurs: ValeurPoint[] = []
   for (const r of base.resultats) {
     if (r.compose !== compose || r.campagne !== campagne || r.exclu) continue
@@ -784,9 +789,12 @@ export function panache(m: Modele, base: Base, compose: string, campagne: string
     if (p) valeurs.push({ cle: p.cle, nom: p.nom, x: p.x, y: p.y, resultat: r })
   }
   const places = valeurs.filter((v) => m.points.find((p) => p.cle === v.cle)?.place)
-  if (!places.length) return { valeurs, champ: null, incertitude: null, lineaire, validation: null }
   const pts = places.map((v) => ({ x: v.x, y: v.y, v: lineaire ? v.resultat.valeur : valeurInterpolee(v.resultat.valeur, v.resultat.inferieur) }))
-  const interp = interpoler(pts, m.methode, avecValidation)
+  return { valeurs, places, pts }
+}
+
+/** An interpolation on the ground grid's nodes, between the points and within the reach beyond (NaN elsewhere). */
+export function champSurGrille(m: Modele, pts: PointValeur[], interp: Interpolateur): { champ: Float64Array; incertitude: Float64Array } {
   const dedans = zoneInterpolee(pts, Math.max(m.portee, 20))
   const g = m.sol
   const champ = new Float64Array(g.nx * g.ny).fill(Number.NaN)
@@ -800,7 +808,14 @@ export function panache(m: Modele, base: Base, compose: string, campagne: string
       champ[j * g.nx + i] = e.v
       incertitude[j * g.nx + i] = e.ecart
     }
-  return { valeurs, champ, incertitude, lineaire, validation: interp.validation }
+  return { champ, incertitude }
+}
+
+export function panache(m: Modele, base: Base, compose: string, campagne: string, lineaire = false, avecValidation = true): Panache {
+  const { valeurs, places, pts } = donneesPanache(m, base, compose, campagne, lineaire)
+  if (!places.length) return { valeurs, champ: null, incertitude: null, lineaire, validation: null }
+  const interp = interpoler(pts, m.methode, avecValidation)
+  return { valeurs, ...champSurGrille(m, pts, interp), lineaire, validation: interp.validation }
 }
 
 export interface EtatPanache {
