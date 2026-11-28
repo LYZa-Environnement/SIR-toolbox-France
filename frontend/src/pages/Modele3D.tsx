@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import ZoneDepot from '../components/ZoneDepot'
 import Delimitation from '../components/modele3d/Delimitation'
 import Evolution from '../components/modele3d/Evolution'
@@ -23,7 +23,7 @@ import { jourIso } from '../lib/format'
 import { ringsOfGeometry, toLambert93 } from '../lib/geo'
 import { assembler } from '../lib/modele3d/assemblage'
 import { chargerCibles, type Cibles } from '../lib/modele3d/cibles'
-import { schemaConceptuel, schemaSvg } from '../lib/modele3d/conceptuel'
+import { centreBatiment, centrePoints, positionHydraulique, schemaConceptuel, schemaSvg } from '../lib/modele3d/conceptuel'
 import type { Systeme } from '../lib/modele3d/coordonnees'
 import { couleurChamp, couleurValeur, etendue, type Echelle } from '../lib/modele3d/couleurs'
 import { gazDeResultats, lireSourcesDossier } from '../lib/modele3d/dossier'
@@ -54,6 +54,7 @@ import {
   type SaisiePoint,
 } from '../lib/modele3d/modele'
 import type { Source } from '../lib/modele3d/types'
+import { compterUsages, ORDRE_USAGES, USAGES } from '../lib/modele3d/usages'
 import { valeurGuideEn } from '../lib/resultats/guides'
 import { LectureImpossible } from '../lib/resultats/parse'
 import { CLASSES, reference } from '../lib/suivi/analyse'
@@ -104,6 +105,8 @@ interface Reglages {
   epaisseur: number
   densite: number
   valeursSurvol: boolean
+  /** Neighbouring buildings raised to their height (else flat footprints). */
+  voisinsEnVolume: boolean
   /** Items of the conceptual model kept or set aside by the user. */
   schema: Record<string, boolean>
 }
@@ -163,6 +166,7 @@ const REGLAGES_DEFAUT: Reglages = {
   epaisseur: 5,
   densite: 1.8,
   valeursSurvol: false,
+  voisinsEnVolume: true,
   schema: {},
 }
 
@@ -180,7 +184,7 @@ const LIBELLES_COUCHES: [NomCouche, string][] = [
   ['gaz', 'Gaz du sol'],
   ['filieres', 'Terres par filière'],
   ['delimitation', 'Délimitation du panache (limite des ouvrages, emplacements proposés)'],
-  ['batiments', 'Bâtiments (BD TOPO)'],
+  ['batiments', 'Bâtiments et usages (BD TOPO)'],
   ['coursdeau', 'Cours d’eau (BD TOPO)'],
   ['etiquettes', 'Noms des forages'],
   ['cadre', 'Cadre, cotes, parcelles et nord'],
@@ -193,7 +197,7 @@ const VUES: [Vue, string][] = [
   ['est', 'Depuis l’est'],
 ]
 
-type Preset = 'geologie' | 'nappe' | 'sols' | 'ensemble'
+type Preset = 'geologie' | 'nappe' | 'sols' | 'cibles' | 'ensemble'
 
 const PRESETS: Record<Preset, { libelle: string; couches: Partial<Couches>; opaciteSol: number; coupe: Reglages['coupe']; vue: Vue }> = {
   geologie: {
@@ -214,6 +218,13 @@ const PRESETS: Record<Preset, { libelle: string; couches: Partial<Couches>; opac
     libelle: 'Sols et gaz',
     couches: { geologie: false, forages: true, nappe: false, isopiezes: false, eaux: false, echantillons: true, gaz: true, observations: true, pid: true, filieres: false, delimitation: false },
     opaciteSol: 0.3,
+    coupe: { axe: 'aucune', valeur: null, inverse: false },
+    vue: '3d',
+  },
+  cibles: {
+    libelle: 'Bâtiments et usages',
+    couches: { geologie: false, forages: true, equipement: false, nappe: true, isopiezes: false, eaux: true, echantillons: false, gaz: false, filieres: false, observations: false, pid: false, batiments: true, coursdeau: true },
+    opaciteSol: 0.6,
     coupe: { axe: 'aucune', valeur: null, inverse: false },
     vue: '3d',
   },
@@ -736,6 +747,20 @@ export default function Modele3D() {
     [modele, donnees, guides, base, corrections, guidesGaz, nappeSchema, ciblesCourantes],
   )
 
+  // Buildings and their place: on the site or around it, up- or downstream at the latest campaign.
+  const lignesBatiments = useMemo(() => {
+    if (!modele || !ciblesCourantes) return RIEN
+    const { x: cx, y: cy } = centrePoints(modele)
+    const ec = nappeSchema?.ecoulement ?? null
+    return ciblesCourantes.batiments
+      .map((b, index) => {
+        const k = centreBatiment(b)
+        return { b, index, site: batimentSurSite(b), position: ec ? positionHydraulique(ec.azimut, k.x - cx, k.y - cy) : null, distance: Math.hypot(k.x - cx, k.y - cy) }
+      })
+      .sort((a, b) => Number(b.site) - Number(a.site) || ORDRE_USAGES.indexOf(a.b.categorie) - ORDRE_USAGES.indexOf(b.b.categorie) || a.distance - b.distance)
+  }, [modele, ciblesCourantes, nappeSchema, batimentSurSite])
+  const usagesVisibles = useMemo(() => (reglages.couches.batiments && ciblesCourantes?.batiments.length ? compterUsages(ciblesCourantes.batiments) : null), [reglages.couches.batiments, ciblesCourantes])
+
   // ---- View --------------------------------------------------------------------------------
   const exagAuto = modele ? Math.min(25, Math.max(1, Math.round((0.3 * Math.max(modele.emprise.xmax - modele.emprise.xmin, modele.emprise.ymax - modele.emprise.ymin)) / Math.max(1, modele.zmax - modele.zmin)))) : 1
   const exag = reglages.exag ?? exagAuto
@@ -855,7 +880,10 @@ export default function Modele3D() {
         const v = parametreGaz ? g?.resultats[parametreGaz.cle] : undefined
         return g ? `${g.nom}${v && parametreGaz ? ` · ${parametreGaz.nom} : ${v.brut} ${parametreGaz.unite}` : ''}` : ''
       }
-      if (s.type === 'batiment') return ciblesCourantes?.batiments[s.index]?.usage ?? 'Bâtiment'
+      if (s.type === 'batiment') {
+        const b = ciblesCourantes?.batiments[s.index]
+        return b ? [USAGES[b.categorie].libelle, b.secondaire ? `et ${USAGES[b.secondaire].libelle.toLowerCase()}` : '', b.logements ? `${b.logements} logement${b.logements > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ') : 'Bâtiment'
+      }
       if (s.type === 'enveloppe') return parametreSol && seuil ? `${parametreSol.nom} ≥ ${fr(seuil)} ${parametreSol.unite} (interpolé)` : ''
       if (s.type === 'proposition') {
         const x = delimitation?.propositions.find((p) => p.rang === s.rang)
@@ -1187,6 +1215,7 @@ export default function Modele3D() {
                       delimitation={reglages.couches.delimitation && delimitation ? delimitation : null}
                       batiments={ciblesCourantes?.batiments ?? RIEN}
                       batimentSurSite={batimentSurSite}
+                      voisinsEnVolume={reglages.voisinsEnVolume}
                       coursDEau={lignesCoursEau}
                       libelles={libelles}
                       selection={selection && selection.type !== 'virtuel' ? selection : null}
@@ -1216,6 +1245,8 @@ export default function Modele3D() {
                         pid={reglages.couches.pid && pid.length > 0}
                         enveloppe={reglages.enveloppe ? (enveloppe ?? null) : null}
                         seuil={seuil}
+                        usages={usagesVisibles}
+                        mixtes={!!ciblesCourantes?.batiments.some((b) => b.secondaire)}
                       />
                       {reglages.fond === 'geologie' && etatSol === 'erreur' && urlSol && vignetteKo !== urlSol && (
                         <figure className="m3d-vignette">
@@ -1290,9 +1321,25 @@ export default function Modele3D() {
                       <fieldset role="tabpanel">
                         <legend>Calques</legend>
                         {LIBELLES_COUCHES.map(([k, l]) => (
-                          <label key={k} className="st-coche">
-                            <input type="checkbox" checked={reglages.couches[k]} onChange={() => basculerCouche(k)} /> {l}
-                          </label>
+                          <Fragment key={k}>
+                            <label className="st-coche">
+                              <input type="checkbox" checked={reglages.couches[k]} onChange={() => basculerCouche(k)} /> {l}
+                            </label>
+                            {k === 'batiments' && reglages.couches.batiments && (
+                              <div className="m3d-sous">
+                                <label className="st-coche">
+                                  <input type="checkbox" checked={reglages.voisinsEnVolume} onChange={(e) => regler('voisinsEnVolume', e.target.checked)} /> Bâtiments voisins en volume (sinon leur emprise au sol)
+                                </label>
+                                <p className="st-note">
+                                  {etatCibles === 'indisponible'
+                                    ? 'Bâtiments : coordonnées en Lambert 93 nécessaires.'
+                                    : etatCibles === 'chargement'
+                                      ? 'Recherche des bâtiments…'
+                                      : `${ciblesCourantes?.batiments.length ? pluriel(ciblesCourantes.batiments.length, 'bâtiment') : 'Aucun bâtiment'} de la BD TOPO, colorés par usage ; ceux du site en transparence.`}
+                                </p>
+                              </div>
+                            )}
+                          </Fragment>
                         ))}
                         <div className="m3d-sous">
                           <label className="champ">
@@ -1721,6 +1768,8 @@ export default function Modele3D() {
                   sols={sols}
                   guide={guide}
                   echelleSol={echelleSol}
+                  batiments={reglages.couches.batiments ? lignesBatiments : null}
+                  surBatiment={(index) => setSelection({ type: 'batiment', index })}
                 />
 
                 <MethodeLimites />

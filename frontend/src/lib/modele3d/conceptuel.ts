@@ -11,8 +11,9 @@
  */
 
 import type { Donnees } from './assemblage.ts'
-import type { Cibles } from './cibles.ts'
+import type { Batiment, Cibles } from './cibles.ts'
 import { predicatEmprise, type Modele, type Nappe } from './modele.ts'
+import { compterUsages, resumeUsages, USAGES } from './usages.ts'
 
 export type Colonne = 'source' | 'transfert' | 'cible'
 
@@ -46,6 +47,26 @@ export function positionHydraulique(azimutEcoulement: number, dx: number, dy: nu
   const ecart = Math.abs(((az - azimutEcoulement + 540) % 360) - 180)
   return ecart <= 60 ? 'aval' : ecart >= 120 ? 'amont' : 'lateral'
 }
+
+/** Centre of the placed boreholes and wells, from which up- and downstream are read. */
+export function centrePoints(m: Modele): { x: number; y: number } {
+  const ps = m.points.filter((p) => p.place)
+  return { x: ps.reduce((a, p) => a + p.x, 0) / Math.max(1, ps.length), y: ps.reduce((a, p) => a + p.y, 0) / Math.max(1, ps.length) }
+}
+
+/** Centre of a building's footprint (mean of its vertices). */
+export function centreBatiment(b: Pick<Batiment, 'anneau'>): { x: number; y: number } {
+  const n = Math.max(1, b.anneau.length)
+  return { x: b.anneau.reduce((a, p) => a + p[0], 0) / n, y: b.anneau.reduce((a, p) => a + p[1], 0) / n }
+}
+
+/** « 12 logements recensés (Fichiers fonciers) », when the land files count them. */
+function logementsRecenses(bs: Batiment[]): string | null {
+  const n = bs.reduce((a, b) => a + (b.logements ?? 0), 0)
+  return n > 0 ? `${n} logement${n > 1 ? 's' : ''} recensé${n > 1 ? 's' : ''} (Fichiers fonciers)` : null
+}
+
+const SENSIBLES = 'commerces et services : vérifier la présence d’établissements sensibles (crèches, écoles, établissements de santé ; circulaire du 8 février 2007)'
 
 export interface EntreesSchema {
   modele: Modele
@@ -171,30 +192,68 @@ export function schemaConceptuel(e: EntreesSchema): Schema {
     })
 
   // ---- Targets ----------------------------------------------------------------------------------
-  ajouter({ id: 'usagers', colonne: 'cible', titre: 'Usagers du site (travailleurs, futurs occupants)', preuves: ['usage actuel et futur du site à préciser'], retenu: true })
+  // Who is exposed depends on the use of the buildings (usages.ts): residents, children included,
+  // most of the time; workers and the public a working day.
   const c = e.cibles
-  const centre = m.points.filter((p) => p.place)
-  const cx = centre.reduce((a, p) => a + p.x, 0) / Math.max(1, centre.length)
-  const cy = centre.reduce((a, p) => a + p.y, 0) / Math.max(1, centre.length)
+  const { x: cx, y: cy } = centrePoints(m)
+  const dansSite = predicatEmprise({ ...m, etendre: false })
+  const surSite = c ? c.batiments.filter((b) => b.anneau.some(([x, y]) => dansSite(x, y))) : []
+  const usageActuel = compterUsages(surSite)
+    .filter(([u]) => u !== 'autre')
+    .map(([u]) => USAGES[u].libelle.toLowerCase())
+  ajouter({
+    id: 'usagers',
+    colonne: 'cible',
+    titre: 'Usagers du site (travailleurs, futurs occupants)',
+    preuves: [usageActuel.length ? `usage actuel des bâtiments d’après la BD TOPO : ${usageActuel.join(', ')} ; usage futur à préciser` : 'usage actuel et futur du site à préciser'],
+    retenu: true,
+  })
   if (c) {
-    const dansSite = predicatEmprise({ ...m, etendre: false })
-    const surSite = c.batiments.filter((b) => b.anneau.some(([x, y]) => dansSite(x, y)))
-    if (surSite.length)
+    const enAval = (bs: Batiment[]) => {
+      if (!ecoulement) return ''
+      const n = bs.filter((b) => {
+        const k = centreBatiment(b)
+        return positionHydraulique(ecoulement.azimut, k.x - cx, k.y - cy) === 'aval'
+      }).length
+      return `, dont ${n} en aval`
+    }
+    if (surSite.length) {
+      const habites = surSite.filter((b) => b.habite)
       ajouter({
         id: 'batiments-site',
         colonne: 'cible',
-        titre: 'Occupants des bâtiments du site',
-        preuves: [`${surSite.length} bâtiment${surSite.length > 1 ? 's' : ''} sur les parcelles (BD TOPO) : ${[...new Set(surSite.map((b) => b.usage))].slice(0, 3).join(' ; ')}`],
+        titre: habites.length ? 'Occupants des bâtiments du site, habitants compris' : 'Occupants des bâtiments du site',
+        preuves: [
+          `${resumeUsages(surSite)} sur les parcelles (BD TOPO)`,
+          ...(habites.length ? [`${[`${habites.length} habité${habites.length > 1 ? 's' : ''}`, logementsRecenses(habites)].filter(Boolean).join(', ')} : habitants, enfants compris, les plus sensibles`] : []),
+          ...(surSite.some((b) => b.categorie === 'commercial') ? [SENSIBLES] : []),
+        ],
         retenu: true,
       })
+    }
     const voisins = c.batiments.filter((b) => !surSite.includes(b))
-    if (voisins.length)
+    const habitants = voisins.filter((b) => b.habite)
+    const autres = voisins.filter((b) => !b.habite && b.categorie === 'autre')
+    const activites = voisins.filter((b) => !b.habite && b.categorie !== 'autre')
+    const exposes = eauxImpactees || volatilsSols || gazImpactes
+    if (habitants.length || autres.length)
       ajouter({
         id: 'riverains',
         colonne: 'cible',
-        titre: 'Riverains (bâtiments voisins)',
-        preuves: [`${voisins.length} bâtiment${voisins.length > 1 ? 's' : ''} dans l’emprise du modèle hors site${ecoulement ? `, dont ${voisins.filter((b) => positionHydraulique(ecoulement.azimut, b.anneau[0][0] - cx, b.anneau[0][1] - cy) === 'aval').length} en aval` : ''}`],
-        retenu: eauxImpactees || volatilsSols || gazImpactes,
+        titre: habitants.length ? 'Riverains : habitants des bâtiments voisins' : 'Riverains (usage des bâtiments voisins à vérifier)',
+        preuves: [
+          ...(habitants.length ? [[`${habitants.length} bâtiment${habitants.length > 1 ? 's' : ''} habité${habitants.length > 1 ? 's' : ''} hors site${enAval(habitants)}`, logementsRecenses(habitants)].filter(Boolean).join(', ')] : []),
+          ...(autres.length ? [`${resumeUsages(autres)}${enAval(autres)} : à vérifier (visite, enquête de voisinage)`] : []),
+        ],
+        retenu: exposes,
+      })
+    if (activites.length)
+      ajouter({
+        id: 'riverains-activites',
+        colonne: 'cible',
+        titre: 'Riverains : travailleurs et public des activités voisines',
+        preuves: [`${resumeUsages(activites)} hors site${enAval(activites)}`, ...(activites.some((b) => b.categorie === 'commercial') ? [SENSIBLES] : [])],
+        retenu: exposes,
       })
     if (ecoulement) {
       const aval = c.prelevements.filter((p) => positionHydraulique(ecoulement.azimut, p.x - cx, p.y - cy) === 'aval')
@@ -246,7 +305,8 @@ export function schemaConceptuel(e: EntreesSchema): Schema {
     lier('volatilisation', t)
   }
   lier('volatilisation', 'riverains')
-  for (const t of ['captages', 'cours-eau', 'usages-nappe', 'riverains']) lier('migration', t)
+  lier('volatilisation', 'riverains-activites')
+  for (const t of ['captages', 'cours-eau', 'usages-nappe', 'riverains', 'riverains-activites']) lier('migration', t)
   return { elements, liens }
 }
 

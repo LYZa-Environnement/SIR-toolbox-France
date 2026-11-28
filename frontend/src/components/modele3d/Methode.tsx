@@ -47,6 +47,11 @@ export default function MethodeLimites() {
           <strong>Gaz du sol</strong> : concentrations de Résultats labo (volume prélevé saisi là-bas) rattachées aux forages du même nom, comparées à titre de repère à
           la valeur R1 de l’air intérieur.
         </li>
+        <li>
+          <strong>Bâtiments</strong> : BD TOPO® (IGN), usage principal et secondaire issus des Fichiers fonciers ; usage indifférencié complété par le nombre de
+          logements, puis par la nature du bâtiment (signalé comme déduit). Hauteur réelle, sans exagération ; 6 m quand elle manque. À confirmer par la visite du site
+          et de ses abords, en particulier les établissements sensibles (circulaire du 8 février 2007).
+        </li>
       </ul>
     </details>
   )

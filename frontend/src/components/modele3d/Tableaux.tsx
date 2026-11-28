@@ -1,10 +1,12 @@
 import type { Tendance } from '../../lib/modele3d/calcul'
+import type { Batiment } from '../../lib/modele3d/cibles'
 import { couleurValeur, type Echelle } from '../../lib/modele3d/couleurs'
 import { fr, frM } from '../../lib/modele3d/format'
 import type { Modele, Nappe, Panache, PointSol } from '../../lib/modele3d/modele'
 import { CLASSES } from '../../lib/suivi/analyse'
 import { formatDate } from '../../lib/suivi/dates'
 import type { Compose } from '../../lib/suivi/modele'
+import { USAGES } from '../../lib/modele3d/usages'
 
 interface Props {
   modele: Modele
@@ -20,11 +22,14 @@ interface Props {
   sols: PointSol[]
   guide: { valeur: number } | null
   echelleSol: Echelle
+  /** Buildings of the BD TOPO with their place (on the site, up- or downstream), or null when the layer is off. */
+  batiments: { b: Batiment; index: number; site: boolean; position: 'aval' | 'amont' | 'lateral' | null }[] | null
+  surBatiment: (index: number) => void
 }
 
-/** The values shown in the view, as tables: water levels and concentrations of the date, soil results. */
+/** The values shown in the view, as tables: water levels and concentrations of the date, soil results, buildings and their uses. */
 export default function Tableaux(props: Props) {
-  const { modele, nappe, nappeA, etape, etapeA, pan, compose, echelleEaux, tendances, parametreSol, sols, guide, echelleSol } = props
+  const { modele, nappe, nappeA, etape, etapeA, pan, compose, echelleEaux, tendances, parametreSol, sols, guide, echelleSol, batiments } = props
   return (
     <details className="m3d-tableaux">
       <summary>Tableaux des valeurs affichées</summary>
@@ -123,6 +128,48 @@ export default function Tableaux(props: Props) {
           </div>
         </>
       )}
+        {batiments && batiments.length > 0 && (
+          <>
+            <h3>Bâtiments et usages (BD TOPO)</h3>
+            <div className="tableau-defile">
+              <table className="tableau">
+                <thead>
+                  <tr>
+                    <th>Usage</th>
+                    <th>Usage et nature (BD TOPO)</th>
+                    <th>Emplacement</th>
+                    <th>Hauteur</th>
+                    <th>Logements</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batiments.map((l) => (
+                    <tr key={l.index}>
+                      <th scope="row">
+                        <button type="button" className="lien-bouton" onClick={() => props.surBatiment(l.index)}>
+                          <span className="m3d-pastille" style={{ background: USAGES[l.b.categorie].couleur }} aria-hidden="true" />
+                          {USAGES[l.b.categorie].libelle}
+                        </button>
+                        {l.b.deduit && <span className="st-note"> (d’après {l.b.deduit})</span>}
+                      </th>
+                      <td>
+                        {l.b.usage}
+                        {l.b.nature && !/^indiff/i.test(l.b.nature) ? ` · ${l.b.nature}` : ''}
+                      </td>
+                      <td>{[l.site ? 'Sur le site' : 'Voisin', l.position && !l.site ? l.position.replace('lateral', 'latéral') : ''].filter(Boolean).join(', ')}</td>
+                      <td>{l.b.hauteur !== null ? frM(l.b.hauteur) : '–'}</td>
+                      <td>{l.b.logements ?? '–'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="st-note">
+              Usages de la BD TOPO® (IGN), issus des Fichiers fonciers : à confirmer par la visite du site et de ses abords. Amont, aval : d’après le sens d’écoulement de la
+              dernière campagne, depuis le centre des ouvrages.
+            </p>
+          </>
+        )}
     </details>
   )
 }

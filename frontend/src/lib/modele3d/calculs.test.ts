@@ -335,6 +335,50 @@ describe('schéma conceptuel', () => {
     expect(positionHydraulique(90, -100, 0)).toBe('amont')
     expect(positionHydraulique(90, 0, 100)).toBe('lateral')
   })
+
+  it('cibles selon l’usage des bâtiments : site, habitants et activités voisines', async () => {
+    const { schemaConceptuel, centrePoints } = await import('./conceptuel.ts')
+    const { lireBatiment } = await import('./cibles.ts')
+    const d = assembler([exemple()])
+    const m = construireModele(d)
+    const base = d.base!
+    const derniere = base.campagnes[base.campagnes.length - 1]
+    // A 10 m square around (x, y), in the model's frame.
+    const carre = (x: number, y: number): [number, number][] => [
+      [x - 5, y - 5],
+      [x + 5, y - 5],
+      [x + 5, y + 5],
+      [x - 5, y + 5],
+    ]
+    const c = centrePoints(m)
+    const loin = m.emprise.xmax + 25
+    const batiments = [
+      lireBatiment(carre(c.x, c.y), { usage_1: 'Industriel' }),
+      lireBatiment(carre(loin, c.y), { usage_1: 'Résidentiel', nombre_de_logements: 12 }),
+      lireBatiment(carre(loin, c.y + 30), { usage_1: 'Commercial et services' }),
+      lireBatiment(carre(loin, c.y - 30), { usage_1: 'Indifférencié', nature: 'Industriel, agricole ou commercial' }),
+      lireBatiment(carre(loin, c.y + 60), { usage_1: 'Indifférencié' }),
+    ]
+    const s = schemaConceptuel({
+      modele: m,
+      donnees: d,
+      guideSol: () => null,
+      referenceEau: (cle) => reference(base.composes.find((k) => k.cle === cle)!, d.corrections)?.valeur ?? null,
+      referenceGaz: () => null,
+      nappe: nappeCampagne(m, base, derniere.id),
+      cibles: { batiments, coursDEau: [], prelevements: [], erreurs: [] },
+    })
+    const el = (id: string) => s.elements.find((e) => e.id === id)!
+    expect(el('usagers').preuves[0]).toBe('usage actuel des bâtiments d’après la BD TOPO : industriel ; usage futur à préciser')
+    expect(el('batiments-site').titre).toBe('Occupants des bâtiments du site')
+    expect(el('batiments-site').preuves[0]).toBe('1 bâtiment industriel sur les parcelles (BD TOPO)')
+    expect(el('riverains').titre).toBe('Riverains : habitants des bâtiments voisins')
+    expect(el('riverains').preuves[0]).toMatch(/^1 bâtiment habité hors site, dont \d+ en aval, 12 logements recensés \(Fichiers fonciers\)$/)
+    expect(el('riverains').preuves[1]).toMatch(/^1 bâtiment d’autre usage ou non renseigné, dont \d+ en aval : à vérifier/)
+    expect(el('riverains-activites').preuves[0]).toMatch(/^2 bâtiments \(1 commercial ou de services, 1 d’activité sans précision\) hors site/)
+    expect(el('riverains-activites').preuves[1]).toContain('établissements sensibles')
+    expect(s.liens).toContainEqual({ de: 'migration', vers: 'riverains-activites' })
+  })
 })
 
 describe('délimitation du panache', () => {

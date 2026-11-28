@@ -3,6 +3,7 @@ import { FILIERES, ORDRE_FILIERES } from '../../lib/modele3d/filieres'
 import { fr } from '../../lib/modele3d/format'
 import { CLASSES_CONCENTRATION, type ClasseConcentration } from '../../lib/modele3d/modele'
 import type { Compose } from '../../lib/suivi/modele'
+import { USAGES, type CategorieUsage } from '../../lib/modele3d/usages'
 import { MILIEU, RAMPE_INCERTITUDE, RAMPE_PID } from './palettes'
 
 /** Legend of the view: the scales of what is coloured, folded on a phone. */
@@ -24,12 +25,16 @@ export default function Legende(p: {
   pid: boolean
   enveloppe: { volume: number } | null
   seuil: number | null
+  /** Buildings shown, by use, or null. */
+  usages: [CategorieUsage, number][] | null
+  /** Some buildings have a secondary use (their roof). */
+  mixtes: boolean
 }) {
   const blocs: { titre: string; echelle: Echelle; unite: string }[] = []
   if (p.compose && p.echelleEaux && !p.comparaison) blocs.push({ titre: `Eaux : ${p.compose.nom}`, echelle: p.echelleEaux, unite: p.compose.unite })
   if (p.parametre) blocs.push({ titre: `Sols : ${p.parametre.nom}`, echelle: p.echelleSol, unite: p.parametre.unite })
   if (p.gaz && p.echelleGaz) blocs.push({ titre: `Gaz du sol : ${p.gaz.nom}`, echelle: p.echelleGaz, unite: p.gaz.unite })
-  const vide = !blocs.length && !p.enveloppe && !p.comparaison && !p.incertitude && p.probabilite === null && !p.delimitation && !p.filieres && !p.pid
+  const vide = !blocs.length && !p.enveloppe && !p.comparaison && !p.incertitude && p.probabilite === null && !p.delimitation && !p.filieres && !p.pid && !p.usages
   if (vide) return null
   return (
     <div className={`m3d-legende${p.ouverte ? '' : ' m3d-legende--repliee'}`}>
@@ -143,6 +148,20 @@ export default function Legende(p: {
             <div className="m3d-legende__bloc">
               <strong>PID (ppm, échelle logarithmique)</strong>
               <div className="m3d-rampe" style={{ background: `linear-gradient(to right, ${RAMPE_PID.join(', ')})` }} aria-hidden="true" />
+            </div>
+          )}
+          {p.usages && (
+            <div className="m3d-legende__bloc">
+              <strong>Bâtiments : usage (BD TOPO)</strong>
+              <ul>
+                {p.usages.map(([u, n]) => (
+                  <li key={u}>
+                    <span className="m3d-pastille" style={{ background: USAGES[u].couleur }} aria-hidden="true" />
+                    {USAGES[u].libelle} ({n})
+                  </li>
+                ))}
+                {p.mixtes && <li className="st-note">toit : usage secondaire, s’il diffère</li>}
+              </ul>
             </div>
           )}
           {p.enveloppe && p.seuil && (

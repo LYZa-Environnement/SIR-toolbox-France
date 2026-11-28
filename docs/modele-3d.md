@@ -263,13 +263,54 @@ au-dessus des valeurs guides ou volatils quantifiés, indices
 organoleptiques, eaux au-dessus des valeurs de comparaison à la dernière
 campagne, gaz du sol), voies de transfert (contact direct, volatilisation,
 lixiviation, migration dans la nappe avec son sens), cibles (usagers,
-bâtiments du site et riverains de la BD TOPO, prélèvements déclarés à la
-BNPE et cours d'eau en aval). Chaque élément se garde ou s'écarte ; export
-SVG.
+bâtiments du site et riverains de la BD TOPO selon leur usage, prélèvements
+déclarés à la BNPE et cours d'eau en aval). Chaque élément se garde ou
+s'écarte ; export SVG.
+
+Les cibles bâties suivent l'**usage des bâtiments** (voir ci-dessous) :
+usage actuel du site, occupants des bâtiments du site (habitants compris
+quand des logements y sont recensés), riverains habitants (bâtiments
+résidentiels ou avec logements, nombre de logements, en aval), riverains
+travailleurs et public des activités voisines ; bâtiments d'usage non
+renseigné à vérifier ; rappel de vérifier les établissements sensibles
+quand il y a des commerces et services (circulaire du 8 février 2007).
+
+## Bâtiments et usages
+
+`usages.ts`, `cibles.ts` : les bâtiments de la BD TOPO® (IGN, couche
+`batiment`, par API Carto) autour du modèle, avec leurs attributs `usage_1`
+et `usage_2` (usage principal et secondaire, issus des Fichiers fonciers de
+la DGFiP), `nature`, `hauteur`, `nombre_de_logements`, `nombre_d_etages`.
+
+| Classe | Couleur | Usage BD TOPO |
+| --- | --- | --- |
+| Résidentiel | ambre `#f2a600` | Résidentiel |
+| Commercial et services | framboise `#c2396e` | Commercial et services (bureaux, services, établissements recevant du public) |
+| Industriel | violet `#5b44d6` | Industriel |
+| Agricole | olive `#7d8f3a` | Agricole |
+| Activité sans précision | violet clair `#a99be8` | nature « Industriel, agricole ou commercial » sans usage renseigné |
+| Autre usage ou non renseigné | gris `#d6d1c8` | Annexe, Religieux, Sportif, Indifférencié |
+
+Usage « Indifférencié » : l'usage secondaire, sinon des logements recensés
+(résidentiel), sinon la nature du bâtiment (serre, silo : agricole) ; la
+classe est alors signalée comme déduite. Ambre pour l'habitat et violet pour
+l'industrie reprennent les cartes d'occupation du sol (PLU, MOS) ; la palette
+est vérifiée pour les daltonismes sur le fond clair de la vue.
+
+Dans la vue : calque « Bâtiments et usages » et préréglage du même nom ;
+bâtiments à leur hauteur réelle (sans exagération, 6 m quand elle manque),
+ceux du site en transparence pour voir les forages, les voisins opaques, ou
+en emprise au sol en option ; toit de la couleur de l'usage secondaire quand
+il diffère (rez-de-chaussée commercial sous des logements) ; légende avec le
+nombre de bâtiments par usage ; fiche au clic (usages, nature, occupants,
+logements, étages, hauteur) ; tableau des bâtiments (usage, emplacement sur
+le site ou voisin, amont / aval d'après l'écoulement de la dernière
+campagne). Usages à confirmer par la visite du site et de ses abords.
 
 ## Vue
 
-- Préréglages : Géologie, Nappe et panache, Sols et gaz, Vue d'ensemble.
+- Préréglages : Géologie, Nappe et panache, Sols et gaz, Bâtiments et
+  usages, Vue d'ensemble.
 - Panneau en onglets (Calques, Géologie, Eaux, Sols et gaz, Coupe et vue) ;
   légende repliable.
 - Frise proportionnelle au temps : hautes eaux (bleu), basses eaux (ocre),
@@ -281,7 +322,7 @@ SVG.
 - Étiquettes désencombrées (piézomètres et sélection d'abord), valeurs au
   survol en option ; lien de chaque fiche vers le log (Logs de forage, ancre
   `#forage=`).
-- Bâtiments BD TOPO : ceux du site en volume, les voisins en emprise.
+- Bâtiments BD TOPO colorés par usage (voir Bâtiments et usages).
 - Image PNG avec les étiquettes ; tableaux des valeurs affichées.
 - Calculs lourds (modèle, formations, krigeage, volumes, évolution,
   tendances, délimitation et verdicts par campagne) dans un Web Worker ;
@@ -301,4 +342,6 @@ les réglages de la vue.
 systèmes, saisies, points d'investigation du dossier, krigeage, formations et contacts, filières, isopièzes,
 évolution du panache, délimitation du panache : quadrants, fermetures calculées à la main, exemple, schéma conceptuel), `dossier.test.ts` (fichiers des
 outils relus après un aller-retour par l'encodage du dossier, fiches de
-prélèvement, tournées sans analyses, emprise des interpolations).
+prélèvement, tournées sans analyses, emprise des interpolations),
+`usages.test.ts` (classement des usages, usages mixtes et déduits, lecture
+des propriétés de la BD TOPO) ; cibles selon l'usage dans `calculs.test.ts`.
