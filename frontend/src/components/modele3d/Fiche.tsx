@@ -7,6 +7,7 @@ import { fr, frM } from '../../lib/modele3d/format'
 import { CLASSES_LITHO } from '../../lib/modele3d/lithologie'
 import { chronique, LIBELLES_ORIGINE_CHARGE, LIBELLES_ORIGINE_Z, type Enveloppe, type Modele, type Nappe } from '../../lib/modele3d/modele'
 import type { ParametreSol } from '../../lib/modele3d/types'
+import { USAGES } from '../../lib/modele3d/usages'
 import { LIBELLES_POSITION } from '../../lib/resultats/expert/amontAval'
 import { CLASSES } from '../../lib/suivi/analyse'
 import { formatDate } from '../../lib/suivi/dates'
@@ -93,20 +94,58 @@ export default function Fiche(p: Props) {
       {s.type === 'pid' && <FichePid {...p} cle={s.cle} index={s.index} />}
       {s.type === 'observation' && <FicheObservation {...p} cle={s.cle} index={s.index} />}
       {s.type === 'gaz' && <FicheGaz {...p} cle={s.cle} />}
-      {s.type === 'batiment' && p.batiments[s.index] && (
-        <>
-          <h3>Bâtiment</h3>
-          <p className="m3d-fiche__nature">BD TOPO® (IGN)</p>
-          <dl className="m3d-fiche__dl">
-            <dt>Usage</dt>
-            <dd>{p.batiments[s.index].usage}</dd>
-            <dt>Hauteur</dt>
-            <dd>{p.batiments[s.index].hauteur !== null ? frM(p.batiments[s.index].hauteur) : 'non renseignée (6 m dessinés)'}</dd>
-          </dl>
-        </>
-      )}
+      {s.type === 'batiment' && p.batiments[s.index] && <FicheBatiment b={p.batiments[s.index]} />}
       {s.type === 'virtuel' && p.virtuel && <FicheVirtuelle {...p} v={p.virtuel} />}
     </aside>
+  )
+}
+
+function FicheBatiment({ b }: { b: Batiment }) {
+  const u = USAGES[b.categorie]
+  return (
+    <>
+      <h3>
+        <span className="m3d-pastille m3d-pastille--grande" style={{ background: u.couleur }} aria-hidden="true" />
+        {u.libelle}
+      </h3>
+      <p className="m3d-fiche__nature">Bâtiment · BD TOPO® (IGN){b.deduit ? ` · usage déduit : ${b.deduit}` : ''}</p>
+      <dl className="m3d-fiche__dl">
+        <dt>Usage (BD TOPO)</dt>
+        <dd>{b.usage}</dd>
+        {b.secondaire && (
+          <>
+            <dt>Usage secondaire</dt>
+            <dd>
+              <span className="m3d-pastille" style={{ background: USAGES[b.secondaire].couleur }} aria-hidden="true" />
+              {USAGES[b.secondaire].libelle} (toit)
+            </dd>
+          </>
+        )}
+        {b.nature && !/^indiff/i.test(b.nature) && (
+          <>
+            <dt>Nature</dt>
+            <dd>{b.nature}</dd>
+          </>
+        )}
+        <dt>Occupants</dt>
+        <dd>{b.habite && b.categorie !== 'residentiel' ? `${u.occupants} ; habitants aussi (logements)` : u.occupants}</dd>
+        {b.logements !== null && (
+          <>
+            <dt>Logements</dt>
+            <dd>{b.logements}</dd>
+          </>
+        )}
+        {b.etages !== null && (
+          <>
+            <dt>Étages</dt>
+            <dd>{b.etages}</dd>
+          </>
+        )}
+        <dt>Hauteur</dt>
+        <dd>{b.hauteur !== null ? frM(b.hauteur) : 'non renseignée (6 m dessinés)'}</dd>
+      </dl>
+      <p className="st-note">Usage issu des Fichiers fonciers par la BD TOPO : à confirmer sur place (visite, enquête de voisinage), notamment la présence d’établissements sensibles.</p>
+    </>
   )
 }
 
